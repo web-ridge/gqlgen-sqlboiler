@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/types"
 	"sort"
+	"strings"
 
 	"github.com/99designs/gqlgen/codegen/config"
 	"github.com/99designs/gqlgen/codegen/templates"
@@ -33,12 +34,13 @@ type Object struct {
 }
 
 type Field struct {
-	Description string
-	Name        string
-	Type        types.Type
-	Tag         string
-	IsId        bool
-	IsRelation  bool
+	Description  string
+	Name         string
+	RelationName string
+	Type         types.Type
+	Tag          string
+	IsId         bool
+	IsRelation   bool
 }
 
 type Enum struct {
@@ -135,6 +137,7 @@ func (m *Plugin) MutateConfig(cfg *config.Config) error {
 						return err
 					}
 				} else {
+
 					switch fieldDef.Kind {
 					case ast.Scalar:
 						// no user defined model, referencing a default scalar
@@ -182,6 +185,10 @@ func (m *Plugin) MutateConfig(cfg *config.Config) error {
 				// fmt.Println("-----       -----")
 				typ = binder.CopyModifiersFromAst(field.Type, typ)
 				isRelation := fieldDef.Kind == ast.Object
+				fmt.Println(isRelation, "isRelation")
+				fmt.Println(ast.Object, "ast.Object")
+				fmt.Println(fieldDef, "fieldDef")
+
 				if isStruct(typ) && (fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject) {
 					typ = types.NewPointer(typ)
 				}
@@ -194,13 +201,18 @@ func (m *Plugin) MutateConfig(cfg *config.Config) error {
 				// }
 
 				it.Fields = append(it.Fields, &Field{
-					IsId:        isId,
-					IsRelation:  isRelation,
-					Name:        name,
-					Type:        typ,
-					Description: field.Description,
-					Tag:         `json:"` + field.Name + `"`,
+					IsId:         isId,
+					IsRelation:   isRelation,
+					Name:         name,
+					RelationName: fieldDef.Name,
+					Type:         typ,
+					Description:  field.Description,
+					Tag:          `json:"` + field.Name + `"`,
 				})
+			}
+
+			if strings.HasPrefix(it.Name, "_") {
+				continue
 			}
 
 			b.Models = append(b.Models, it)
