@@ -8,7 +8,7 @@ to fix import from
 
 */
 
-package stubgen
+package modelgen
 
 import (
 	"go/build"
@@ -59,4 +59,14 @@ var invalidPackageNameChar = regexp.MustCompile(`[^\w]`)
 
 func SanitizePackageName(pkg string) string {
 	return invalidPackageNameChar.ReplaceAllLiteralString(filepath.Base(pkg), "_")
+}
+
+// take a string in the form github.com/package/blah.Type and split it into package and type
+func PkgAndType(name string) (string, string) {
+	parts := strings.Split(name, ".")
+	if len(parts) == 1 {
+		return "", name
+	}
+
+	return strings.Join(parts[:len(parts)-1], "."), parts[len(parts)-1]
 }

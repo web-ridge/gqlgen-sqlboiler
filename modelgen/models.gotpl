@@ -1,0 +1,150 @@
+{{ reserveImport "context"  }}
+{{ reserveImport "fmt"  }}
+{{ reserveImport "io"  }}
+{{ reserveImport "strconv"  }}
+{{ reserveImport "time"  }}
+{{ reserveImport "sync"  }}
+{{ reserveImport "errors"  }}
+{{ reserveImport "bytes"  }}
+{{ reserveImport "strings"  }}
+
+{{ reserveImport "github.com/vektah/gqlparser" }}
+{{ reserveImport "github.com/vektah/gqlparser/ast" }}
+{{ reserveImport "github.com/99designs/gqlgen/graphql" }}
+{{ reserveImport "github.com/99designs/gqlgen/graphql/introspection" }}
+{{ reserveImport  $.BackendModelsPath }}
+
+
+func ID(ID string, entityName string) int {
+	i, _ := strconv.ParseInt(strings.TrimPrefix(ID, entityName+"_"), 10, 64)
+	return int(i)
+}
+
+func UniqueID(id int, entityName string) string {
+	return entityName + "_" + strconv.Itoa(id)
+}
+
+
+
+
+
+{{ range $model := .Models }}
+	{{with .Description }} {{.|prefixLines "// "}} {{end}}
+
+	func {{ .Name|go }}ToGraphQL(m *models.{{ .Name|go }})( *{{ .Name|go }}) {
+		if m == nil {
+			return nil
+		}
+		r := &{{ .Name|go }}{
+			{{- range $field := .Fields }}
+				{{- with .Description }}
+					{{.|prefixLines "// "}}
+				{{- end}}
+				{{- if $field.IsId }}
+					{{ $field.Name|go }}: UniqueID(m.{{ $field.Name|go }}, "{{ $model.Name|go }}"),
+				{{- else if $field.IsRelation }}
+				{{- else }}	
+					{{ $field.Name|go }}: m.{{ $field.Name|go }},
+				{{end -}}
+			{{- end }}
+		}
+
+		{{- range $field := .Fields }}
+			{{- if $field.IsRelation }}
+
+			if !m.{{ $field.Name|go }}ID.IsZero() {
+				if m.R == nil || m.R.{{ $field.Name|go }} == nil {
+					r.{{ $field.Name|go }} = {{ $field.Name|go }}WithID(m.BlockChoiceID.Int)
+				} else {
+					r.{{ $field.Name|go }} ={{ $field.Name|go }}ToGraphQL(m.R.BlockChoice)
+				}
+			}
+			{{end -}}
+		{{- end }}
+	}
+
+
+	func {{ .Name|go }}ToBoiler(m *{{ .Name|go }})( *models.{{ .Name|go }}) {
+		if m == nil {
+			return nil
+		}	
+		r := &models.{{ .Name|go }}{
+			{{- range $field := .Fields }}
+				{{- with .Description }}
+					{{.|prefixLines "// "}}
+				{{- end}}
+				{{- if $field.IsId }}
+					{{ $field.Name|go }}: ID(m.{{ $field.Name|go }}, "{{ $model.Name|go }}"),
+				{{- else if $field.IsRelation }}
+				{{- else }}	
+					{{ $field.Name|go }}: m.{{ $field.Name|go }},
+				{{end -}}
+			{{- end }}
+		}
+
+		{{- range $field := .Fields }}
+			{{- if $field.IsRelation }}
+
+		// {{ $field.Name|go }}: {{ $field.Name|go }}ToBoiler(m.{{ $field.Name|go }}),
+
+			{{end -}}
+		{{- end }}
+
+	}
+
+
+
+
+	{{- range $iface := .Implements }}
+		func ({{ $model.Name|go }}) Is{{ $iface|go }}() {}
+	{{- end }}
+{{- end}}
+
+{{ range $enum := .Enums }}
+	{{ with .Description }} {{.|prefixLines "// "}} {{end}}
+	type {{.Name|go }} string
+	const (
+	{{- range $value := .Values}}
+		{{- with .Description}}
+			{{.|prefixLines "// "}}
+		{{- end}}
+		{{ $enum.Name|go }}{{ .Name|go }} {{$enum.Name|go }} = {{.Name|quote}}
+	{{- end }}
+	)
+
+	var All{{.Name|go }} = []{{ .Name|go }}{
+	{{- range $value := .Values}}
+		{{$enum.Name|go }}{{ .Name|go }},
+	{{- end }}
+	}
+
+	func (e {{.Name|go }}) IsValid() bool {
+		switch e {
+		case {{ range $index, $element := .Values}}{{if $index}},{{end}}{{ $enum.Name|go }}{{ $element.Name|go }}{{end}}:
+			return true
+		}
+		return false
+	}
+
+	func (e {{.Name|go }}) String() string {
+		return string(e)
+	}
+
+	func (e *{{.Name|go }}) UnmarshalGQL(v interface{}) error {
+		str, ok := v.(string)
+		if !ok {
+			return fmt.Errorf("enums must be strings")
+		}
+
+		*e = {{ .Name|go }}(str)
+		if !e.IsValid() {
+			return fmt.Errorf("%s is not a valid {{ .Name }}", str)
+		}
+		return nil
+	}
+
+	func (e {{.Name|go }}) MarshalGQL(w io.Writer) {
+		fmt.Fprint(w, strconv.Quote(e.String()))
+	}
+
+{{- end }}

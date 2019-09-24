@@ -1,4 +1,4 @@
-package stubgen
+package convert_model
 
 import (
 	"path/filepath"
@@ -37,6 +37,13 @@ func (m *Plugin) GenerateCode(data *codegen.Data) error {
 		return err
 	}
 	pkgName := NameForDir(filepath.Dir(abs))
+
+	// jsonData, err := json.Marshal(data)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	// return
+	// }
+	// fmt.Println(string(jsonData))
 
 	return templates.Render(templates.Options{
 		PackageName: pkgName,
