@@ -1,4 +1,4 @@
-```
+```golang
 // +build ignore
 
 package main
