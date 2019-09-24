@@ -36,16 +36,17 @@ func UniqueID(id int, entityName string) string {
 			return nil
 		}
 		r := &{{ .Name|go }}{
-			{{- range $field := .Fields }}
+			{{ range $field := .Fields }}
+			
 				{{- with .Description }}
 					{{.|prefixLines "// "}}
 				{{- end}}
-				{{- if $field.IsId }}
+				{{- if $field.IsId -}}
 					{{ $field.Name|go }}: UniqueID(m.{{ $field.Name|go }}, "{{ $model.Name|go }}"),
-				{{- else if $field.IsRelation }}
+				{{- else if $field.IsRelation -}}
 				{{- else }}	
 					{{ $field.Name|go }}: m.{{ $field.Name|go }},
-				{{end -}}
+				{{- end -}}
 			{{- end }}
 		}
 
