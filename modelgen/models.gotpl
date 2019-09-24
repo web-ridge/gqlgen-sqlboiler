@@ -8,34 +8,56 @@
 {{ reserveImport "bytes"  }}
 {{ reserveImport "strings"  }}
 
+{{ reserveImport "github.com/volatiletech/null"  }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/types"  }}
+
 {{ reserveImport "github.com/vektah/gqlparser" }}
 {{ reserveImport "github.com/vektah/gqlparser/ast" }}
 {{ reserveImport "github.com/99designs/gqlgen/graphql" }}
 {{ reserveImport "github.com/99designs/gqlgen/graphql/introspection" }}
 {{ reserveImport  $.BackendModelsPath }}
+{{ reserveImport  $.FrontendModelsPath }}
 
 
-func ID(ID string, entityName string) int {
-	i, _ := strconv.ParseInt(strings.TrimPrefix(ID, entityName+"_"), 10, 64)
-	return int(i)
+func ID(ID string, entityName string) uint {
+	i, _ := strconv.ParseUint(strings.TrimPrefix(ID, entityName+"_"), 10, 64)
+	return uint(i)
 }
 
-func UniqueID(id int, entityName string) string {
-	return entityName + "_" + strconv.Itoa(id)
+func UniqueID(id uint, entityName string) string {
+	return entityName + "_" + strconv.Itoa(int(id))
 }
 
 
-
-
+func stringifyToNullString(x interface{}) *string {
+	switch x.(type) {
+	case nil:
+		return nil
+	case types.NullDecimal:
+		s := strconv.Itoa(x.(types.NullDecimal).Big())
+		return &s
+	case null.String:
+		return x.(null.String).Ptr()
+	case null.Int:
+		intV := x.(null.Int).Ptr()
+		if intV != nil {
+			s := strconv.Itoa(*intV)
+			return &s
+		}
+		return nil
+	default:
+		return nil
+	}
+}
 
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 
-	func {{ .Name|go }}ToGraphQL(m *models.{{ .Name|go }})( *{{ .Name|go }}) {
+	func {{ .Name|go }}ToGraphQL(m *models.{{ .Name|go }})( *graphql_models.{{ .Name|go }}) {
 		if m == nil {
 			return nil
 		}
-		r := &{{ .Name|go }}{
+		r := &graphql_models.{{ .Name|go }}{
 			{{ range $field := .Fields }}
 			
 				{{- with .Description }}
@@ -44,6 +66,8 @@ func UniqueID(id int, entityName string) string {
 				{{- if $field.IsId -}}
 					{{ $field.Name|go }}: UniqueID(m.{{ $field.Name|go }}, "{{ $model.Name|go }}"),
 				{{- else if $field.IsRelation -}}
+				{{- else if $field.IsPointerToString }}
+					{{ $field.Name|go }}: stringifyToNullString(m.{{ $field.Name|go }}),
 				{{- else }}	
 					{{ $field.Name|go }}: m.{{ $field.Name|go }},
 				{{- end -}}
@@ -67,21 +91,21 @@ func UniqueID(id int, entityName string) string {
 	}
 
 
-	func {{ .Name|go }}ToBoiler(m *{{ .Name|go }})( *models.{{ .Name|go }}) {
+	func {{ .Name|go }}ToBoiler(m *graphql_models.{{ .Name|go }})( *models.{{ .Name|go }}) {
 		if m == nil {
 			return nil
 		}	
 		r := &models.{{ .Name|go }}{
-			{{- range $field := .Fields }}
+			{{ range $field := .Fields }}
 				{{- with .Description }}
 					{{.|prefixLines "// "}}
 				{{- end}}
-				{{- if $field.IsId }}
+				{{- if $field.IsId -}}
 					{{ $field.Name|go }}: ID(m.{{ $field.Name|go }}, "{{ $model.Name|go }}"),
 				{{- else if $field.IsRelation }}
 				{{- else }}	
 					{{ $field.Name|go }}: m.{{ $field.Name|go }},
-				{{end -}}
+				{{- end -}}
 			{{- end }}
 		}
 
