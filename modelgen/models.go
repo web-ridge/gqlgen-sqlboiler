@@ -13,12 +13,14 @@ import (
 )
 
 type ModelBuild struct {
-	BackendModelsPath string
-	PackageName       string
-	Interfaces        []*Interface
-	Models            []*Object
-	Enums             []*Enum
-	Scalars           []string
+	BackendModelsPath  string
+	FrontendModelsPath string
+
+	PackageName string
+	Interfaces  []*Interface
+	Models      []*Object
+	Enums       []*Enum
+	Scalars     []string
 }
 
 type Interface struct {
@@ -34,13 +36,14 @@ type Object struct {
 }
 
 type Field struct {
-	Description  string
-	Name         string
-	RelationName string
-	Type         types.Type
-	Tag          string
-	IsId         bool
-	IsRelation   bool
+	Description       string
+	Name              string
+	RelationName      string
+	Type              types.Type
+	Tag               string
+	IsPointerToString bool
+	IsId              bool
+	IsRelation        bool
 }
 
 type Enum struct {
@@ -54,26 +57,33 @@ type EnumValue struct {
 	Name        string
 }
 
-func New(filename, backendModelsPath string) plugin.Plugin {
-	return &Plugin{filename: filename, backendModelsPath: backendModelsPath}
+func New(filename, backendModelsPath, frontendModelsPath string) plugin.Plugin {
+	return &Plugin{filename: filename, backendModelsPath: backendModelsPath, frontendModelsPath: frontendModelsPath}
 }
 
 type Plugin struct {
-	filename          string
-	backendModelsPath string
+	filename           string
+	backendModelsPath  string
+	frontendModelsPath string
 }
 
 var _ plugin.ConfigMutator = &Plugin{}
 
 func (m *Plugin) Name() string {
-	return "modelgen"
+	return "convert-generator"
 }
 
-func (m *Plugin) MutateConfig(cfg *config.Config) error {
-	fmt.Println("cfg.Check()")
-	if err := cfg.Check(); err != nil {
-		return err
-	}
+func copyConfig(cfg config.Config) *config.Config {
+	return &cfg
+}
+
+func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
+	// fmt.Println("cfg.Check()")
+	// if err := cfg.Check(); err != nil {
+	// 	return err
+	// }
+	cfg := copyConfig(*ignoredConfig)
+
 	fmt.Println("cfg.LoadSchema()")
 	schema, _, err := cfg.LoadSchema()
 	if err != nil {
@@ -94,8 +104,9 @@ func (m *Plugin) MutateConfig(cfg *config.Config) error {
 	}
 
 	b := &ModelBuild{
-		BackendModelsPath: m.backendModelsPath,
-		PackageName:       cfg.Model.Package,
+		FrontendModelsPath: m.frontendModelsPath,
+		BackendModelsPath:  m.backendModelsPath,
+		PackageName:        cfg.Model.Package,
 	}
 
 	for _, schemaType := range schema.Types {
@@ -185,15 +196,16 @@ func (m *Plugin) MutateConfig(cfg *config.Config) error {
 				// fmt.Println("-----       -----")
 				typ = binder.CopyModifiersFromAst(field.Type, typ)
 				isRelation := fieldDef.Kind == ast.Object
-				fmt.Println(isRelation, "isRelation")
-				fmt.Println(ast.Object, "ast.Object")
-				fmt.Println(fieldDef, "fieldDef")
+				// fmt.Println(isRelation, "isRelation")
+				// fmt.Println(ast.Object, "ast.Object")
+				fmt.Println(typ, "typ")
 
 				if isStruct(typ) && (fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject) {
 					typ = types.NewPointer(typ)
 				}
 
 				isId := name == "id"
+				isPointerToString := typ.String() == "*string"
 				// if isId {
 				// 	fmt.Println(isId)
 				// } else {
@@ -201,13 +213,14 @@ func (m *Plugin) MutateConfig(cfg *config.Config) error {
 				// }
 
 				it.Fields = append(it.Fields, &Field{
-					IsId:         isId,
-					IsRelation:   isRelation,
-					Name:         name,
-					RelationName: fieldDef.Name,
-					Type:         typ,
-					Description:  field.Description,
-					Tag:          `json:"` + field.Name + `"`,
+					IsId:              isId,
+					IsRelation:        isRelation,
+					IsPointerToString: isPointerToString,
+					Name:              name,
+					RelationName:      fieldDef.Name,
+					Type:              typ,
+					Description:       field.Description,
+					Tag:               `json:"` + field.Name + `"`,
 				})
 			}
 
@@ -257,12 +270,17 @@ func (m *Plugin) MutateConfig(cfg *config.Config) error {
 		return nil
 	}
 
-	return templates.Render(templates.Options{
+	renderError := templates.Render(templates.Options{
 		PackageName:     cfg.Model.Package,
 		Filename:        m.filename,
 		Data:            b,
 		GeneratedHeader: true,
 	})
+
+	if renderError != nil {
+		fmt.Println("renderError", renderError)
+	}
+	return nil
 }
 
 func isStruct(t types.Type) bool {
