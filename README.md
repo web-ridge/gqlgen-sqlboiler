@@ -1,3 +1,8 @@
+Put this in your program
+
+Run normal generator
+`go run github.com/99designs/gqlgen -v`
+
 ```golang
 // +build ignore
 
