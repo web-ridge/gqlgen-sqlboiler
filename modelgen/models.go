@@ -3,6 +3,8 @@ package modelgen
 import (
 	"fmt"
 	"go/types"
+	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -11,6 +13,12 @@ import (
 	"github.com/99designs/gqlgen/plugin"
 	"github.com/vektah/gqlparser/ast"
 )
+
+var pathRegex *regexp.Regexp
+
+func init() {
+	pathRegex, _ = regexp.Compile(`src\/(.*)`)
+}
 
 type ModelBuild struct {
 	BackendModelsPath  string
@@ -77,6 +85,18 @@ func copyConfig(cfg config.Config) *config.Config {
 	return &cfg
 }
 
+func getGoImportFromFile(dir string) string {
+	// graphql_models
+
+	longPath, err := filepath.Abs(dir)
+	if err != nil {
+		fmt.Println("abs 1", err)
+	}
+	// src/Users/richardlindhout/go/src/gitlab.com/eyeontarget/app/backend/graphql_models
+	return strings.TrimPrefix(pathRegex.FindString(longPath), "src/")
+
+}
+
 func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 	// fmt.Println("cfg.Check()")
 	// if err := cfg.Check(); err != nil {
@@ -104,10 +124,12 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 	}
 
 	b := &ModelBuild{
-		FrontendModelsPath: m.frontendModelsPath,
-		BackendModelsPath:  m.backendModelsPath,
+		FrontendModelsPath: getGoImportFromFile(m.frontendModelsPath),
+		BackendModelsPath:  getGoImportFromFile(m.backendModelsPath),
 		PackageName:        cfg.Model.Package,
 	}
+
+	parseBoilerFile(m.backendModelsPath)
 
 	for _, schemaType := range schema.Types {
 
@@ -198,7 +220,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 				isRelation := fieldDef.Kind == ast.Object
 				// fmt.Println(isRelation, "isRelation")
 				// fmt.Println(ast.Object, "ast.Object")
-				fmt.Println(typ, "typ")
+				// fmt.Println(typ, "typ")
 
 				if isStruct(typ) && (fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject) {
 					typ = types.NewPointer(typ)
