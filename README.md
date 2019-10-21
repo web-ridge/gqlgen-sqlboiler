@@ -6,6 +6,8 @@ Run normal generator
 ```golang
 // +build ignore
 
+// +build ignore
+
 package main
 
 import (
@@ -29,8 +31,8 @@ func main() {
 	err = api.Generate(cfg,
 		api.AddPlugin(cm.New(
 			"convert/convert.go",
-			"gitlab.com/eyeontarget/app/backend/models",
-			"gitlab.com/eyeontarget/app/backend/graphql_models",
+			"models",
+			"graphql_models",
 		)), // This is the magic line
 	)
 	if err != nil {
@@ -39,6 +41,7 @@ func main() {
 		os.Exit(3)
 	}
 }
+
 
 ```
 
