@@ -92,7 +92,7 @@ func getGoImportFromFile(dir string) string {
 
 	longPath, err := filepath.Abs(dir)
 	if err != nil {
-		fmt.Println("abs 1", err)
+		fmt.Println("error while trying to convert folder to gopath", err)
 	}
 	// src/Users/richardlindhout/go/src/gitlab.com/eyeontarget/app/backend/graphql_models
 	return strings.TrimPrefix(pathRegex.FindString(longPath), "src/")
@@ -106,12 +106,12 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 	// }
 	cfg := copyConfig(*ignoredConfig)
 
-	fmt.Println("cfg.LoadSchema()")
+	// fmt.Println("cfg.LoadSchema()")
 	schema, _, err := cfg.LoadSchema()
 	if err != nil {
 		return err
 	}
-	fmt.Println("cfg.Autobind(schema)")
+	// fmt.Println("cfg.Autobind(schema)")
 	err = cfg.Autobind(schema)
 	if err != nil {
 		return err
@@ -119,7 +119,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 
 	cfg.InjectBuiltins(schema)
 
-	fmt.Println("cfg.InjectBuiltins(schema)")
+	// fmt.Println("cfg.InjectBuiltins(schema)")
 	binder, err := cfg.NewBinder(schema)
 	if err != nil {
 		return err
@@ -240,7 +240,8 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 				// fmt.Println(boilerKey, ":", boilerType)
 				boilerType, ok := boilerTypeMap[boilerKey]
 				if !ok {
-					fmt.Println(boilerKey, ":", boilerType)
+
+					fmt.Println("Could not find boilerType for key:type = ", boilerKey, ":", boilerType)
 
 				}
 

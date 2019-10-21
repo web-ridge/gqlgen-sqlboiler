@@ -21,19 +21,18 @@ var ignoreFiles = []string{"boil_queries.go", "boil_table_names.go", "boil_types
 func parseBoilerFile(dir string) map[string]string {
 	m := make(map[string]string, 0)
 
-	fmt.Println(dir)
+	// fmt.Println(dir)
 	dir, err := filepath.Abs(dir)
 	if err != nil {
-		fmt.Println("abs", err)
+		fmt.Println("abs error", err)
 		return m
 	}
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		fmt.Println("readdir", err)
+		fmt.Println("readdir error", err)
 		return m
 	}
 
-	fmt.Println("files found in dir!!", len(files))
 	fset := token.NewFileSet()
 	for _, file := range files {
 		// only pick .go files and ignore test files
@@ -42,7 +41,7 @@ func parseBoilerFile(dir string) map[string]string {
 			continue
 		}
 
-		fmt.Println("file!!", file.Name())
+		// fmt.Println("file!!", file.Name())
 
 		filename := filepath.Join(dir, file.Name())
 		if src, err := parser.ParseFile(fset, filename, nil, parser.ParseComments); err == nil {
@@ -97,10 +96,10 @@ func parseBoilerFile(dir string) map[string]string {
 							key := structName + "." + name
 
 							m[key] = t.X.(*ast.Ident).Name + "." + t.Sel.Name
-						case *ast.StarExpr:
-							// Used for pointers to external structs
-						case *ast.ArrayType:
-							fmt.Println("Array type....")
+						// case *ast.StarExpr:
+						// 	// Used for pointers to external structs
+						// case *ast.ArrayType:
+
 						case *ast.Ident:
 							t, _ := field.Type.(*ast.Ident) // The type as a string
 							typeName := t.Name
@@ -119,7 +118,7 @@ func parseBoilerFile(dir string) map[string]string {
 							// fmt.Println(tag)
 
 						default:
-
+							// fmt.Println("ignoring....", field.Names)
 						}
 					}
 				}

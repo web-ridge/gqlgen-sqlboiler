@@ -26,8 +26,6 @@ func main() {
 		os.Exit(2)
 	}
 
-	fmt.Println()
-
 	err = api.Generate(cfg,
 		api.AddPlugin(cm.New(
 			"convert/convert.go",
