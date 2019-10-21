@@ -11,6 +11,7 @@ import (
 	"github.com/99designs/gqlgen/codegen/config"
 	"github.com/99designs/gqlgen/codegen/templates"
 	"github.com/99designs/gqlgen/plugin"
+	"github.com/iancoleman/strcase"
 	"github.com/vektah/gqlparser/ast"
 )
 
@@ -47,6 +48,7 @@ type Field struct {
 	Description       string
 	Name              string
 	RelationName      string
+	BoilerType        string
 	Type              types.Type
 	Tag               string
 	IsPointerToString bool
@@ -129,7 +131,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 		PackageName:        cfg.Model.Package,
 	}
 
-	parseBoilerFile(m.backendModelsPath)
+	boilerTypeMap := parseBoilerFile(m.backendModelsPath)
 
 	for _, schemaType := range schema.Types {
 
@@ -226,28 +228,40 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					typ = types.NewPointer(typ)
 				}
 
+				if strings.HasPrefix(it.Name, "_") {
+					continue
+				}
+
 				isId := name == "id"
 				isPointerToString := typ.String() == "*string"
+				structKey := strings.Replace(strcase.ToCamel(name), "Id", "ID", -1)
+
+				boilerKey := it.Name + "." + structKey
+				// fmt.Println(boilerKey, ":", boilerType)
+				boilerType, ok := boilerTypeMap[boilerKey]
+				if !ok {
+					fmt.Println(boilerKey, ":", boilerType)
+
+				}
+
 				// if isId {
 				// 	fmt.Println(isId)
 				// } else {
 				// 	fmt.Println(name)
 				// }
+				// fmt.Println(boilerType)
 
 				it.Fields = append(it.Fields, &Field{
 					IsId:              isId,
 					IsRelation:        isRelation,
 					IsPointerToString: isPointerToString,
+					BoilerType:        boilerType,
 					Name:              name,
 					RelationName:      fieldDef.Name,
 					Type:              typ,
 					Description:       field.Description,
 					Tag:               `json:"` + field.Name + `"`,
 				})
-			}
-
-			if strings.HasPrefix(it.Name, "_") {
-				continue
 			}
 
 			b.Models = append(b.Models, it)

@@ -53,9 +53,10 @@ func parseBoilerFile(dir string) map[string]string {
 					continue
 				}
 				// ast
-				if obj.Kind == ast.Typ {
+				if obj.Kind == ast.Typ &&
+					!strings.HasSuffix(obj.Name, "Slice") {
 					structName = obj.Name
-					// fmt.Println(obj.Name)
+					// break
 
 				}
 			}
@@ -88,12 +89,14 @@ func parseBoilerFile(dir string) map[string]string {
 						switch field.Type.(type) {
 
 						case *ast.SelectorExpr:
-							t, _ := field.Type.(*ast.SelectorExpr) // The type as a string
-							// typeName := t.X
-							name := field.Names[0].Name //name as a string
-							// // fmt.Println(name + " : " + typeName)
+							t, _ := field.Type.(*ast.SelectorExpr)
+							name := field.Names[0].Name
+							// if strings.HasPrefix(name, "_") || strings.HasPrefix(structName, "_") {
+							// 	continue
+							// }
+							key := structName + "." + name
 
-							m[structName+"."+name] = t.X.(*ast.Ident).Name + "." + t.Sel.Name
+							m[key] = t.X.(*ast.Ident).Name + "." + t.Sel.Name
 						case *ast.StarExpr:
 							// Used for pointers to external structs
 						case *ast.ArrayType:
@@ -102,6 +105,9 @@ func parseBoilerFile(dir string) map[string]string {
 							t, _ := field.Type.(*ast.Ident) // The type as a string
 							typeName := t.Name
 							name := field.Names[0].Name //name as a string
+							// if strings.HasPrefix(name, "_") || strings.HasPrefix(structName, "_") {
+							// 	continue
+							// }
 							// fmt.Println(name + " : " + typeName)
 							m[structName+"."+name] = typeName
 							// tag := ""
@@ -157,9 +163,25 @@ func parseBoilerFile(dir string) map[string]string {
 			// return src.Name.Name
 		}
 	}
+	fmt.Println(" ")
+	fmt.Println(" ")
+	fmt.Println(" ")
+	fmt.Println("START OF MAP DUMP")
+	fmt.Println("START OF MAP DUMP")
+	fmt.Println("START OF MAP DUMP")
+	fmt.Println(" ")
+	fmt.Println(" ")
+	for key, value := range m {
+		fmt.Println(key, ":", value)
+	}
+	fmt.Println(" ")
+	fmt.Println(" ")
+	fmt.Println("END OF MAP DUMP")
+	fmt.Println("END OF MAP DUMP")
+	fmt.Println("END OF MAP DUMP")
+	fmt.Println(" ")
+	fmt.Println(" ")
+	fmt.Println(" ")
 
-	// for key, value := range m {
-	// 	fmt.Println(key, ":", value)
-	// }
 	return m
 }
