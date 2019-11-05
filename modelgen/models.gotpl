@@ -7,7 +7,7 @@
 {{ reserveImport "errors"  }}
 {{ reserveImport "bytes"  }}
 {{ reserveImport "strings"  }}
-
+{{ reserveImport "github.com/ericlagergren/decimal"  }}
 {{ reserveImport "github.com/volatiletech/null"  }}
 {{ reserveImport "github.com/volatiletech/sqlboiler/types"  }}
 
@@ -18,62 +18,194 @@
 {{ reserveImport  $.BackendModelsPath }}
 {{ reserveImport  $.FrontendModelsPath }}
 
+func StringToIntID(ID string, entityName string) int {
+	i, _ := strconv.ParseInt(strings.TrimPrefix(ID, entityName+"_"), 10, 64)
+	return int(i)
+}
 
-func ID(ID string, entityName string) uint {
+func IntToStringUniqueID(id int, entityName string) string {
+	return entityName + "_" + strconv.Itoa(id)
+}
+
+func StringToUintID(ID string, entityName string) uint {
 	i, _ := strconv.ParseUint(strings.TrimPrefix(ID, entityName+"_"), 10, 64)
 	return uint(i)
 }
 
-func UniqueID(id uint, entityName string) string {
+func UintToStringUniqueID(id uint, entityName string) string {
 	return entityName + "_" + strconv.Itoa(int(id))
 }
 
+func NullDotBoolToPointerBool(v null.Bool) *bool {
+	return v.Ptr()
+}
 
-func stringifyToNullString(x interface{}) *string {
-	switch x.(type) {
-	case nil:
+func NullDotStringToPointerString(v null.String) *string {
+	return v.Ptr()
+}
+
+
+func NullDotTimeToPointerInt(v null.Time) *int {
+	pv := v.Ptr()
+	if pv == nil {
 		return nil
-	case types.NullDecimal:
-		s := strconv.Itoa(x.(types.NullDecimal).Big())
-		return &s
-	case null.String:
-		return x.(null.String).Ptr()
-	case null.Int:
-		intV := x.(null.Int).Ptr()
-		if intV != nil {
-			s := strconv.Itoa(*intV)
-			return &s
+	}
+	u := int(pv.Unix())
+	return &u
+}
+
+func NullDotUintToPointerInt(v null.Uint) *int {
+	pv := v.Ptr()
+	if pv == nil {
+		return nil
+	}
+	u := int(*pv)
+	return &u
+}
+
+func PointerIntToNullDotTime(v *int) null.Time {
+	if v == nil {
+		return null.Time{
+			Valid: false,
 		}
-		return nil
-	default:
-		return nil
+	}
+	return null.Time{
+		Valid: true,
+		Time:  time.Unix(int64(*v), 0),
 	}
 }
 
-func stringToBoiler(x interface{}, dbType interface{}) interface{} {
+func PointerStringToNullDotString(v *string) null.String {
+	if v == nil {
+		return null.String{
+			Valid: false,
+		}
+	}
+	return null.String{
+		Valid:  v != nil,
+		String: *v,
+	}
+}
+
+func PointerBoolToNullDotBool(v *bool) null.Bool {
+	if v == nil {
+		return null.Bool{
+			Valid: false,
+		}
+	}
+	return null.Bool{
+		Valid: v != nil,
+		Bool:  *v,
+	}
+}
+
+func TypesNullDecimalToPointerString(v types.NullDecimal) *string {
+	s := v.String()
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func PointerStringToTypesNullDecimal(v *string) types.NullDecimal {
+	if v == nil {
+		return types.NewNullDecimal(nil)
+	}
+	d := new(decimal.Big)
+	if _, ok := d.SetString(*v); !ok {
+		nd := types.NewNullDecimal(nil)
+		if err := d.Context.Err(); err != nil {
+			return nd
+		}
+		// TODO: error handling maybe write log line here
+		// https://github.com/volatiletech/sqlboiler/blob/master/types/decimal.go#L156
+		return nd
+	}
+
+	return types.NewNullDecimal(d)
+}
+
+func PointerIntToNullDotInt(v *int) null.Int {
+	// TODO
+	if v == nil {
+		return null.Int{}
+	}
+	return null.Int{}
+}
+func PointerIntToNullDotUint(v *int) null.Uint {
+		// TODO
+	if v == nil {
+		return null.Uint{}
+	}
+	return null.Uint{}
+}
+func NullDotIntToPointerInt(v null.Int) *int {
+	// TODO
 	return nil
 }
+func IntToInt8(v int) int8 {
+	return int8(v)
+}
+func Int8ToInt(v int8) int {
+	return int(v)
+}
+func NullDotFloat64ToPointerFloat64(v null.Float64) *float64 {
+	// TODO
+	return nil
+	
+}
+func PointerFloat64ToNullDotFloat64(v *float64) null.Float64 {
+		// TODO
+	if v == nil {
+		return null.Float64{}
+	}
+	return null.Float64{}
+}
 
-func boilerToNullString(x interface{}) *string {
-	switch x.(type) {
-	case nil:
-		return nil
-	case types.NullDecimal:
-		s := strconv.Itoa(x.(types.NullDecimal).Big())
-		return &s
-	case null.String:
-		return x.(null.String).Ptr()
-	case null.Int:
-		intV := x.(null.Int).Ptr()
-		if intV != nil {
-			s := strconv.Itoa(*intV)
-			return &s
-		}
-		return nil
-	default:
+func IntToUint(v int) uint {
+	return uint(v)
+}
+
+func UintToInt(v uint) int {
+	return int(v)
+}
+
+func BoolToInt(v bool) int {
+	if v == true {
+		return 1
+	}
+	return 0
+}
+
+func IntToBool(v int) bool {
+	return v == 1
+}
+
+func NullDotBoolToPointerInt(v null.Bool) *int {
+	pv := v.Ptr()
+	if pv == nil {
 		return nil
 	}
+	if *pv == true {
+		i := 1
+		return &i
+	}
+	i := 0
+	return &i
 }
+
+func PointerIntToNullDotBool(v *int) null.Bool{
+	if v == nil {
+		return null.Bool{
+			Valid: false,
+		}
+	}
+	return null.Bool{
+		Valid: v != nil,
+		Bool:  *v == 1,
+	}
+}
+
 
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
@@ -89,28 +221,29 @@ func boilerToNullString(x interface{}) *string {
 					{{.|prefixLines "// "}}
 				{{- end}}
 				{{- if $field.IsId -}}
-					{{ $field.Name|go }}: UniqueID(m.{{ $field.Name|go }}, "{{ $model.Name|go }}"),
+					{{ $field.Name|go }}: {{ $field.CustomToFunction }}UniqueID(m.{{ $field.BoilerName|go }}, "{{ $model.Name|go }}"),
 				{{- else if $field.IsRelation -}}
-				{{- else if $field.IsPointerToString }}
-					{{ $field.Name|go }}: boilerToNullString(m.{{ $field.Name|go }}),
+				
+				{{- else if $field.IsCustomFunction }}
+					{{ $field.Name|go }}: {{ $field.CustomToFunction }}(m.{{ $field.BoilerName|go }}),
 				{{- else }}	
-					{{ $field.Name|go }}: m.{{ $field.Name|go }},
+					{{ $field.Name|go }}: m.{{ $field.BoilerName|go }},
 				{{- end -}}
 			{{- end }}
 		}
 
-		{{- range $field := .Fields }}
-			{{- if $field.IsRelation }}
-			// TODO: relation
-			if !m.{{ $field.Name|go }}ID.IsZero() {
-				// if m.R == nil || m.R.{{ $field.Name|go }} == nil {
-				// 	r.{{ $field.Name|go }} = {{ $field.Name|go }}WithID(m.{{ $field.Name|go }}ID.Int)
-				// } else {
-					r.{{ $field.Name|go }} ={{ $field.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }}s)
-				// }
-			}
-			{{end -}}
-		{{- end }}
+		// {{- range $field := .Fields }}
+		// 	{{- if $field.IsRelation }}
+		// 	// TODO: relation
+		// 	if !m.{{ $field.Name|go }}ID.IsZero() {
+		// 		// if m.R == nil || m.R.{{ $field.Name|go }} == nil {
+		// 		// 	r.{{ $field.Name|go }} = {{ $field.Name|go }}WithID(m.{{ $field.Name|go }}ID.Int)
+		// 		// } else {
+		// 			r.{{ $field.Name|go }} ={{ $field.BoilerName|go }}ToGraphQL(m.R.{{ $field.Name|go }}s)
+		// 		// }
+		// 	}
+		// 	{{end -}}
+		// {{- end }}
 
 		return r
 	}
@@ -120,30 +253,29 @@ func boilerToNullString(x interface{}) *string {
 		if m == nil {
 			return nil
 		}	
-		r := &models.{{ .Name|go }}{}
-		// r := &models.{{ .Name|go }}{
+		r := &models.{{ .Name|go }}{
 		{{ range $field := .Fields }}
 			{{- with .Description }}
 				{{.|prefixLines "// "}}
 			{{- end}}
 			{{- if $field.IsId -}}
-				r.{{ $field.Name|go }} = ID(m.{{ $field.Name|go }}, "{{ $model.Name|go }}")
+				{{ $field.BoilerName|go }} : {{ $field.CustomFromFunction }}ID(m.{{ $field.Name|go }}, "{{ $model.Name|go }}"),
 			{{- else if $field.IsRelation }}
-			{{- else if $field.IsPointerToString }}
-				r.{{ $field.Name|go }} = stringToBoiler(m.{{ $field.Name|go }}, r.{{ $field.Name|go }})
+			{{- else if $field.IsCustomFunction }}
+				{{ $field.BoilerName|go }} : {{ $field.CustomFromFunction }}(m.{{ $field.Name|go }}),
 			{{- else }}	
-				r.{{ $field.Name|go }} = m.{{ $field.Name|go }}
+				{{ $field.BoilerName|go }}: m.{{ $field.Name|go }},
 			{{- end -}}
 		{{- end }}
-		// }
+		}
 
-		{{- range $field := .Fields }}
-			{{- if $field.IsRelation }}
-				// TODO relation
-		// {{ $field.Name|go }}: {{ $field.Name|go }}ToBoiler(m.{{ $field.Name|go }}),
+		// {{- range $field := .Fields }}
+		// 	{{- if $field.IsRelation }}
+		// 		// TODO relation
+		// // {{ $field.Name|go }}: {{ $field.Name|go }}ToBoiler(m.{{ $field.Name|go }}),
 
-			{{end -}}
-		{{- end }}
+		// 	{{end -}}
+		// {{- end }}
 		return r
 	}
 

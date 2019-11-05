@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"io/ioutil"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -46,19 +47,19 @@ func parseBoilerFile(dir string) map[string]string {
 		filename := filepath.Join(dir, file.Name())
 		if src, err := parser.ParseFile(fset, filename, nil, parser.ParseComments); err == nil {
 
-			var structName string
-			for _, obj := range src.Scope.Objects {
-				if !ast.IsExported(obj.Name) {
-					continue
-				}
-				// ast
-				if obj.Kind == ast.Typ &&
-					!strings.HasSuffix(obj.Name, "Slice") {
-					structName = obj.Name
-					// break
+			// var structName string
+			// for _, obj := range src.Scope.Objects {
+			// 	if !ast.IsExported(obj.Name) {
+			// 		continue
+			// 	}
+			// 	// ast
+			// 	if obj.Kind == ast.Typ &&
+			// 		!strings.HasSuffix(obj.Name, "Slice") {
+			// 		structName = obj.Name
+			// 		// break
 
-				}
-			}
+			// 	}
+			// }
 			for _, decl := range src.Decls {
 				typeDecl, ok := decl.(*ast.GenDecl)
 				if !ok {
@@ -71,10 +72,13 @@ func parseBoilerFile(dir string) map[string]string {
 					if !ok {
 						continue
 					}
+					// safeTypeSpec.Name // struct name
+
 					safeStructDecl, ok := safeTypeSpec.Type.(*ast.StructType)
 					if !ok {
 						continue
 					}
+
 					for _, field := range safeStructDecl.Fields.List {
 						// if t := reflect.TypeOf(field.Type); t.Kind() == reflect.Ptr {
 						// 	fmt.Println("STRUCT?????", "*"+t.Elem().Name())
@@ -93,7 +97,7 @@ func parseBoilerFile(dir string) map[string]string {
 							// if strings.HasPrefix(name, "_") || strings.HasPrefix(structName, "_") {
 							// 	continue
 							// }
-							key := structName + "." + name
+							key := safeTypeSpec.Name.String() + "." + name
 
 							m[key] = t.X.(*ast.Ident).Name + "." + t.Sel.Name
 						// case *ast.StarExpr:
@@ -108,7 +112,7 @@ func parseBoilerFile(dir string) map[string]string {
 							// 	continue
 							// }
 							// fmt.Println(name + " : " + typeName)
-							m[structName+"."+name] = typeName
+							m[safeTypeSpec.Name.String()+"."+name] = typeName
 							// tag := ""
 							// if field.Tag != nil {
 							// 	tag = field.Tag.Value //the tag as a string
@@ -162,25 +166,33 @@ func parseBoilerFile(dir string) map[string]string {
 			// return src.Name.Name
 		}
 	}
-	// fmt.Println(" ")
-	// fmt.Println(" ")
-	// fmt.Println(" ")
-	// fmt.Println("START OF MAP DUMP")
-	// fmt.Println("START OF MAP DUMP")
-	// fmt.Println("START OF MAP DUMP")
-	// fmt.Println(" ")
-	// fmt.Println(" ")
-	// for key, value := range m {
-	// 	fmt.Println(key, ":", value)
-	// }
-	// fmt.Println(" ")
-	// fmt.Println(" ")
-	// fmt.Println("END OF MAP DUMP")
-	// fmt.Println("END OF MAP DUMP")
-	// fmt.Println("END OF MAP DUMP")
-	// fmt.Println(" ")
-	// fmt.Println(" ")
-	// fmt.Println(" ")
+
+	// To store the keys in slice in sorted order
+	var keys []string
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	fmt.Println(" ")
+	fmt.Println(" ")
+	fmt.Println(" ")
+	fmt.Println("START OF MAP DUMP")
+	fmt.Println("START OF MAP DUMP")
+	fmt.Println("START OF MAP DUMP")
+	fmt.Println(" ")
+	fmt.Println(" ")
+	for _, key := range keys {
+		fmt.Println(key, ":", m[key])
+	}
+	fmt.Println(" ")
+	fmt.Println(" ")
+	fmt.Println("END OF MAP DUMP")
+	fmt.Println("END OF MAP DUMP")
+	fmt.Println("END OF MAP DUMP")
+	fmt.Println(" ")
+	fmt.Println(" ")
+	fmt.Println(" ")
 
 	return m
 }

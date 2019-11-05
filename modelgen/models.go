@@ -45,15 +45,18 @@ type Object struct {
 }
 
 type Field struct {
-	Description       string
-	Name              string
-	RelationName      string
-	BoilerType        string
-	Type              types.Type
-	Tag               string
-	IsPointerToString bool
-	IsId              bool
-	IsRelation        bool
+	Description        string
+	Name               string
+	BoilerName         string
+	RelationName       string
+	BoilerType         string
+	Type               types.Type
+	Tag                string
+	IsCustomFunction   bool
+	CustomFromFunction string
+	CustomToFunction   string
+	IsId               bool
+	IsRelation         bool
 }
 
 type Enum struct {
@@ -149,12 +152,18 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 
 			b.Interfaces = append(b.Interfaces, it)
 		case ast.Object, ast.InputObject:
-			if schemaType == schema.Query || schemaType == schema.Mutation || schemaType == schema.Subscription {
+			if schemaType == schema.Query ||
+				schemaType == schema.Mutation ||
+				schemaType == schema.Subscription {
 				continue
 			}
 			it := &Object{
 				Description: schemaType.Description,
 				Name:        schemaType.Name,
+			}
+			fmt.Println("GRAPHQL MODEL ::::", it.Name)
+			if strings.HasPrefix(it.Name, "_") {
+				continue
 			}
 
 			for _, implementor := range schema.GetImplements(schemaType) {
@@ -233,15 +242,59 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 				}
 
 				isId := name == "id"
-				isPointerToString := typ.String() == "*string"
-				structKey := strings.Replace(strcase.ToCamel(name), "Id", "ID", -1)
+				structKey := strcase.ToCamel(name)
+				structKey = strings.Replace(structKey, "Id", "ID", -1)
+				structKey = strings.Replace(structKey, "Url", "URL", -1)
 
 				boilerKey := it.Name + "." + structKey
 				// fmt.Println(boilerKey, ":", boilerType)
 				boilerType, ok := boilerTypeMap[boilerKey]
+				var customBoilerName string
 				if !ok {
+					// ok appearently there are are sometimes when key contains 'type' the struct name is printed before
+					cn := strings.TrimPrefix(structKey, it.Name)
+					secondKey := it.Name + "." + cn
+					fmt.Println("secondKey", secondKey)
+					boilerType, ok = boilerTypeMap[secondKey]
+					if ok {
+						customBoilerName = cn
+						boilerKey = secondKey
+					}
 
-					fmt.Println("Could not find boilerType for key:type = ", boilerKey, ":", boilerType)
+					if !ok {
+						fmt.Println("Could not find boilerType for key:type = ", boilerKey, ":", boilerType)
+					}
+
+				}
+
+				var isCustomFunction bool
+				var customFromFunction string
+				var customToFunction string
+
+				if typ.String() != boilerType {
+					fmt.Println(fmt.Sprintf("%v != %v", typ.String(), boilerType))
+
+					graphType := typ.String()
+					boilType := boilerType
+					if strings.HasPrefix(graphType, "*") {
+						graphType = strings.TrimPrefix(graphType, "*")
+						graphType = strcase.ToCamel(graphType)
+						graphType = "Pointer" + graphType
+					}
+					if strings.HasPrefix(boilType, "null.") {
+						boilType = strings.TrimPrefix(boilType, "null.")
+						boilType = strcase.ToCamel(boilType)
+						boilType = "NullDot" + boilType
+					}
+					if strings.HasPrefix(boilType, "types.") {
+						boilType = strings.TrimPrefix(boilType, "types.")
+						boilType = strcase.ToCamel(boilType)
+						boilType = "Types" + boilType
+					}
+
+					isCustomFunction = true
+					customFromFunction = strcase.ToCamel(graphType) + "To" + strcase.ToCamel(boilType)
+					customToFunction = strcase.ToCamel(boilType) + "To" + strcase.ToCamel(graphType)
 
 				}
 
@@ -251,17 +304,26 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 				// 	fmt.Println(name)
 				// }
 				// fmt.Println(boilerType)
+				var boilerName string
+				if customBoilerName != "" {
+					boilerName = customBoilerName
+				} else {
+					boilerName = name
+				}
 
 				it.Fields = append(it.Fields, &Field{
-					IsId:              isId,
-					IsRelation:        isRelation,
-					IsPointerToString: isPointerToString,
-					BoilerType:        boilerType,
-					Name:              name,
-					RelationName:      fieldDef.Name,
-					Type:              typ,
-					Description:       field.Description,
-					Tag:               `json:"` + field.Name + `"`,
+					IsId:               isId,
+					IsRelation:         isRelation,
+					IsCustomFunction:   isCustomFunction,
+					CustomFromFunction: customFromFunction,
+					CustomToFunction:   customToFunction,
+					BoilerType:         boilerType,
+					Name:               name,
+					BoilerName:         boilerName,
+					RelationName:       fieldDef.Name,
+					Type:               typ,
+					Description:        field.Description,
+					Tag:                `json:"` + field.Name + `"`,
 				})
 			}
 
