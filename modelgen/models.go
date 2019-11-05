@@ -57,6 +57,8 @@ type Field struct {
 	CustomToFunction   string
 	IsId               bool
 	IsRelation         bool
+	CustomGraphType    string
+	CustomBoilerType   string
 }
 
 type Enum struct {
@@ -161,7 +163,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 				Description: schemaType.Description,
 				Name:        schemaType.Name,
 			}
-			fmt.Println("GRAPHQL MODEL ::::", it.Name)
+			// fmt.Println("GRAPHQL MODEL ::::", it.Name)
 			if strings.HasPrefix(it.Name, "_") {
 				continue
 			}
@@ -254,11 +256,22 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					// ok appearently there are are sometimes when key contains 'type' the struct name is printed before
 					cn := strings.TrimPrefix(structKey, it.Name)
 					secondKey := it.Name + "." + cn
-					fmt.Println("secondKey", secondKey)
-					boilerType, ok = boilerTypeMap[secondKey]
-					if ok {
-						customBoilerName = cn
-						boilerKey = secondKey
+					if isRelation {
+						cn = strings.TrimPrefix(structKey, it.Name)
+						secondKey = it.Name + "." + structKey + "ID"
+						boilerType, ok = boilerTypeMap[secondKey]
+						if ok {
+							customBoilerName = cn
+							boilerKey = secondKey
+						}
+					} else {
+						cn = strings.TrimPrefix(structKey, it.Name)
+						secondKey = it.Name + "." + cn
+						boilerType, ok = boilerTypeMap[secondKey]
+						if ok {
+							customBoilerName = cn
+							boilerKey = secondKey
+						}
 					}
 
 					if !ok {
@@ -270,9 +283,11 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 				var isCustomFunction bool
 				var customFromFunction string
 				var customToFunction string
+				var customGraphType string
+				var customBoilerType string
 
 				if typ.String() != boilerType {
-					fmt.Println(fmt.Sprintf("%v != %v", typ.String(), boilerType))
+					// fmt.Println(fmt.Sprintf("%v != %v", typ.String(), boilerType))
 
 					graphType := typ.String()
 					boilType := boilerType
@@ -293,9 +308,14 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					}
 
 					isCustomFunction = true
+
 					customFromFunction = strcase.ToCamel(graphType) + "To" + strcase.ToCamel(boilType)
 					customToFunction = strcase.ToCamel(boilType) + "To" + strcase.ToCamel(graphType)
+					fmt.Println("before", typ.String())
+					customGraphType = strcase.ToCamel(graphType)
 
+					customBoilerType = strcase.ToCamel(boilType)
+					fmt.Println("after", customGraphType)
 				}
 
 				// if isId {
@@ -317,6 +337,8 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					IsCustomFunction:   isCustomFunction,
 					CustomFromFunction: customFromFunction,
 					CustomToFunction:   customToFunction,
+					CustomGraphType:    customGraphType,
+					CustomBoilerType:   customBoilerType,
 					BoilerType:         boilerType,
 					Name:               name,
 					BoilerName:         boilerName,

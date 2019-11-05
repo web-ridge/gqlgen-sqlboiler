@@ -44,7 +44,6 @@ func NullDotStringToPointerString(v null.String) *string {
 	return v.Ptr()
 }
 
-
 func NullDotTimeToPointerInt(v null.Time) *int {
 	pv := v.Ptr()
 	if pv == nil {
@@ -206,6 +205,13 @@ func PointerIntToNullDotBool(v *int) null.Bool{
 	}
 }
 
+func NullDotUintIsZero(v null.Uint) bool {
+	return v.IsZero()
+}
+func UintIsZero(v uint) bool {
+	return v == 0
+}
+
 
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
@@ -232,18 +238,13 @@ func PointerIntToNullDotBool(v *int) null.Bool{
 			{{- end }}
 		}
 
-		// {{- range $field := .Fields }}
-		// 	{{- if $field.IsRelation }}
-		// 	// TODO: relation
-		// 	if !m.{{ $field.Name|go }}ID.IsZero() {
-		// 		// if m.R == nil || m.R.{{ $field.Name|go }} == nil {
-		// 		// 	r.{{ $field.Name|go }} = {{ $field.Name|go }}WithID(m.{{ $field.Name|go }}ID.Int)
-		// 		// } else {
-		// 			r.{{ $field.Name|go }} ={{ $field.BoilerName|go }}ToGraphQL(m.R.{{ $field.Name|go }}s)
-		// 		// }
-		// 	}
-		// 	{{end -}}
-		// {{- end }}
+		{{- range $field := .Fields }}
+			{{- if $field.IsRelation }}
+			if {{ $field.CustomBoilerType }}IsZero(m.{{ $field.Name|go }}ID) {
+				r.{{ $field.Name|go }} ={{ $field.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }})
+			}
+			{{end -}}
+		{{- end }}
 
 		return r
 	}
@@ -261,6 +262,7 @@ func PointerIntToNullDotBool(v *int) null.Bool{
 			{{- if $field.IsId -}}
 				{{ $field.BoilerName|go }} : {{ $field.CustomFromFunction }}ID(m.{{ $field.Name|go }}, "{{ $model.Name|go }}"),
 			{{- else if $field.IsRelation }}
+				// {{ $field.BoilerName|go }} : {{ $field.Name }}ID(m.{{ $field.Name|go }}, "{{ $field.BoilerName|go }}"),
 			{{- else if $field.IsCustomFunction }}
 				{{ $field.BoilerName|go }} : {{ $field.CustomFromFunction }}(m.{{ $field.Name|go }}),
 			{{- else }}	
@@ -268,14 +270,6 @@ func PointerIntToNullDotBool(v *int) null.Bool{
 			{{- end -}}
 		{{- end }}
 		}
-
-		// {{- range $field := .Fields }}
-		// 	{{- if $field.IsRelation }}
-		// 		// TODO relation
-		// // {{ $field.Name|go }}: {{ $field.Name|go }}ToBoiler(m.{{ $field.Name|go }}),
-
-		// 	{{end -}}
-		// {{- end }}
 		return r
 	}
 
