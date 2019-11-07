@@ -81,13 +81,9 @@ func PointerIntToNullDotTime(v *int) null.Time {
 	}
 }
 func StringToNullDotString(v string) null.String {
-	if v == nil {
-		return null.String{
-			Valid: false,
-		}
-	}
+	// TODO nullable?? what to here
 	return null.String{
-		Valid:  v != nil,
+		Valid:  true,
 		String: v,
 	}
 }
