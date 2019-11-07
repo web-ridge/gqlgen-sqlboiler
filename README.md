@@ -49,6 +49,24 @@ func UserToGraphQL(m *models.User) *graphql_models.User {
 }
 ```
 
+sqlboiler.yml
+```
+mysql:
+  dbname: dbname
+  host: localhost
+  port: 8889
+  user: root
+  pass: root
+  sslmode: "false"
+  blacklist:
+    - notifications
+    - jobs
+    - password_resets
+    - migrations
+mysqldump:
+  column-statistics: 0
+```
+
 gqlgen.yml
 ```yaml
 schema:
