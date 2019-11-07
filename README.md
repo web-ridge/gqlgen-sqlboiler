@@ -3,7 +3,6 @@ This program generates code like this between your generated gqlgen program and 
 To make this program a success very tight coupling between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed.
 
 Generate database structs with: https://github.com/volatiletech/sqlboiler   
-
 Generate GrapQL scheme with: https://github.com/rexxars/sql-to-graphql   
 Generate GrapQL API with: https://github.com/99designs/gqlgen   
 Generate converts between gqlgen-sqlboiler with this program   
@@ -50,7 +49,7 @@ func UserToGraphQL(m *models.User) *graphql_models.User {
 ```
 
 sqlboiler.yml
-```
+```yaml
 mysql:
   dbname: dbname
   host: localhost
