@@ -216,6 +216,24 @@ func UintIsZero(v uint) bool {
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 
+	func {{ .Name|go }}WithIntID(id int) *graphql_models.{{ .Name|go }} {
+		return &graphql_models.{{ .Name|go }}{
+			ID: IntToStringUniqueID(id, "{{ $model.Name|go }}"),
+		}
+	}
+	func {{ .Name|go }}WithUintID(id uint) *graphql_models.{{ .Name|go }} {
+		return &graphql_models.{{ .Name|go }}{
+			ID: UintToStringUniqueID(id, "{{ $model.Name|go }}"),
+		}
+	}
+
+	func {{ .Name|go }}WithNullDotUintID(id null.Uint) *graphql_models.{{ .Name|go }} {
+		return {{ .Name|go }}WithUintID(id.Uint)
+	}
+	func {{ .Name|go }}WithNullDotIntID(id null.Int) *graphql_models.{{ .Name|go }} {
+		return {{ .Name|go }}WithIntID(id.Int)
+	}
+
 	func {{ .Name|go }}ToGraphQL(m *models.{{ .Name|go }})( *graphql_models.{{ .Name|go }}) {
 		if m == nil {
 			return nil
@@ -241,7 +259,11 @@ func UintIsZero(v uint) bool {
 		{{- range $field := .Fields }}
 			{{- if $field.IsRelation }}
 			if {{ $field.CustomBoilerType }}IsZero(m.{{ $field.Name|go }}ID) {
-				r.{{ $field.Name|go }} ={{ $field.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }})
+				if m.R == nil || m.R.{{ $field.Name|go }} == nil {
+					r.{{ $field.Name|go }} = {{ $field.Name|go }}With{{ $field.CustomBoilerType|go }}ID(m.{{ $field.Name|go }}ID)
+				} else {
+					r.{{ $field.Name|go }} ={{ $field.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }})
+				}
 			}
 			{{end -}}
 		{{- end }}
@@ -262,7 +284,7 @@ func UintIsZero(v uint) bool {
 			{{- if $field.IsId -}}
 				{{ $field.BoilerName|go }} : {{ $field.CustomFromFunction }}ID(m.{{ $field.Name|go }}, "{{ $model.Name|go }}"),
 			{{- else if $field.IsRelation }}
-				// {{ $field.BoilerName|go }} : {{ $field.Name }}ID(m.{{ $field.Name|go }}, "{{ $field.BoilerName|go }}"),
+				// {{ $field.BoilerName|go }}ID : {{ $field.Name }}ID(m.{{ $field.Name|go }}, "{{ $field.BoilerName|go }}"),
 			{{- else if $field.IsCustomFunction }}
 				{{ $field.BoilerName|go }} : {{ $field.CustomFromFunction }}(m.{{ $field.Name|go }}),
 			{{- else }}	
