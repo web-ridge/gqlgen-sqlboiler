@@ -50,7 +50,7 @@ func UserToGraphQL(m *models.User) *graphql_models.User {
 ```
 
 gqlgen.yml
-```
+```yaml
 schema:
   - schema.graphql
 exec:
