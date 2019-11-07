@@ -16,7 +16,7 @@ TODO: generate CRUD resolvers based on mutations in graphql scheme
       
 ## Example result of this plugin
 
-```
+```golang
 func UserToGraphQL(m *models.User) *graphql_models.User {
 	if m == nil {
 		return nil
