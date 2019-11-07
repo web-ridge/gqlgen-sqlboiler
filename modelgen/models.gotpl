@@ -251,7 +251,9 @@ func IntIsZero(v int) bool {
 	func {{ .Name|go }}WithNullDotIntID(id null.Int) *graphql_models.{{ .Name|go }} {
 		return {{ .Name|go }}WithIntID(id.Int)
 	}
+	func {{ .PluralName|go }}ToGraphQL(m []*models.{{ .Name|go }})( []*graphql_models.{{ .Name|go }}) {
 
+	}
 	func {{ .Name|go }}ToGraphQL(m *models.{{ .Name|go }})( *graphql_models.{{ .Name|go }}) {
 		if m == nil {
 			return nil
@@ -265,7 +267,6 @@ func IntIsZero(v int) bool {
 				{{- if $field.IsId -}}
 					{{ $field.Name|go }}: {{ $field.CustomToFunction }}UniqueID(m.{{ $field.BoilerName|go }}, "{{ $model.Name|go }}"),
 				{{- else if $field.IsRelation -}}
-				
 				{{- else if $field.IsCustomFunction }}
 					{{ $field.Name|go }}: {{ $field.CustomToFunction }}(m.{{ $field.BoilerName|go }}),
 				{{- else }}	
@@ -280,6 +281,9 @@ func IntIsZero(v int) bool {
 				if m.R == nil || m.R.{{ $field.Name|go }} == nil {
 					r.{{ $field.Name|go }} = {{ $field.Name|go }}With{{ $field.CustomBoilerType|go }}ID(m.{{ $field.Name|go }}ID)
 				} else {
+					//{{ $field.BoilerName|go }}
+					//{{ $field.CustomToFunction|go }}
+					//{{ $field.CustomFromFunction|go }}
 					r.{{ $field.Name|go }} ={{ $field.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }})
 				}
 			}

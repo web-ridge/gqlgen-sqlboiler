@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 
+	pluralize "github.com/gertd/go-pluralize"
+
 	"github.com/99designs/gqlgen/codegen/config"
 	"github.com/99designs/gqlgen/codegen/templates"
 	"github.com/99designs/gqlgen/plugin"
@@ -16,8 +18,10 @@ import (
 )
 
 var pathRegex *regexp.Regexp
+var pluralizer *pluralize.Client
 
 func init() {
+	pluralizer = pluralize.NewClient()
 	pathRegex, _ = regexp.Compile(`src\/(.*)`)
 }
 
@@ -40,15 +44,18 @@ type Interface struct {
 type Object struct {
 	Description string
 	Name        string
+	PlularName  string
 	Fields      []*Field
 	Implements  []string
 }
 
 type Field struct {
-	Description        string
-	Name               string
+	Description string
+	Name        string
+	PluralName  string
+
 	BoilerName         string
-	RelationName       string
+	PluralBoilerName   string
 	BoilerType         string
 	Type               types.Type
 	Tag                string
@@ -348,8 +355,9 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					CustomBoilerType:   customBoilerType,
 					BoilerType:         boilerType,
 					Name:               name,
+					PluralName:         pluralizer.Plural(name),
 					BoilerName:         boilerName,
-					RelationName:       fieldDef.Name,
+					PluralBoilerName:   pluralizer.Plural(boilerName),
 					Type:               typ,
 					Description:        field.Description,
 					Tag:                `json:"` + field.Name + `"`,
