@@ -44,16 +44,15 @@ type Interface struct {
 type Object struct {
 	Description string
 	Name        string
-	PlularName  string
+	PluralName  string
 	Fields      []*Field
 	Implements  []string
 }
 
 type Field struct {
-	Description string
-	Name        string
-	PluralName  string
-
+	Description        string
+	Name               string
+	PluralName         string
 	BoilerName         string
 	PluralBoilerName   string
 	BoilerType         string
@@ -64,6 +63,7 @@ type Field struct {
 	CustomToFunction   string
 	IsId               bool
 	IsRelation         bool
+	IsPlural           bool
 	CustomGraphType    string
 	CustomBoilerType   string
 }
@@ -169,6 +169,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 			it := &Object{
 				Description: schemaType.Description,
 				Name:        schemaType.Name,
+				PluralName:  pluralizer.Plural(schemaType.Name),
 			}
 			// fmt.Println("GRAPHQL MODEL ::::", it.Name)
 			if strings.HasPrefix(it.Name, "_") {
@@ -355,6 +356,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					CustomBoilerType:   customBoilerType,
 					BoilerType:         boilerType,
 					Name:               name,
+					IsPlural:           pluralizer.IsPlural(name),
 					PluralName:         pluralizer.Plural(name),
 					BoilerName:         boilerName,
 					PluralBoilerName:   pluralizer.Plural(boilerName),
