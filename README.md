@@ -14,7 +14,7 @@ TODO: generate CRUD resolvers based on mutations in graphql scheme
    
       
       
-*Example code*
+## Example result of this plugin
 
 ```
 func UserToGraphQL(m *models.User) *graphql_models.User {
