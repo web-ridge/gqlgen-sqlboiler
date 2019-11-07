@@ -136,7 +136,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 		PackageName:        cfg.Model.Package,
 	}
 
-	boilerTypeMap := parseBoilerFile(m.backendModelsPath)
+	boilerTypeMap, boilerStructMap := parseBoilerFile(m.backendModelsPath)
 
 	for _, schemaType := range schema.Types {
 
@@ -167,7 +167,10 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 			if strings.HasPrefix(it.Name, "_") {
 				continue
 			}
-
+			if !boilerStructMap[it.Name] {
+				fmt.Println(fmt.Sprintf("Skip struct %v because it can not be mapped to a boiler struct", it.Name))
+				continue
+			}
 			for _, implementor := range schema.GetImplements(schemaType) {
 				it.Implements = append(it.Implements, implementor.Name)
 			}
@@ -311,11 +314,11 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 
 					customFromFunction = strcase.ToCamel(graphType) + "To" + strcase.ToCamel(boilType)
 					customToFunction = strcase.ToCamel(boilType) + "To" + strcase.ToCamel(graphType)
-					fmt.Println("before", typ.String())
+					// fmt.Println("before", typ.String())
 					customGraphType = strcase.ToCamel(graphType)
 
 					customBoilerType = strcase.ToCamel(boilType)
-					fmt.Println("after", customGraphType)
+					// fmt.Println("after", customGraphType)
 				}
 
 				// if isId {
@@ -329,6 +332,10 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					boilerName = customBoilerName
 				} else {
 					boilerName = name
+				}
+
+				if boilerType == "" {
+					fmt.Println("boiler type not available for, continueing", name)
 				}
 
 				it.Fields = append(it.Fields, &Field{

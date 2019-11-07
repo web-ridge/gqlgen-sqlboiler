@@ -19,19 +19,19 @@ var ignoreFiles = []string{"boil_queries.go", "boil_table_names.go", "boil_types
 // Address.Longitude: null.String
 // Address.Latitude : null.Decimal
 // needed to generate the right convert code
-func parseBoilerFile(dir string) map[string]string {
-	m := make(map[string]string, 0)
-
+func parseBoilerFile(dir string) (map[string]string, map[string]bool) {
+	fieldsMap := make(map[string]string, 0)
+	structsMap := make(map[string]bool, 0)
 	// fmt.Println(dir)
 	dir, err := filepath.Abs(dir)
 	if err != nil {
 		fmt.Println("abs error", err)
-		return m
+		return fieldsMap, structsMap
 	}
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		fmt.Println("readdir error", err)
-		return m
+		return fieldsMap, structsMap
 	}
 
 	fset := token.NewFileSet()
@@ -72,7 +72,8 @@ func parseBoilerFile(dir string) map[string]string {
 					if !ok {
 						continue
 					}
-					// safeTypeSpec.Name // struct name
+
+					structsMap[safeTypeSpec.Name.String()] = true
 
 					safeStructDecl, ok := safeTypeSpec.Type.(*ast.StructType)
 					if !ok {
@@ -99,7 +100,7 @@ func parseBoilerFile(dir string) map[string]string {
 							// }
 							key := safeTypeSpec.Name.String() + "." + name
 
-							m[key] = t.X.(*ast.Ident).Name + "." + t.Sel.Name
+							fieldsMap[key] = t.X.(*ast.Ident).Name + "." + t.Sel.Name
 						// case *ast.StarExpr:
 						// 	// Used for pointers to external structs
 						// case *ast.ArrayType:
@@ -112,7 +113,7 @@ func parseBoilerFile(dir string) map[string]string {
 							// 	continue
 							// }
 							// fmt.Println(name + " : " + typeName)
-							m[safeTypeSpec.Name.String()+"."+name] = typeName
+							fieldsMap[safeTypeSpec.Name.String()+"."+name] = typeName
 							// tag := ""
 							// if field.Tag != nil {
 							// 	tag = field.Tag.Value //the tag as a string
@@ -128,48 +129,13 @@ func parseBoilerFile(dir string) map[string]string {
 				}
 
 			}
-			// typeDecl := src.Decls[0].(*ast.GenDecl)
 
-			// s
-			// fields := structDecl.Fields.List
-
-			// for _, field := range fields {
-			// 	switch field.Type.(type) {
-			// 	case *ast.Ident:
-			// 		stype := field.Type.(*ast.Ident).Name // The type as a string
-			// 		tag := ""
-			// 		if field.Tag != nil {
-			// 			tag = field.Tag.Value //the tag as a string
-			// 		}
-			// 		name := field.Names[0].Name //name as a string
-			// 		fmt.Println(name, sType, tag)
-			// 	default:
-			// 	}
-			// }
-
-			// for _, obj := range src.Scope.Objects {
-			// 	if !ast.IsExported(obj.Name) {
-			// 		continue
-			// 	}
-			// 	// ast
-			// 	if obj.Kind == ast.Typ {
-
-			// 		fmt.Println(obj.Name)
-			// 		// fmt.Println(obj.Kind)
-			// 		// fmt.Println(obj.Data)
-			// 		fmt.Println("Decleration")
-			// 		fmt.Println(obj.Decl)
-			// 		// fmt.Println(obj.Type)
-			// 	}
-
-			// }
-			// return src.Name.Name
 		}
 	}
 
 	// To store the keys in slice in sorted order
 	var keys []string
-	for k := range m {
+	for k := range fieldsMap {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
@@ -183,7 +149,7 @@ func parseBoilerFile(dir string) map[string]string {
 	fmt.Println(" ")
 	fmt.Println(" ")
 	for _, key := range keys {
-		fmt.Println(key, ":", m[key])
+		fmt.Println(key, ":", fieldsMap[key])
 	}
 	fmt.Println(" ")
 	fmt.Println(" ")
@@ -194,5 +160,5 @@ func parseBoilerFile(dir string) map[string]string {
 	fmt.Println(" ")
 	fmt.Println(" ")
 
-	return m
+	return fieldsMap, structsMap
 }
