@@ -53,6 +53,13 @@ func NullDotTimeToPointerInt(v null.Time) *int {
 	return &u
 }
 
+func NullDotStringToString(v null.String) string {
+	if v.Ptr() == nil {
+		return ""
+	}
+	return *v.Ptr()
+}
+
 func NullDotUintToPointerInt(v null.Uint) *int {
 	pv := v.Ptr()
 	if pv == nil {
@@ -73,7 +80,17 @@ func PointerIntToNullDotTime(v *int) null.Time {
 		Time:  time.Unix(int64(*v), 0),
 	}
 }
-
+func StringToNullDotString(v string) null.String {
+	if v == nil {
+		return null.String{
+			Valid: false,
+		}
+	}
+	return null.String{
+		Valid:  v != nil,
+		String: v,
+	}
+}
 func PointerStringToNullDotString(v *string) null.String {
 	if v == nil {
 		return null.String{
@@ -204,7 +221,9 @@ func PointerIntToNullDotBool(v *int) null.Bool{
 		Bool:  *v == 1,
 	}
 }
-
+func NullDotIntIsZero(v null.Int) bool {
+	return v.IsZero()
+}
 func NullDotUintIsZero(v null.Uint) bool {
 	return v.IsZero()
 }
