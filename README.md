@@ -12,6 +12,9 @@ DONE: generate converts between sqlboiler structs and graphql
 WIP: Fetch sqlboiler preloads from graphql context   
 TODO: generate CRUD resolvers based on mutations in graphql scheme   
    
+   
+## Case
+You have a personal project with a very big database and a 'Laravel API'. I want to be able to generate a new Golang GraphQL API for this project in no time. 
       
       
 ## Example result of this plugin
