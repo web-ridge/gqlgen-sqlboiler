@@ -226,6 +226,9 @@ func NullDotUintIsZero(v null.Uint) bool {
 func UintIsZero(v uint) bool {
 	return v == 0
 }
+func IntIsZero(v int) bool {
+	return v == 0
+}
 
 
 {{ range $model := .Models }}
