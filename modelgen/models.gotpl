@@ -245,9 +245,6 @@ func IntIsZero(v int) bool {
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 
 	{{- if not .IsInput -}}
-	// TODO input conversions
-	
-
 		func {{ .Name|go }}WithIntID(id int) *graphql_models.{{ .Name|go }} {
 			return &graphql_models.{{ .Name|go }}{
 				ID: IntToStringIDUnique(id, "{{ $model.Name|go }}"),
@@ -297,9 +294,8 @@ func IntIsZero(v int) bool {
 				{{- with .Description }}
 					{{.|prefixLines "// "}}
 				{{- end}}
-				{{- if $field.IsId }}
-					//{{ $field.CustomToFunction }}
-					{{ $field.Name|go }}:  {{ $field.CustomBoilerIDFunction|go }}(m.{{ $field.BoilerName|go }}),
+				{{- if $field.IsId -}}
+					{{- $field.Name|go }}:  {{ $field.CustomBoilerIDFunction|go }}(m.{{ $field.BoilerName|go }}),
 				{{- else if $field.IsRelation -}}
 				{{- else if $field.IsCustomFunction }}
 					{{ $field.Name|go }}: {{ $field.CustomToFunction }}(m.{{ $field.BoilerName|go }}),
@@ -311,7 +307,6 @@ func IntIsZero(v int) bool {
 
 		{{- range $field := .Fields }}
 	
-		
 			{{- if $field.IsRelation }}
 				{{- if $field.IsPlural }}
 					if m.R != nil || m.R.{{ $field.Name|go }} != nil {
@@ -361,15 +356,15 @@ func IntIsZero(v int) bool {
 				{{- with .Description }}
 					{{.|prefixLines "// "}}
 				{{- end}}
-				{{- if $field.IsId }}
+				{{ if $field.IsId }}
 					{{ $field.BoilerName|go }} : {{ $field.CustomGraphIDFunction|go }}(m.{{ $field.Name|go }}),
-				{{- else if $field.IsRelation }}
+				{{ else if $field.IsRelation }}
 					// {{ $field.BoilerName|go }}ID : {{ $field.Name }}ID(m.{{ $field.Name|go }}, "{{ $field.BoilerName|go }}"),
-				{{- else if $field.IsCustomFunction }}
-					{{ $field.BoilerName|go }} : {{ $field.CustomFromFunction }}(m.{{ $field.Name|go }}),
-				{{- else }}	
-					{{ $field.BoilerName|go }}: m.{{ $field.Name|go }},
-				{{- end -}}
+				{{ else if $field.IsCustomFunction }}
+					{{- $field.BoilerName|go }} : {{ $field.CustomFromFunction }}(m.{{ $field.Name|go }}),
+				{{ else }}	
+					{{- $field.BoilerName|go }}: m.{{ $field.Name|go }},
+				{{ end -}}
 			{{- end }}
 			}
 			return r
