@@ -67,7 +67,7 @@ type Field struct {
 	CustomBoilerIDFunction string
 	CustomGraphIDFunction  string
 	IsId                   bool
-	IsNullableId           bool
+	IsNullableID           bool
 	IsRelation             bool
 	IsPlural               bool
 	CustomGraphType        string
@@ -366,7 +366,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 
 				var customBoilerIDFunction string
 				var customGraphIDFunction string
-				var isNullableId bool
+				var isNullableID bool
 				if isId {
 					fmt.Println("isId")
 					if boilerName == "id" {
@@ -381,9 +381,13 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 
 					graphTypeIsNullable := strings.HasPrefix(typ.String(), "*")
 					boilerTypeIsNullable := strings.HasPrefix(boilerType, "null.")
-					isNullableId = graphTypeIsNullable || boilerTypeIsNullable
+					isNullableID = graphTypeIsNullable || boilerTypeIsNullable
+					if isNullableID {
+						customBoilerIDFunction = customBoilerIDFunction + "Nullable"
+						customGraphIDFunction = customGraphIDFunction + "Nullable"
+					}
 
-					if isNullableId && (!graphTypeIsNullable || !boilerTypeIsNullable) {
+					if isNullableID && (!graphTypeIsNullable || !boilerTypeIsNullable) {
 						fmt.Println(fmt.Printf(`
 						ERROR: nullable differs in model: %v, 
 						you should make it the same 
@@ -410,7 +414,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					CustomGraphIDFunction:  customGraphIDFunction,
 					CustomGraphType:        customGraphType,
 					CustomBoilerType:       customBoilerType,
-					IsNullableId:           isNullableId,
+					IsNullableID:           isNullableID,
 					BoilerType:             boilerType,
 					GraphType:              typ.String(),
 					Name:                   name,
