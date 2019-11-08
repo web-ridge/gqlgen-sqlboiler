@@ -56,6 +56,7 @@ type Field struct {
 	BoilerName         string
 	PluralBoilerName   string
 	BoilerType         string
+	GraphType          string
 	Type               types.Type
 	Tag                string
 	IsCustomFunction   bool
@@ -140,7 +141,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 	b := &ModelBuild{
 		FrontendModelsPath: getGoImportFromFile(m.frontendModelsPath),
 		BackendModelsPath:  getGoImportFromFile(m.backendModelsPath),
-		PackageName:        cfg.Model.Package,
+		PackageName:        "convert", // TODO convert?
 	}
 
 	boilerTypeMap, boilerStructMap := parseBoilerFile(m.backendModelsPath)
@@ -355,6 +356,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					CustomGraphType:    customGraphType,
 					CustomBoilerType:   customBoilerType,
 					BoilerType:         boilerType,
+					GraphType:          typ.String(),
 					Name:               name,
 					IsPlural:           pluralizer.IsPlural(name),
 					PluralName:         pluralizer.Plural(name),
@@ -409,7 +411,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 	}
 
 	renderError := templates.Render(templates.Options{
-		PackageName:     cfg.Model.Package,
+		PackageName:     "convert",
 		Filename:        m.filename,
 		Data:            b,
 		GeneratedHeader: true,

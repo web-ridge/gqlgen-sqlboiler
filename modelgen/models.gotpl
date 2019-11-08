@@ -139,13 +139,17 @@ func PointerStringToTypesNullDecimal(v *string) types.NullDecimal {
 
 func PointerIntToNullDotInt(v *int) null.Int {
 	// TODO
+	fmt.Println("not implemented convert")
+
 	if v == nil {
 		return null.Int{}
 	}
 	return null.Int{}
 }
 func PointerIntToNullDotUint(v *int) null.Uint {
-		// TODO
+	// TODO
+	fmt.Println("not implemented convert")
+
 	if v == nil {
 		return null.Uint{}
 	}
@@ -153,6 +157,8 @@ func PointerIntToNullDotUint(v *int) null.Uint {
 }
 func NullDotIntToPointerInt(v null.Int) *int {
 	// TODO
+	fmt.Println("not implemented convert")
+
 	return nil
 }
 func IntToInt8(v int) int8 {
@@ -163,11 +169,15 @@ func Int8ToInt(v int8) int {
 }
 func NullDotFloat64ToPointerFloat64(v null.Float64) *float64 {
 	// TODO
+	fmt.Println("not implemented convert")
+
 	return nil
 	
 }
 func PointerFloat64ToNullDotFloat64(v *float64) null.Float64 {
-		// TODO
+	// TODO
+	fmt.Println("not implemented convert")
+
 	if v == nil {
 		return null.Float64{}
 	}
@@ -258,6 +268,16 @@ func IntIsZero(v int) bool {
 		}
 		return ar
 	}
+
+
+	{{ range $field := .Fields }}
+		{{- if $field.IsId -}}
+			func {{ $model.Name|go }}UniqueID(v {{$field.BoilerType}})({{$field.GraphType}}) {
+				return {{ $field.CustomToFunction }}UniqueID(v, "{{ $model.Name|go }}")
+			}
+		{{- end -}}
+	{{- end }}
+
 	func {{ .Name|go }}ToGraphQL(m *models.{{ .Name|go }})( *graphql_models.{{ .Name|go }}) {
 		if m == nil {
 			return nil
@@ -269,7 +289,7 @@ func IntIsZero(v int) bool {
 					{{.|prefixLines "// "}}
 				{{- end}}
 				{{- if $field.IsId -}}
-					{{ $field.Name|go }}: {{ $field.CustomToFunction }}UniqueID(m.{{ $field.BoilerName|go }}, "{{ $model.Name|go }}"),
+					{{ $field.Name|go }}: {{ $model.Name|go }}UniqueID(m.{{ $field.BoilerName|go }}),
 				{{- else if $field.IsRelation -}}
 				{{- else if $field.IsCustomFunction }}
 					{{ $field.Name|go }}: {{ $field.CustomToFunction }}(m.{{ $field.BoilerName|go }}),
@@ -302,7 +322,13 @@ func IntIsZero(v int) bool {
 
 		return r
 	}
-
+	{{ range $field := .Fields }}
+		{{- if $field.IsId -}}
+			func {{ $model.Name|go }}ID({{ $field.Name|go }} {{$field.GraphType}})( {{$field.BoilerType}}) {
+				return {{ $field.CustomFromFunction }}ID({{ $field.Name|go }}, "{{ $model.Name|go }}")
+			}
+		{{- end -}}
+	{{- end }}
 	func {{ .PluralName|go }}ToBoiler(am []*graphql_models.{{ .Name|go }})( []*models.{{ .Name|go }}) {
 		ar := make([]*models.{{ .Name|go }}, len(am))
 		for i,m := range am {
@@ -320,7 +346,7 @@ func IntIsZero(v int) bool {
 				{{.|prefixLines "// "}}
 			{{- end}}
 			{{- if $field.IsId -}}
-				{{ $field.BoilerName|go }} : {{ $field.CustomFromFunction }}ID(m.{{ $field.Name|go }}, "{{ $model.Name|go }}"),
+				{{ $field.BoilerName|go }} : {{ $model.Name|go }}ID(m.{{ $field.Name|go }}),
 			{{- else if $field.IsRelation }}
 				// {{ $field.BoilerName|go }}ID : {{ $field.Name }}ID(m.{{ $field.Name|go }}, "{{ $field.BoilerName|go }}"),
 			{{- else if $field.IsCustomFunction }}
