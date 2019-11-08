@@ -10,235 +10,13 @@
 {{ reserveImport "github.com/ericlagergren/decimal"  }}
 {{ reserveImport "github.com/volatiletech/null"  }}
 {{ reserveImport "github.com/volatiletech/sqlboiler/types"  }}
-
+{{ reserveImport "github.com/webridge-git/gqlgen-sqlboiler/helper" }}
 {{ reserveImport "github.com/vektah/gqlparser" }}
 {{ reserveImport "github.com/vektah/gqlparser/ast" }}
 {{ reserveImport "github.com/99designs/gqlgen/graphql" }}
 {{ reserveImport "github.com/99designs/gqlgen/graphql/introspection" }}
 {{ reserveImport  $.BackendModelsPath }}
 {{ reserveImport  $.FrontendModelsPath }}
-
-func StringToIntID(ID string, entityName string) int {
-	i, _ := strconv.ParseInt(strings.TrimPrefix(ID, entityName+"_"), 10, 64)
-	return int(i)
-}
-
-func IntToStringIDUnique(id int, entityName string) string {
-	return entityName + "_" + strconv.Itoa(id)
-}
-
-func StringToUintID(ID string, entityName string) uint {
-	i, _ := strconv.ParseUint(strings.TrimPrefix(ID, entityName+"_"), 10, 64)
-	return uint(i)
-}
-
-func UintToStringIDUnique(id uint, entityName string) string {
-	return entityName + "_" + strconv.Itoa(int(id))
-}
-
-func NullDotBoolToPointerBool(v null.Bool) *bool {
-	return v.Ptr()
-}
-
-func NullDotStringToPointerString(v null.String) *string {
-	return v.Ptr()
-}
-
-func NullDotTimeToPointerInt(v null.Time) *int {
-	pv := v.Ptr()
-	if pv == nil {
-		return nil
-	}
-	u := int(pv.Unix())
-	return &u
-}
-
-func NullDotStringToString(v null.String) string {
-	if v.Ptr() == nil {
-		return ""
-	}
-	return *v.Ptr()
-}
-
-func NullDotUintToPointerInt(v null.Uint) *int {
-	pv := v.Ptr()
-	if pv == nil {
-		return nil
-	}
-	u := int(*pv)
-	return &u
-}
-
-func PointerIntToNullDotTime(v *int) null.Time {
-	if v == nil {
-		return null.Time{
-			Valid: false,
-		}
-	}
-	return null.Time{
-		Valid: true,
-		Time:  time.Unix(int64(*v), 0),
-	}
-}
-func StringToNullDotString(v string) null.String {
-	// TODO nullable?? what to here
-	return null.String{
-		Valid:  true,
-		String: v,
-	}
-}
-func PointerStringToNullDotString(v *string) null.String {
-	if v == nil {
-		return null.String{
-			Valid: false,
-		}
-	}
-	return null.String{
-		Valid:  v != nil,
-		String: *v,
-	}
-}
-
-func PointerBoolToNullDotBool(v *bool) null.Bool {
-	if v == nil {
-		return null.Bool{
-			Valid: false,
-		}
-	}
-	return null.Bool{
-		Valid: v != nil,
-		Bool:  *v,
-	}
-}
-
-func TypesNullDecimalToPointerString(v types.NullDecimal) *string {
-	s := v.String()
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
-func PointerStringToTypesNullDecimal(v *string) types.NullDecimal {
-	if v == nil {
-		return types.NewNullDecimal(nil)
-	}
-	d := new(decimal.Big)
-	if _, ok := d.SetString(*v); !ok {
-		nd := types.NewNullDecimal(nil)
-		if err := d.Context.Err(); err != nil {
-			return nd
-		}
-		// TODO: error handling maybe write log line here
-		// https://github.com/volatiletech/sqlboiler/blob/master/types/decimal.go#L156
-		return nd
-	}
-
-	return types.NewNullDecimal(d)
-}
-
-func PointerIntToNullDotInt(v *int) null.Int {
-	// TODO
-	fmt.Println("not implemented convert")
-
-	if v == nil {
-		return null.Int{}
-	}
-	return null.Int{}
-}
-func PointerIntToNullDotUint(v *int) null.Uint {
-	// TODO
-	fmt.Println("not implemented convert")
-
-	if v == nil {
-		return null.Uint{}
-	}
-	return null.Uint{}
-}
-func NullDotIntToPointerInt(v null.Int) *int {
-	// TODO
-	fmt.Println("not implemented convert")
-
-	return nil
-}
-func IntToInt8(v int) int8 {
-	return int8(v)
-}
-func Int8ToInt(v int8) int {
-	return int(v)
-}
-func NullDotFloat64ToPointerFloat64(v null.Float64) *float64 {
-	// TODO
-	fmt.Println("not implemented convert")
-
-	return nil
-	
-}
-func PointerFloat64ToNullDotFloat64(v *float64) null.Float64 {
-	// TODO
-	fmt.Println("not implemented convert")
-
-	if v == nil {
-		return null.Float64{}
-	}
-	return null.Float64{}
-}
-
-func IntToUint(v int) uint {
-	return uint(v)
-}
-
-func UintToInt(v uint) int {
-	return int(v)
-}
-
-func BoolToInt(v bool) int {
-	if v == true {
-		return 1
-	}
-	return 0
-}
-
-func IntToBool(v int) bool {
-	return v == 1
-}
-
-func NullDotBoolToPointerInt(v null.Bool) *int {
-	pv := v.Ptr()
-	if pv == nil {
-		return nil
-	}
-	if *pv == true {
-		i := 1
-		return &i
-	}
-	i := 0
-	return &i
-}
-
-func PointerIntToNullDotBool(v *int) null.Bool{
-	if v == nil {
-		return null.Bool{
-			Valid: false,
-		}
-	}
-	return null.Bool{
-		Valid: v != nil,
-		Bool:  *v == 1,
-	}
-}
-func NullDotIntIsZero(v null.Int) bool {
-	return v.IsZero()
-}
-func NullDotUintIsZero(v null.Uint) bool {
-	return v.IsZero()
-}
-func UintIsZero(v uint) bool {
-	return v == 0
-}
-func IntIsZero(v int) bool {
-	return v == 0
-}
 
 
 {{ range $model := .Models }}
@@ -247,12 +25,12 @@ func IntIsZero(v int) bool {
 	{{- if not .IsInput -}}
 		func {{ .Name|go }}WithIntID(id int) *graphql_models.{{ .Name|go }} {
 			return &graphql_models.{{ .Name|go }}{
-				ID: IntToStringIDUnique(id, "{{ $model.Name|go }}"),
+				ID: helper.IntToStringIDUnique(id, "{{ $model.Name|go }}"),
 			}
 		}
 		func {{ .Name|go }}WithUintID(id uint) *graphql_models.{{ .Name|go }} {
 			return &graphql_models.{{ .Name|go }}{
-				ID: UintToStringIDUnique(id, "{{ $model.Name|go }}"),
+				ID: helper.UintToStringIDUnique(id, "{{ $model.Name|go }}"),
 			}
 		}
 
@@ -274,7 +52,7 @@ func IntIsZero(v int) bool {
 		{{ range $field := .Fields }}
 			{{- if $field.IsId -}}
 				func {{ $model.Name|go }}IDUnique(v {{$field.BoilerType}})({{$field.GraphType}}) {
-					return {{ $field.CustomToFunction }}IDUnique(v, "{{ $model.Name|go }}")
+					return helper.{{ $field.CustomToFunction }}IDUnique(v, "{{ $model.Name|go }}")
 				}
 				func {{ $model.Name|go }}IDUniquePointerString(v {{$field.BoilerType}})(*{{$field.GraphType}}) {
 					s := {{ $model.Name|go }}IDUnique(v)
@@ -298,7 +76,7 @@ func IntIsZero(v int) bool {
 					{{- $field.Name|go }}:  {{ $field.CustomBoilerIDFunction|go }}(m.{{ $field.BoilerName|go }}),
 				{{- else if $field.IsRelation -}}
 				{{- else if $field.IsCustomFunction }}
-					{{ $field.Name|go }}: {{ $field.CustomToFunction }}(m.{{ $field.BoilerName|go }}),
+					{{ $field.Name|go }}: helper.{{ $field.CustomToFunction }}(m.{{ $field.BoilerName|go }}),
 				{{- else }}	
 					{{ $field.Name|go }}: m.{{ $field.BoilerName|go }},
 				{{- end -}}
@@ -314,7 +92,7 @@ func IntIsZero(v int) bool {
 					} 
 				{{- else }}	
 				
-				if {{ $field.CustomBoilerType }}IsZero(m.{{ $field.Name|go }}ID) {
+				if helper.{{ $field.CustomBoilerType }}IsZero(m.{{ $field.Name|go }}ID) {
 					if m.R == nil || m.R.{{ $field.Name|go }} == nil {
 						r.{{ $field.Name|go }} = {{ $field.Name|go }}With{{ $field.CustomBoilerType|go }}ID(m.{{ $field.Name|go }}ID)
 					} else {
@@ -331,7 +109,7 @@ func IntIsZero(v int) bool {
 		{{ range $field := .Fields }}
 			{{- if $field.IsId -}}
 				func {{ $model.Name|go }}ID({{ $field.Name|go }} {{$field.GraphType}})( {{$field.BoilerType}}) {
-					return {{ $field.CustomFromFunction }}ID({{ $field.Name|go }}, "{{ $model.Name|go }}")
+					return helper.{{ $field.CustomFromFunction }}ID({{ $field.Name|go }}, "{{ $model.Name|go }}")
 				}
 				// func {{ $model.Name|go }}PointerID({{ $field.Name|go }} {{$field.GraphType}})( {{$field.BoilerType}}) {
 				// 	return {{ $field.CustomFromFunction }}ID({{ $field.Name|go }}, "{{ $model.Name|go }}")
@@ -352,20 +130,16 @@ func IntIsZero(v int) bool {
 				return nil
 			}	
 			r := &models.{{ .BoilerName|go }}{
-			{{ range $field := .Fields }}
-				{{- with .Description }}
-					{{.|prefixLines "// "}}
-				{{- end}}
+			{{ range $field := .Fields -}}
 				{{ if $field.IsId }}
-					{{ $field.BoilerName|go }} : {{ $field.CustomGraphIDFunction|go }}(m.{{ $field.Name|go }}),
+					{{- $field.BoilerName|go }} : {{ $field.CustomGraphIDFunction|go }}(m.{{ $field.Name|go }}),
 				{{ else if $field.IsRelation }}
-					// {{ $field.BoilerName|go }}ID : {{ $field.Name }}ID(m.{{ $field.Name|go }}, "{{ $field.BoilerName|go }}"),
 				{{ else if $field.IsCustomFunction }}
-					{{- $field.BoilerName|go }} : {{ $field.CustomFromFunction }}(m.{{ $field.Name|go }}),
+					{{- $field.BoilerName|go }} : helper.{{ $field.CustomFromFunction }}(m.{{ $field.Name|go }}),
 				{{ else }}	
 					{{- $field.BoilerName|go }}: m.{{ $field.Name|go }},
-				{{ end -}}
-			{{- end }}
+				{{ end }}
+			{{- end -}}
 			}
 			return r
 		}
