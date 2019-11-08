@@ -67,6 +67,7 @@ type Field struct {
 	CustomBoilerIDFunction string
 	CustomGraphIDFunction  string
 	IsId                   bool
+	IsNullableId           bool
 	IsRelation             bool
 	IsPlural               bool
 	CustomGraphType        string
@@ -365,6 +366,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 
 				var customBoilerIDFunction string
 				var customGraphIDFunction string
+				var isNullableId bool
 				if isId {
 					fmt.Println("isId")
 					if boilerName == "id" {
@@ -374,11 +376,28 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 						customBoilerIDFunction = boilerName + "Unique"
 						customGraphIDFunction = name
 					}
+					fmt.Println("boilerType", boilerType)
+					fmt.Println("graphType", typ.String())
 
+					graphTypeIsNullable := strings.HasPrefix(typ.String(), "*")
+					boilerTypeIsNullable := strings.HasPrefix(boilerType, "null.")
+					isNullableId = graphTypeIsNullable || boilerTypeIsNullable
+
+					if isNullableId && (!graphTypeIsNullable || !boilerTypeIsNullable) {
+						fmt.Println(fmt.Printf(`
+						ERROR: nullable differs in model: %v, 
+						you should make it the same 
+						schema name: %v is nullable=%v 
+						boiler name:  %v is nullable=%v`,
+							it.Name,
+							name, graphTypeIsNullable,
+							boilerName, boilerTypeIsNullable,
+						))
+					}
 				}
 
 				if boilerType == "" {
-					fmt.Println("boiler type not available for, continueing", name)
+					fmt.Println("boiler type not available for, continue", name)
 				}
 
 				it.Fields = append(it.Fields, &Field{
@@ -391,6 +410,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					CustomGraphIDFunction:  customGraphIDFunction,
 					CustomGraphType:        customGraphType,
 					CustomBoilerType:       customBoilerType,
+					IsNullableId:           isNullableId,
 					BoilerType:             boilerType,
 					GraphType:              typ.String(),
 					Name:                   name,

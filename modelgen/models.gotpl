@@ -54,10 +54,6 @@
 				func {{ $model.Name|go }}IDUnique(v {{$field.BoilerType}})({{$field.GraphType}}) {
 					return helper.{{ $field.CustomToFunction }}IDUnique(v, "{{ $model.Name|go }}")
 				}
-				func {{ $model.Name|go }}IDUniquePointerString(v {{$field.BoilerType}})(*{{$field.GraphType}}) {
-					s := {{ $model.Name|go }}IDUnique(v)
-					return &s
-				}
 			{{- end -}}
 		{{- end }}
 	
@@ -108,12 +104,21 @@
 
 		{{ range $field := .Fields }}
 			{{- if $field.IsId -}}
-				func {{ $model.Name|go }}ID({{ $field.Name|go }} {{$field.GraphType}})( {{$field.BoilerType}}) {
-					return helper.{{ $field.CustomFromFunction }}ID({{ $field.Name|go }}, "{{ $model.Name|go }}")
+				func {{ $model.Name|go }}ID(v {{$field.GraphType}})( {{$field.BoilerType}}) {
+					return helper.{{ $field.CustomFromFunction }}ID(v, "{{ $model.Name|go }}")
 				}
-				// func {{ $model.Name|go }}PointerID({{ $field.Name|go }} {{$field.GraphType}})( {{$field.BoilerType}}) {
-				// 	return {{ $field.CustomFromFunction }}ID({{ $field.Name|go }}, "{{ $model.Name|go }}")
-				// }
+				func {{ $model.Name|go }}IDNullable(v *{{$field.GraphType}})(null.{{$field.BoilerType|go}}) {
+					if v == nil {
+						return null.{{$field.BoilerType|go}}{
+							Valid: false,
+						}
+					}
+					s := {{ $model.Name|go }}ID(*v)
+					return null.{{$field.BoilerType|go}}{
+						Valid: s != 0,
+						{{$field.BoilerType|go}}: s,
+					}
+				}
 			{{- end -}}
 		{{- end }}
 	{{- end }}
