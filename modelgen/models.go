@@ -44,29 +44,33 @@ type Interface struct {
 type Object struct {
 	Description string
 	Name        string
+	BoilerName  string
 	PluralName  string
 	Fields      []*Field
 	Implements  []string
+	IsInput     bool
 }
 
 type Field struct {
-	Description        string
-	Name               string
-	PluralName         string
-	BoilerName         string
-	PluralBoilerName   string
-	BoilerType         string
-	GraphType          string
-	Type               types.Type
-	Tag                string
-	IsCustomFunction   bool
-	CustomFromFunction string
-	CustomToFunction   string
-	IsId               bool
-	IsRelation         bool
-	IsPlural           bool
-	CustomGraphType    string
-	CustomBoilerType   string
+	Description            string
+	Name                   string
+	PluralName             string
+	BoilerName             string
+	PluralBoilerName       string
+	BoilerType             string
+	GraphType              string
+	Type                   types.Type
+	Tag                    string
+	IsCustomFunction       bool
+	CustomFromFunction     string
+	CustomToFunction       string
+	CustomBoilerIDFunction string
+	CustomGraphIDFunction  string
+	IsId                   bool
+	IsRelation             bool
+	IsPlural               bool
+	CustomGraphType        string
+	CustomBoilerType       string
 }
 
 type Enum struct {
@@ -167,19 +171,30 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 				schemaType == schema.Subscription {
 				continue
 			}
-			it := &Object{
-				Description: schemaType.Description,
-				Name:        schemaType.Name,
-				PluralName:  pluralizer.Plural(schemaType.Name),
+			modelName := schemaType.Name
+			boilerName, hasBoilerName := boilerStructMap[modelName]
+			if !hasBoilerName {
+				boilerName, hasBoilerName = boilerStructMap[strings.TrimSuffix(modelName, "Input")]
 			}
 			// fmt.Println("GRAPHQL MODEL ::::", it.Name)
-			if strings.HasPrefix(it.Name, "_") {
+			if strings.HasPrefix(modelName, "_") {
 				continue
 			}
-			if !boilerStructMap[it.Name] {
-				fmt.Println(fmt.Sprintf("Skip struct %v because it can not be mapped to a boiler struct", it.Name))
+
+			// We will try to handle Input mutations to graphql objects
+			if !hasBoilerName {
+				fmt.Println(fmt.Sprintf("Skip struct %v because it can not be mapped to a boiler struct", modelName))
 				continue
 			}
+
+			it := &Object{
+				Description: schemaType.Description,
+				Name:        modelName,
+				PluralName:  pluralizer.Plural(modelName),
+				BoilerName:  boilerName,
+				IsInput:     strings.HasSuffix(modelName, "Input"),
+			}
+
 			for _, implementor := range schema.GetImplements(schemaType) {
 				it.Implements = append(it.Implements, implementor.Name)
 			}
@@ -243,6 +258,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 				// fmt.Println("-----       -----")
 				typ = binder.CopyModifiersFromAst(field.Type, typ)
 				isRelation := fieldDef.Kind == ast.Object
+
 				// fmt.Println(isRelation, "isRelation")
 				// fmt.Println(ast.Object, "ast.Object")
 				// fmt.Println(typ, "typ")
@@ -255,14 +271,18 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					continue
 				}
 
-				isId := name == "id"
 				structKey := strcase.ToCamel(name)
 				structKey = strings.Replace(structKey, "Id", "ID", -1)
 				structKey = strings.Replace(structKey, "Url", "URL", -1)
-
+				isId := strings.Contains(structKey, "ID")
 				boilerKey := it.Name + "." + structKey
 				// fmt.Println(boilerKey, ":", boilerType)
 				boilerType, ok := boilerTypeMap[boilerKey]
+				if it.IsInput {
+					boilerKey := strings.TrimSuffix(it.Name, "Input") + "." + structKey
+					boilerType, ok = boilerTypeMap[boilerKey]
+				}
+
 				var customBoilerName string
 				if !ok {
 					// ok appearently there are are sometimes when key contains 'type' the struct name is printed before
@@ -343,28 +363,44 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					boilerName = name
 				}
 
+				var customBoilerIDFunction string
+				var customGraphIDFunction string
+				if isId {
+					fmt.Println("isId")
+					if boilerName == "id" {
+						customBoilerIDFunction = it.BoilerName + "ID" + "Unique"
+						customGraphIDFunction = it.BoilerName + "ID"
+					} else {
+						customBoilerIDFunction = boilerName + "Unique"
+						customGraphIDFunction = name
+					}
+
+				}
+
 				if boilerType == "" {
 					fmt.Println("boiler type not available for, continueing", name)
 				}
 
 				it.Fields = append(it.Fields, &Field{
-					IsId:               isId,
-					IsRelation:         isRelation,
-					IsCustomFunction:   isCustomFunction,
-					CustomFromFunction: customFromFunction,
-					CustomToFunction:   customToFunction,
-					CustomGraphType:    customGraphType,
-					CustomBoilerType:   customBoilerType,
-					BoilerType:         boilerType,
-					GraphType:          typ.String(),
-					Name:               name,
-					IsPlural:           pluralizer.IsPlural(name),
-					PluralName:         pluralizer.Plural(name),
-					BoilerName:         boilerName,
-					PluralBoilerName:   pluralizer.Plural(boilerName),
-					Type:               typ,
-					Description:        field.Description,
-					Tag:                `json:"` + field.Name + `"`,
+					IsId:                   isId,
+					IsRelation:             isRelation,
+					IsCustomFunction:       isCustomFunction,
+					CustomFromFunction:     customFromFunction,
+					CustomToFunction:       customToFunction,
+					CustomBoilerIDFunction: customBoilerIDFunction,
+					CustomGraphIDFunction:  customGraphIDFunction,
+					CustomGraphType:        customGraphType,
+					CustomBoilerType:       customBoilerType,
+					BoilerType:             boilerType,
+					GraphType:              typ.String(),
+					Name:                   name,
+					IsPlural:               pluralizer.IsPlural(name),
+					PluralName:             pluralizer.Plural(name),
+					BoilerName:             boilerName,
+					PluralBoilerName:       pluralizer.Plural(boilerName),
+					Type:                   typ,
+					Description:            field.Description,
+					Tag:                    `json:"` + field.Name + `"`,
 				})
 			}
 

@@ -19,9 +19,9 @@ var ignoreFiles = []string{"boil_queries.go", "boil_table_names.go", "boil_types
 // Address.Longitude: null.String
 // Address.Latitude : null.Decimal
 // needed to generate the right convert code
-func parseBoilerFile(dir string) (map[string]string, map[string]bool) {
+func parseBoilerFile(dir string) (map[string]string, map[string]string) {
 	fieldsMap := make(map[string]string, 0)
-	structsMap := make(map[string]bool, 0)
+	structsMap := make(map[string]string, 0)
 	// fmt.Println(dir)
 	dir, err := filepath.Abs(dir)
 	if err != nil {
@@ -73,7 +73,7 @@ func parseBoilerFile(dir string) (map[string]string, map[string]bool) {
 						continue
 					}
 
-					structsMap[safeTypeSpec.Name.String()] = true
+					structsMap[safeTypeSpec.Name.String()] = safeTypeSpec.Name.String()
 
 					safeStructDecl, ok := safeTypeSpec.Type.(*ast.StructType)
 					if !ok {
