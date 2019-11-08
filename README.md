@@ -10,7 +10,7 @@ Generate GrapQL API with: https://github.com/99designs/gqlgen
 Generate converts between gqlgen-sqlboiler with this program   
    
    
-DONE: generate converts between sqlboiler structs and graphql   
+DONE: generate converts between sqlboiler structs and graphql (with relations included)  
 DONE: generate converts between input models and sqlboiler
 WIP: Fetch sqlboiler preloads from graphql context   
 TODO: generate CRUD resolvers based on mutations in graphql scheme   
