@@ -4,14 +4,14 @@ To make this program a success very tight coupling between your database and gra
 
 Generate database structs with: https://github.com/volatiletech/sqlboiler   
 Generate GrapQL scheme with (??): 
-https://github.com/rexxars/sql-to-graphql   
-https://docs.hasura.io/1.0/graphql/manual/schema/using-existing-database.html
+https://github.com/rexxars/sql-to-graphql (seeking a better alternative)
 
 Generate GrapQL API with: https://github.com/99designs/gqlgen   
 Generate converts between gqlgen-sqlboiler with this program   
    
    
-DONE: generate converts between sqlboiler structs and graphql   
+DONE: generate converts between sqlboiler structs and graphql (with relations included)  
+DONE: generate converts between input models and sqlboiler
 WIP: Fetch sqlboiler preloads from graphql context   
 TODO: generate CRUD resolvers based on mutations in graphql scheme   
    
