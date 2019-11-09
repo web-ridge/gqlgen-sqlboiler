@@ -40,10 +40,10 @@
 		func {{ .Name|go }}WithNullDotIntID(id null.Int) *graphql_models.{{ .Name|go }} {
 			return {{ .Name|go }}WithIntID(id.Int)
 		}
-		func {{ .PluralName|go }}ToGraphQL(am []*models.{{ .Name|go }})( []*graphql_models.{{ .Name|go }}) {
+		func {{ .PluralName|go }}ToGraphQL(am []*models.{{ .Name|go }}, root interface{})( []*graphql_models.{{ .Name|go }}) {
 			ar := make([]*graphql_models.{{ .Name|go }}, len(am))
 			for i,m := range am {
-				ar[i] = {{ .Name|go }}ToGraphQL(m)
+				ar[i] = {{ .Name|go }}ToGraphQL(m, root)
 			}
 			return ar
 		}
@@ -59,7 +59,7 @@
 	
 
 
-	func {{ .Name|go }}ToGraphQL(m *models.{{ .BoilerName|go }})( *graphql_models.{{ .Name|go }}) {
+	func {{ .Name|go }}ToGraphQL(m *models.{{ .BoilerName|go }}, root interface{})( *graphql_models.{{ .Name|go }}) {
 		if m == nil {
 			return nil
 		}
@@ -83,16 +83,17 @@
 	
 			{{- if $field.IsRelation }}
 				{{- if $field.IsPlural }}
-					if m.R != nil && m.R.{{ $field.Name|go }} != nil {
-						r.{{ $field.Name|go }} = {{ $field.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }})
+					if m.R != nil && m.R.{{ $field.Name|go }} != nil  {
+						r.{{ $field.Name|go }} = {{ $field.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }}, m)
 					} 
 				{{- else }}	
 				
 				if !helper.{{ $field.CustomBoilerType }}IsZero(m.{{ $field.Name|go }}ID) {
-					if m.R == nil || m.R.{{ $field.Name|go }} == nil {
-						r.{{ $field.Name|go }} = {{ $field.Name|go }}With{{ $field.CustomBoilerType|go }}ID(m.{{ $field.Name|go }}ID)
+					pointerToObject, hasPointerToObject := root.(*models.{{ $field.BoilerName|go }})
+					if m.R != nil && m.R.{{ $field.Name|go }} != nil && (!hasPointerToObject || pointerToObject != m.R.{{ $field.Name|go }})  {
+						r.{{ $field.Name|go }} ={{ $field.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }}, m)
 					} else {
-						r.{{ $field.Name|go }} ={{ $field.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }})
+						r.{{ $field.Name|go }} = {{ $field.Name|go }}With{{ $field.CustomBoilerType|go }}ID(m.{{ $field.Name|go }}ID)
 					}
 				}
 				{{- end -}}
