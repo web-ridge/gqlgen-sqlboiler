@@ -404,6 +404,10 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					fmt.Println("boiler type not available for, continue", name)
 				}
 
+				if name == "clientMutationId" {
+					continue
+				}
+
 				it.Fields = append(it.Fields, &Field{
 					IsId:                   isId,
 					IsRelation:             isRelation,
@@ -426,6 +430,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					Description:            field.Description,
 					Tag:                    `json:"` + field.Name + `"`,
 				})
+
 			}
 
 			b.Models = append(b.Models, it)

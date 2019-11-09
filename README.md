@@ -1,25 +1,25 @@
-This program generates code like this between your generated gqlgen program and sqlboiler. This in work in progress and we are working on automatically generating the basis Mutations like create, update, delete working based on your graphql scheme and your database models.
+This program generates code like this between your generated gqlgen program and sqlboiler with support for relay (unique id's etc). This in work in progress and we are working on automatically generating the basis Mutations like create, update, delete working based on your graphql scheme and your database models.
 
 To make this program a success very tight coupling between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed.
 
-Generate database structs with: https://github.com/volatiletech/sqlboiler   
-Generate GrapQL scheme with (??): 
+Generate database structs with: https://github.com/volatiletech/sqlboiler  
+Generate GrapQL scheme with (??):
 https://github.com/rexxars/sql-to-graphql (seeking a better alternative)
 
-Generate GrapQL API with: https://github.com/99designs/gqlgen   
-Generate converts between gqlgen-sqlboiler with this program   
-   
-   
+Generate GrapQL API with: https://github.com/99designs/gqlgen  
+Generate converts between gqlgen-sqlboiler with this program
+
 DONE: generate converts between sqlboiler structs and graphql (with relations included)  
 DONE: generate converts between input models and sqlboiler
-WIP: Fetch sqlboiler preloads from graphql context   
-TODO: generate CRUD resolvers based on mutations in graphql scheme   
-   
-   
+WIP: Fetch sqlboiler preloads from graphql context  
+TODO: generate CRUD resolvers based on mutations in graphql scheme
+
 ## Case
-You have a personal project with a very big database and a 'Laravel API'. I want to be able to generate a new Golang GraphQL API for this project in no time. 
-      
-      
+
+You have a personal project with a very big database and a 'Laravel API'. I want to be able to generate a new Golang GraphQL API for this project in no time.
+  
+
+
 ## Example result of this plugin
 
 ```golang
@@ -52,6 +52,7 @@ func UserToGraphQL(m *models.User) *graphql_models.User {
 ```
 
 sqlboiler.yml
+
 ```yaml
 mysql:
   dbname: dbname
@@ -70,6 +71,7 @@ mysqldump:
 ```
 
 gqlgen.yml
+
 ```yaml
 schema:
   - schema.graphql
@@ -88,6 +90,7 @@ Run normal generator
 `go run github.com/99designs/gqlgen -v`
 
 Put this in your program convert_plugin.go e.g.
+
 ```golang
 // +build ignore
 
