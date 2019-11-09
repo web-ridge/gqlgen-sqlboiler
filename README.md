@@ -39,7 +39,7 @@ func UserToGraphQL(m *models.User) *graphql_models.User {
 		DeletedAt:                      NullDotTimeToPointerInt(m.DeletedAt),
 		SendNotificationsOnNewCalamity: BoolToInt(m.SendNotificationsOnNewCalamity),
 	}
-	if UintIsZero(m.RoleID) {
+	if !UintIsZero(m.RoleID) {
 		if m.R == nil || m.R.Role == nil {
 			r.Role = RoleWithUintID(m.RoleID)
 		} else {
