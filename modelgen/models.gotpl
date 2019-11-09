@@ -83,12 +83,12 @@
 	
 			{{- if $field.IsRelation }}
 				{{- if $field.IsPlural }}
-					if m.R != nil || m.R.{{ $field.Name|go }} != nil {
+					if m.R != nil && m.R.{{ $field.Name|go }} != nil {
 						r.{{ $field.Name|go }} = {{ $field.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }})
 					} 
 				{{- else }}	
 				
-				if helper.{{ $field.CustomBoilerType }}IsZero(m.{{ $field.Name|go }}ID) {
+				if !helper.{{ $field.CustomBoilerType }}IsZero(m.{{ $field.Name|go }}ID) {
 					if m.R == nil || m.R.{{ $field.Name|go }} == nil {
 						r.{{ $field.Name|go }} = {{ $field.Name|go }}With{{ $field.CustomBoilerType|go }}ID(m.{{ $field.Name|go }}ID)
 					} else {
