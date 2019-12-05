@@ -61,6 +61,12 @@ func NullDotUintToPointerInt(v null.Uint) *int {
 	u := int(*pv)
 	return &u
 }
+func PointerStringToString(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
+}
 
 func PointerIntToNullDotTime(v *int) null.Time {
 	if v == nil {
