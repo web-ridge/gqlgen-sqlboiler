@@ -17,8 +17,6 @@ TODO: generate CRUD resolvers based on mutations in graphql scheme
 ## Case
 
 You have a personal project with a very big database and a 'Laravel API'. I want to be able to generate a new Golang GraphQL API for this project in no time.
-  
-
 
 ## Example result of this plugin
 
@@ -119,7 +117,7 @@ func main() {
 			"convert/convert.go",
 			"models",
 			"graphql_models",
-		)), // This is the magic line
+		)), // This generates conversions structs
 	)
 	if err != nil {
 		fmt.Println("error!!")
