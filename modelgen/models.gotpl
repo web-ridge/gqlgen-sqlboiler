@@ -179,7 +179,7 @@ func getInputFromContext(ctx context.Context, key string) []string {
 					{{ end -}}
 				}
 			}
-			return boil.Whitelist(greylist...)
+			return boil.Whitelist(columsWhichAreSet...)
 		}
 	{{- end }}
 {{- end }}
