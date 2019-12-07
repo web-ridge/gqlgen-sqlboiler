@@ -170,16 +170,16 @@ func getInputFromContext(ctx context.Context, key string) []string {
 
 		func {{ .Name|go }}ToBoilerWhitelist(ctx context.Context) boil.Columns {
 			keys := getInputFromContext(ctx, "input")
-			greylist := []string{}
+			columsWhichAreSet := []string{}
 			for _, key := range keys {
 				switch key {
 					{{ range $field := .Fields -}}
 					case "{{ $field.CamelCaseName }}":
-						greylist = append(greylist, models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }})
+						columsWhichAreSet = append(columsWhichAreSet, models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }})
 					{{ end -}}
 				}
 			}
-			return boil.Greylist(greylist...)
+			return boil.Whitelist(greylist...)
 		}
 	{{- end }}
 {{- end }}
