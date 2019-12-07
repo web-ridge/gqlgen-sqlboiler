@@ -54,6 +54,7 @@ type Object struct {
 type Field struct {
 	Description            string
 	Name                   string
+	CamelCaseName          string
 	PluralName             string
 	BoilerName             string
 	PluralBoilerName       string
@@ -422,6 +423,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					BoilerType:             boilerType,
 					GraphType:              typ.String(),
 					Name:                   name,
+					CamelCaseName:          strcase.ToLowerCamel(name),
 					IsPlural:               pluralizer.IsPlural(name),
 					PluralName:             pluralizer.Plural(name),
 					BoilerName:             boilerName,

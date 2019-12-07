@@ -174,7 +174,7 @@ func getInputFromContext(ctx context.Context, key string) []string {
 			for _, key := range keys {
 				switch key {
 					{{ range $field := .Fields -}}
-					case "{{ $field.Name }}":
+					case "{{ $field.CamelCaseName }}":
 						whitelist = append(whitelist, models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }})
 					{{ end -}}
 				}
