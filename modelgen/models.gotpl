@@ -7,6 +7,7 @@
 {{ reserveImport "errors"  }}
 {{ reserveImport "bytes"  }}
 {{ reserveImport "strings"  }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/boil"}}
 {{ reserveImport "github.com/ericlagergren/decimal"  }}
 {{ reserveImport "github.com/volatiletech/null"  }}
 {{ reserveImport "github.com/volatiletech/sqlboiler/types"  }}
@@ -167,8 +168,18 @@ func getInputFromContext(ctx context.Context, key string) []string {
 			return r
 		}
 
-		func {{ .Name|go }}ToBoilerWhitelist(ctx context.Context) []string {
-			return getInputFromContext(ctx, "input")
+		func {{ .Name|go }}ToBoilerWhitelist(ctx context.Context) boil.Columns {
+			keys := getInputFromContext(ctx, "input")
+			whitelist := []string{}
+			for _, key := range keys {
+				switch key {
+					{{ range $field := .Fields -}}
+					case "{{ $field.Name|go }}":
+						whitelist = append(whitelist, models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }})
+					{{ end -}}
+				}
+			}
+			return boil.Whitelist(whitelist...)
 		}
 	{{- end }}
 {{- end }}
