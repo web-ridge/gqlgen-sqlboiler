@@ -167,19 +167,35 @@ func getInputFromContext(ctx context.Context, key string) []string {
 			}
 			return r
 		}
-
-		func {{ .Name|go }}ToBoilerWhitelist(ctx context.Context) boil.Columns {
+		func {{ .Name|go }}ToModelM(ctx context.Context) models.M {
 			keys := getInputFromContext(ctx, "input")
-			columsWhichAreSet := []string{}
+			m := models.M{}
+			for v, key := range keys {
+				switch key {
+					{{ range $field := .Fields -}}
+					case "{{ $field.CamelCaseName }}":
+						m[models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }}] = v
+					{{ end -}}
+				}
+			}
+			for _, column := range extraColumns {
+				m[models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }}] = v
+			}
+			return m
+		}
+		func {{ .Name|go }}ToBoilerWhitelist(ctx context.Context, extraColumns ...string) boil.Columns {
+			keys := getInputFromContext(ctx, "input")
+			columnsWhichAreSet := []string{}
 			for _, key := range keys {
 				switch key {
 					{{ range $field := .Fields -}}
 					case "{{ $field.CamelCaseName }}":
-						columsWhichAreSet = append(columsWhichAreSet, models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }})
+						columnsWhichAreSet = append(columnsWhichAreSet, models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }})
 					{{ end -}}
 				}
 			}
-			return boil.Whitelist(columsWhichAreSet...)
+			columnsWhichAreSet = append(columnsWhichAreSet, extraColumns...)
+			return boil.Whitelist(columnsWhichAreSet...)
 		}
 	{{- end }}
 {{- end }}
