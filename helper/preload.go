@@ -4,12 +4,12 @@ import (
 	"context"
 	"strings"
 
-	. "github.com/volatiletech/sqlboiler/queries/qm"
+	qm "github.com/volatiletech/sqlboiler/queries/qm"
 
 	"github.com/99designs/gqlgen/graphql"
 )
 
-type ColumSetting struct {
+type ColumnSetting struct {
 	Name        string
 	IDAvailable bool // ID is available without preloading
 }
@@ -17,8 +17,8 @@ type ColumSetting struct {
 func PreloadsContainMoreThanId(a []string, v string) bool {
 	for _, av := range a {
 		if strings.HasPrefix(av, v) &&
-			av != v &&
-			!strings.HasPrefix(av, v+".id") {
+			av != v && // e.g. parentTable
+			!strings.HasPrefix(av, v+".id") { // e.g parentTable.id
 			return true
 		}
 	}
@@ -34,26 +34,26 @@ func PreloadsContain(a []string, v string) bool {
 	return false
 }
 
-func GetPreloadMods(ctx context.Context, preloadColumnMap map[string]ColumSetting) (queryMods []QueryMod) {
+func GetPreloadMods(ctx context.Context, preloadColumnMap map[string]ColumnSetting) (queryMods []qm.QueryMod) {
 	gPreloads := GetPreloads(ctx)
 	for _, gPreload := range gPreloads {
 		dPreloadParts := []string{}
 		for _, gPreloadPart := range strings.Split(gPreload, ".") {
-			columSetting, ok := preloadColumnMap[gPreloadPart]
+			columnSetting, ok := preloadColumnMap[gPreloadPart]
 			if ok {
-				if columSetting.IDAvailable {
+				if columnSetting.IDAvailable {
 					if PreloadsContainMoreThanId(gPreloads, gPreloadPart) {
-						dPreloadParts = append(dPreloadParts, columSetting.Name)
+						dPreloadParts = append(dPreloadParts, columnSetting.Name)
 					}
 					// TODO
 					// dPreloadParts = append(dPreloadParts, columSetting.Name)
 				} else {
-					dPreloadParts = append(dPreloadParts, columSetting.Name)
+					dPreloadParts = append(dPreloadParts, columnSetting.Name)
 				}
 			}
 		}
 		if len(dPreloadParts) > 0 {
-			queryMods = append(queryMods, Load(strings.Join(dPreloadParts, ".")))
+			queryMods = append(queryMods, qm.Load(strings.Join(dPreloadParts, ".")))
 		}
 	}
 	return
