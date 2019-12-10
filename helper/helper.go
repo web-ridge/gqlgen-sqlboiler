@@ -1,7 +1,6 @@
 package helper
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -61,6 +60,7 @@ func NullDotUintToPointerInt(v null.Uint) *int {
 	u := int(*pv)
 	return &u
 }
+
 func PointerStringToString(v *string) string {
 	if v == nil {
 		return ""
@@ -69,45 +69,19 @@ func PointerStringToString(v *string) string {
 }
 
 func PointerIntToNullDotTime(v *int) null.Time {
-	if v == nil {
-		return null.Time{
-			Valid: false,
-		}
-	}
-	return null.Time{
-		Valid: true,
-		Time:  time.Unix(int64(*v), 0),
-	}
+	return null.TimeFrom(time.Unix(int64(*v), 0))
 }
+
 func StringToNullDotString(v string) null.String {
-	// TODO nullable?? what to here
-	return null.String{
-		Valid:  true,
-		String: v,
-	}
+	return null.StringFrom(v)
 }
+
 func PointerStringToNullDotString(v *string) null.String {
-	if v == nil {
-		return null.String{
-			Valid: false,
-		}
-	}
-	return null.String{
-		Valid:  v != nil,
-		String: *v,
-	}
+	return null.StringFromPtr(v)
 }
 
 func PointerBoolToNullDotBool(v *bool) null.Bool {
-	if v == nil {
-		return null.Bool{
-			Valid: false,
-		}
-	}
-	return null.Bool{
-		Valid: v != nil,
-		Bool:  *v,
-	}
+	return null.BoolFromPtr(v)
 }
 
 func TypesNullDecimalToPointerString(v types.NullDecimal) *string {
@@ -137,28 +111,17 @@ func PointerStringToTypesNullDecimal(v *string) types.NullDecimal {
 }
 
 func PointerIntToNullDotInt(v *int) null.Int {
-	// TODO
-	fmt.Println("not implemented convert")
-
-	if v == nil {
-		return null.Int{}
-	}
-	return null.Int{}
+	return null.IntFromPtr((v))
 }
 func PointerIntToNullDotUint(v *int) null.Uint {
-	// TODO
-	fmt.Println("not implemented convert")
-
 	if v == nil {
-		return null.Uint{}
+		return null.UintFromPtr(nil)
 	}
-	return null.Uint{}
+	uv := *v
+	return null.UintFrom(uint(uv))
 }
 func NullDotIntToPointerInt(v null.Int) *int {
-	// TODO
-	fmt.Println("not implemented convert")
-
-	return nil
+	return v.Ptr()
 }
 func IntToInt8(v int) int8 {
 	return int8(v)
@@ -167,20 +130,11 @@ func Int8ToInt(v int8) int {
 	return int(v)
 }
 func NullDotFloat64ToPointerFloat64(v null.Float64) *float64 {
-	// TODO
-	fmt.Println("not implemented convert")
-
-	return nil
+	return v.Ptr()
 
 }
 func PointerFloat64ToNullDotFloat64(v *float64) null.Float64 {
-	// TODO
-	fmt.Println("not implemented convert")
-
-	if v == nil {
-		return null.Float64{}
-	}
-	return null.Float64{}
+	return null.Float64FromPtr(v)
 }
 
 func IntToUint(v int) uint {
@@ -192,7 +146,7 @@ func UintToInt(v uint) int {
 }
 
 func BoolToInt(v bool) int {
-	if v == true {
+	if v {
 		return 1
 	}
 	return 0
@@ -207,7 +161,7 @@ func NullDotBoolToPointerInt(v null.Bool) *int {
 	if pv == nil {
 		return nil
 	}
-	if *pv == true {
+	if *pv {
 		i := 1
 		return &i
 	}
