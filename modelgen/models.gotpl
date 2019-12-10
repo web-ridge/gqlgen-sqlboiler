@@ -135,7 +135,7 @@ func getInputFromContext(ctx context.Context, key string) []string {
 
 		{{ range $field := .Fields }}
 			{{- if $field.IsId -}}
-				func {{ $model.Name|go }}ID(v {{$field.GraphType}})( {{$field.BoilerType}}) {
+				func {{ $model.Name|go }}ID(v {{$field.GraphType}})({{$field.BoilerType}}) {
 					return helper.{{ $field.CustomFromFunction }}ID(v, "{{ $model.Name|go }}")
 				}
 				func {{ $model.Name|go }}IDNullable(v *{{$field.GraphType}})(null.{{$field.BoilerType|go}}) {
@@ -149,6 +149,13 @@ func getInputFromContext(ctx context.Context, key string) []string {
 						Valid: s != 0,
 						{{$field.BoilerType|go}}: s,
 					}
+				}
+				func {{ $model.Name|go }}IDsToInts(a []string) []{{$field.BoilerType}} {
+					r := make([]int, len(a))
+					for i, v := range a {
+						r[i] = {{ $model.Name|go }}ID(v)
+					}
+					return r
 				}
 			{{- end -}}
 		{{- end }}
