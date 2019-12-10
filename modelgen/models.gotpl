@@ -36,15 +36,15 @@ func getInputFromContext(ctx context.Context, key string) []string {
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 
 	{{- if not .IsInput -}}
-	var {{ $model.Name|go }}loadMap = map[string]helper.ColumnSetting{
+	var {{ $model.Name|go }}PreloadMap = map[string]helper.ColumnSetting{
 		{{ range $field := .Fields }}
-		{{- if $field.IsRelation }}
-		"{{ $field.Name }}":        helper.ColumnSetting{Name: models.{{ $model.Name|go }}Rels.{{ $field.BoilerName|go }}, IDAvailable: true},
-		// "blockChoices": ColumSetting{Name: models.BlockRels.BlockChoices},
-		// "flowBlock":    ColumSetting{Name: models.FlowBlockRels.FlowBlock, IDAvailable: true},
-		// "blockChoice":  ColumSetting{Name: models.FlowBlockRels.BlockChoice},
-		// "flow":         ColumSetting{Name: models.FlowBlockRels.Flow, IDAvailable: true},
-		{{- end -}}
+			{{- if $field.IsRelation -}}
+				{{- if $field.IsPlural }}
+					"{{ $field.Name }}":        helper.ColumnSetting{Name: models.{{ $model.Name|go }}Rels.{{ $field.BoilerName|go }}},
+				{{- else }}
+					"{{ $field.Name }}":        helper.ColumnSetting{Name: models.{{ $model.Name|go }}Rels.{{ $field.BoilerName|go }}, IDAvailable: true},
+				{{- end }}
+			{{- end -}}
 		{{- end }}
 	}
 	{{ end }}
