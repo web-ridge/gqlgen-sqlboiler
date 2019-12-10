@@ -34,7 +34,19 @@ func getInputFromContext(ctx context.Context, key string) []string {
 
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
-
+	{{- if not .IsInput -}}
+	var {{ $model.Name|go }}loadMap = map[string]ColumSetting{
+		{{ range $field := .Fields }}
+		{{- if $field.IsRelation }}
+		"{{ $field.Name }}":        ColumSetting{Name: models.{{ $model.Name|go }}Rels.{{ $field.BoilerName|go }}, IDAvailable: true},
+		// "blockChoices": ColumSetting{Name: models.BlockRels.BlockChoices},
+		// "flowBlock":    ColumSetting{Name: models.FlowBlockRels.FlowBlock, IDAvailable: true},
+		// "blockChoice":  ColumSetting{Name: models.FlowBlockRels.BlockChoice},
+		// "flow":         ColumSetting{Name: models.FlowBlockRels.Flow, IDAvailable: true},
+		{{- end -}}
+		{{- end }}
+	}
+	{{- end }}
 	{{- if not .IsInput -}}
 		func {{ .Name|go }}WithIntID(id int) *graphql_models.{{ .Name|go }} {
 			return &graphql_models.{{ .Name|go }}{
