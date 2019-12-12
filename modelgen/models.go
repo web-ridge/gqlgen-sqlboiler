@@ -185,7 +185,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 
 			// We will try to handle Input mutations to graphql objects
 			if !hasBoilerName {
-				fmt.Println(fmt.Sprintf("Skip struct %v because it can not be mapped to a boiler struct", modelName))
+				fmt.Println(fmt.Sprintf("    [WARN] Skip  %v because it there is no database model found", modelName))
 				continue
 			}
 
@@ -309,7 +309,14 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					}
 
 					if !ok {
-						fmt.Println("Could not find boilerType for key:type = ", boilerKey, ":", boilerType)
+						if strings.Contains(boilerKey, "ClientMutationID") {
+							// ignore
+						} else if strings.Contains(boilerKey, ".") && pluralizer.IsPlural(strings.Split(boilerKey, ".")[1]) {
+							// ignore
+							// 	Could not find boilerType for key:type =  Flow.FlowBlocks
+						} else {
+							fmt.Println("Could not find boilerType for key:type = ", boilerKey, ":", boilerType)
+						}
 					}
 
 				}
@@ -369,7 +376,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 				var customGraphIDFunction string
 				var isNullableID bool
 				if isId {
-					fmt.Println("isId")
+					// fmt.Println("isId")
 					if boilerName == "id" {
 						customBoilerIDFunction = it.BoilerName + "ID" + "Unique"
 						customGraphIDFunction = it.BoilerName + "ID"
@@ -377,8 +384,8 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 						customBoilerIDFunction = boilerName + "Unique"
 						customGraphIDFunction = name
 					}
-					fmt.Println("boilerType", boilerType)
-					fmt.Println("graphType", typ.String())
+					// fmt.Println("boilerType", boilerType)
+					// fmt.Println("graphType", typ.String())
 
 					graphTypeIsNullable := strings.HasPrefix(typ.String(), "*")
 					boilerTypeIsNullable := strings.HasPrefix(boilerType, "null.")
@@ -400,13 +407,17 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 						))
 					}
 				}
-
-				if boilerType == "" {
-					fmt.Println("boiler type not available for, continue", name)
-				}
-
 				if name == "clientMutationId" {
 					continue
+				}
+
+				if boilerType == "" {
+					if pluralizer.IsPlural(name) {
+						// ignore
+					} else {
+						fmt.Println("[WARN] boiler type not available for, continue", name)
+					}
+
 				}
 
 				it.Fields = append(it.Fields, &Field{

@@ -140,25 +140,25 @@ func parseBoilerFile(dir string) (map[string]string, map[string]string) {
 	}
 	sort.Strings(keys)
 
-	fmt.Println(" ")
-	fmt.Println(" ")
-	fmt.Println(" ")
-	fmt.Println("START OF MAP DUMP")
-	fmt.Println("START OF MAP DUMP")
-	fmt.Println("START OF MAP DUMP")
-	fmt.Println(" ")
-	fmt.Println(" ")
-	for _, key := range keys {
-		fmt.Println(key, ":", fieldsMap[key])
-	}
-	fmt.Println(" ")
-	fmt.Println(" ")
-	fmt.Println("END OF MAP DUMP")
-	fmt.Println("END OF MAP DUMP")
-	fmt.Println("END OF MAP DUMP")
-	fmt.Println(" ")
-	fmt.Println(" ")
-	fmt.Println(" ")
+	// fmt.Println(" ")
+	// fmt.Println(" ")
+	// fmt.Println(" ")
+	// fmt.Println("START OF MAP DUMP")
+	// fmt.Println("START OF MAP DUMP")
+	// fmt.Println("START OF MAP DUMP")
+	// fmt.Println(" ")
+	// fmt.Println(" ")
+	// for _, key := range keys {
+	// 	fmt.Println(key, ":", fieldsMap[key])
+	// }
+	// fmt.Println(" ")
+	// fmt.Println(" ")
+	// fmt.Println("END OF MAP DUMP")
+	// fmt.Println("END OF MAP DUMP")
+	// fmt.Println("END OF MAP DUMP")
+	// fmt.Println(" ")
+	// fmt.Println(" ")
+	// fmt.Println(" ")
 
 	return fieldsMap, structsMap
 }

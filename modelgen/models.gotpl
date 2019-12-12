@@ -16,20 +16,18 @@
 {{ reserveImport "github.com/vektah/gqlparser/ast" }}
 {{ reserveImport "github.com/99designs/gqlgen/graphql" }}
 {{ reserveImport "github.com/99designs/gqlgen/graphql/introspection" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/queries/qm" }}
+{{ reserveImport "database/sql" }}
 {{ reserveImport  $.BackendModelsPath }}
 {{ reserveImport  $.FrontendModelsPath }}
 
-func getInputFromContext(ctx context.Context, key string) []string {
+func getInputFromContext(ctx context.Context, key string) map[string]interface{} {
 	requestContext := graphql.GetRequestContext(ctx)
 	m, ok := requestContext.Variables[key].(map[string]interface{})
 	if !ok {
 		fmt.Println("can not get input from context")
 	}
-	keys := []string{}
-	for key, _ := range m {
-		keys = append(keys, key)
-	}
-	return keys
+	return m
 }
 
 {{ range $model := .Models }}
@@ -50,6 +48,18 @@ func getInputFromContext(ctx context.Context, key string) []string {
 	{{ end }}
 
 	{{- if not .IsInput -}}
+		func Get{{ .Name|go }}(ctx context.Context, db *sql.DB, whereFilters ...qm.QueryMod) (*graphql_models.{{ .Name|go }}, error) {
+			queryMods := helper.GetPreloadMods(ctx, {{ .Name|go }}PreloadMap)
+			queryMods = append(queryMods, whereFilters...)
+			m, err := models.{{ .PluralName|go }}(queryMods...).One(ctx, db)
+			return {{ .Name|go }}ToGraphQL(m, m), err
+		}
+		func Get{{ .PluralName|go }}(ctx context.Context, db *sql.DB, whereFilters ...qm.QueryMod) ([]*graphql_models.{{ .Name|go }}, error) {
+			queryMods := helper.GetPreloadMods(ctx,{{ .Name|go }}PreloadMap)
+			queryMods = append(queryMods, whereFilters...)
+			a, err := models.{{ .PluralName|go }}(queryMods...).All(ctx, db)
+			return {{ .PluralName|go }}ToGraphQL(a, nil), err
+		}
 		func {{ .Name|go }}WithIntID(id int) *graphql_models.{{ .Name|go }} {
 			return &graphql_models.{{ .Name|go }}{
 				ID: helper.IntToStringIDUnique(id, "{{ $model.Name|go }}"),
@@ -189,22 +199,22 @@ func getInputFromContext(ctx context.Context, key string) []string {
 			return r
 		}
 		func {{ .Name|go }}ToModelM(ctx context.Context) models.M {
-			keys := getInputFromContext(ctx, "input")
+			input := getInputFromContext(ctx, "input")
 			m := models.M{}
-			for v, key := range keys {
+			for key, value := range input {
 				switch key {
 					{{ range $field := .Fields -}}
 					case "{{ $field.CamelCaseName }}":
-						m[models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }}] = v
+						m[models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }}] = value
 					{{ end -}}
 				}
 			}
 			return m
 		}
 		func {{ .Name|go }}ToBoilerWhitelist(ctx context.Context, extraColumns ...string) boil.Columns {
-			keys := getInputFromContext(ctx, "input")
+			input := getInputFromContext(ctx, "input")
 			columnsWhichAreSet := []string{}
-			for _, key := range keys {
+			for key, _ := range input {
 				switch key {
 					{{ range $field := .Fields -}}
 					case "{{ $field.CamelCaseName }}":
