@@ -2,6 +2,7 @@ package helper
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	qm "github.com/volatiletech/sqlboiler/queries/qm"
@@ -38,6 +39,7 @@ func GetPreloadMods(ctx context.Context, preloadColumnMap map[string]ColumnSetti
 	gPreloads := GetPreloads(ctx)
 	for _, gPreload := range gPreloads {
 		dPreloadParts := []string{}
+		fmt.Println("preloadje??", gPreload)
 		for _, gPreloadPart := range strings.Split(gPreload, ".") {
 			columnSetting, ok := preloadColumnMap[gPreloadPart]
 			if ok {
@@ -51,6 +53,9 @@ func GetPreloadMods(ctx context.Context, preloadColumnMap map[string]ColumnSetti
 					dPreloadParts = append(dPreloadParts, columnSetting.Name)
 				}
 			}
+			// else {
+			// 	fmt.Println(gPreload, " not found s")
+			// }
 		}
 		if len(dPreloadParts) > 0 {
 			queryMods = append(queryMods, qm.Load(strings.Join(dPreloadParts, ".")))
@@ -60,12 +65,33 @@ func GetPreloadMods(ctx context.Context, preloadColumnMap map[string]ColumnSetti
 }
 
 func GetPreloads(ctx context.Context) []string {
+	// return
+
 	return GetNestedPreloads(
-		graphql.GetRequestContext(ctx),
+		graphql.GetOperationContext(ctx),
 		graphql.CollectFieldsCtx(ctx, nil),
 		"",
 	)
+	// arr2 := graphql.CollectAllFields(ctx)
+	// return append(arr1, arr2...)
 }
+
+// // CollectAllFields returns a slice of all GraphQL field names that were selected for the current resolver context.
+// // The slice will contain the unique set of all field names requested regardless of fragment type conditions.
+// func CollectAllFields(ctx context.Context) []string {
+// 	resctx := graphql.GetFieldContext(ctx)
+// 	collected := graphql.CollectFields(graphql.GetOperationContext(ctx), resctx.Field.Selections, nil)
+// 	uniq := make([]string, 0, len(collected))
+
+// 	for _, f := range collected {
+// 		fmt.Println("CollectAllFields add", f.Name)
+// 		for _, s := range f.Selections {
+
+// 		}
+// 		uniq = append(uniq, f.Name)
+// 	}
+// 	return uniq
+// }
 
 func GetNestedPreloads(ctx *graphql.RequestContext, fields []graphql.CollectedField, prefix string) (preloads []string) {
 	for _, column := range fields {
