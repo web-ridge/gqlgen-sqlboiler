@@ -2,7 +2,6 @@ package helper
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	qm "github.com/volatiletech/sqlboiler/queries/qm"
@@ -39,7 +38,7 @@ func GetPreloadMods(ctx context.Context, preloadColumnMap map[string]ColumnSetti
 	gPreloads := GetPreloads(ctx)
 	for _, gPreload := range gPreloads {
 		dPreloadParts := []string{}
-		fmt.Println("preloadje??", gPreload)
+		// fmt.Println("preloadje??", gPreload)
 		for _, gPreloadPart := range strings.Split(gPreload, ".") {
 			columnSetting, ok := preloadColumnMap[gPreloadPart]
 			if ok {
@@ -68,7 +67,7 @@ func GetPreloads(ctx context.Context) []string {
 	// return
 
 	return GetNestedPreloads(
-		graphql.GetOperationContext(ctx),
+		graphql.GetRequestContext(ctx),
 		graphql.CollectFieldsCtx(ctx, nil),
 		"",
 	)
