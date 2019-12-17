@@ -35,38 +35,11 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 
 	{{- if not .IsInput -}}
 	var {{ $model.Name|go }}PreloadMap = map[string]helper.ColumnSetting{
-		{{ range $field := .Fields }}
-			{{- if $field.IsRelation -}}
-				{{- if $field.IsPlural }}
-					"{{ $field.PluralName }}":        helper.ColumnSetting{Name: models.{{ $model.Name|go }}Rels.{{ $field.BoilerName|go }}},
-				{{- else }}
-					"{{ $field.Name }}":        helper.ColumnSetting{Name: models.{{ $model.Name|go }}Rels.{{ $field.BoilerName|go }}, IDAvailable: true},
-				{{- end -}}
-			{{- end -}}
-		{{- end }}
-		
-		{{ range $relationModel := $.Models }}
-	
-				{{ range $field := .Fields }}
-					{{ range $relationField := $relationModel.Fields }}
-						{{- if $field.IsRelation -}}
-							{{- if $relationField.IsRelation -}}
-								{{- if $relationField.IsPlural }}
-								// ?? {{$relationModel.Name}} === {{$model.Name}}
-								{{- if eq $relationModel.Name  $model.Name -}}
-								// YESS {{$relationModel.Name}} === {{$model.Name}}
-								//3
-									"{{ $field.Name }}.{{ $relationField.Name }}":        helper.ColumnSetting{Name: models.{{ $model.Name|go }}Rels.{{ $relationField.BoilerName|go }} + "."+models.{{ $relationModel.Name|go }}Rels.{{ $relationField.BoilerName|go }}},
-								{{- else }}
-
-								//4
-									"{{ $field.Name }}.{{ $relationField.Name }}":        helper.ColumnSetting{Name: models.{{ $model.Name|go }}Rels.{{ $relationField.BoilerName|go }} + "."+models.{{ $relationModel.Name|go }}Rels.{{ $relationField.BoilerName|go }}},
-								{{- end -}}
-							{{- end }}
-						{{- end }}
-					{{- end }}
-				{{- end }}
-			{{- end }}
+		{{ range $key, $value := $model.PreloadMap }}
+		 	"{{$key}}": helper.ColumnSetting{
+				 Name: {{$value.Name}},
+				 IDAvailable: {{$value.IDAvailable}},
+			 },
 		{{- end }}
 	}
 	{{ end }}

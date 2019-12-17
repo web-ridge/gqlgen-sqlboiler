@@ -31,7 +31,7 @@ type ModelBuild struct {
 
 	PackageName string
 	Interfaces  []*Interface
-	Models      []*Object
+	Models      []*Model
 	Enums       []*Enum
 	Scalars     []string
 }
@@ -41,7 +41,7 @@ type Interface struct {
 	Name        string
 }
 
-type Object struct {
+type Model struct {
 	Description string
 	Name        string
 	BoilerName  string
@@ -49,6 +49,12 @@ type Object struct {
 	Fields      []*Field
 	Implements  []string
 	IsInput     bool
+	PreloadMap  map[string]ColumnSetting
+}
+
+type ColumnSetting struct {
+	Name        string
+	IDAvailable bool
 }
 
 type Field struct {
@@ -189,7 +195,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 				continue
 			}
 
-			it := &Object{
+			it := &Model{
 				Description: schemaType.Description,
 				Name:        modelName,
 				PluralName:  pluralizer.Plural(modelName),
@@ -487,7 +493,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 		fmt.Println("return nil")
 		return nil
 	}
-
+	enhanceModelsWithPreloadMap(b.Models)
 	renderError := templates.Render(templates.Options{
 		PackageName:     "convert",
 		Filename:        m.filename,
@@ -499,6 +505,94 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 		fmt.Println("renderError", renderError)
 	}
 	return nil
+}
+
+func isPreloadableModel(m *Model) bool {
+	if m.IsInput {
+		return false
+	}
+	return true
+}
+
+func enhanceModelsWithPreloadMap(models []*Model) {
+
+	// first assing basic first level relations
+	for _, model := range models {
+		model.PreloadMap = make(map[string]ColumnSetting)
+		if !isPreloadableModel(model) {
+			continue
+		}
+		for _, field := range model.Fields {
+			// we only preload relations :-D
+			if !field.IsRelation {
+				continue
+			}
+			if field.IsPlural {
+				model.PreloadMap[field.PluralName] = ColumnSetting{
+					Name: fmt.Sprintf("models.%vRels.%v", model.Name, strcase.ToCamel(field.BoilerName)),
+				}
+			} else {
+				model.PreloadMap[field.Name] = ColumnSetting{
+					Name:        fmt.Sprintf("models.%vRels.%v", model.Name, strcase.ToCamel(field.BoilerName)),
+					IDAvailable: true,
+				}
+			}
+		}
+	}
+
+	// second level
+	for _, model := range models {
+		if !isPreloadableModel(model) {
+			continue
+		}
+		for _, field := range model.Fields {
+			// we only preload relations :-D
+			if !field.IsRelation {
+				continue
+			}
+
+			// e.g this is the value in the map for the
+			// model -->___FlowBlock___<---
+			//       "block": helper.ColumnSetting{
+			// 	            Name:        models.FlowBlockRels.Block,
+			// 	            IDAvailable: true,
+			//       },
+
+			// models.FlowBlockRels.Block has also relations which
+			// we want the relations of the models.FlowBlockRels.Block model
+
+			// loop generated model maps
+			for _, relationModel := range models {
+				if relationModel.Name == field.BoilerName {
+					for key, value := range relationModel.PreloadMap {
+
+						var prefix string
+						if field.IsPlural {
+							prefix = fmt.Sprintf("models.%vRels.%v", model.Name, strcase.ToCamel(field.BoilerName))
+						} else {
+							prefix = fmt.Sprintf("models.%vRels.%v", model.Name, strcase.ToCamel(field.BoilerName))
+						}
+
+						model.PreloadMap[field.Name+"."+key] = ColumnSetting{
+							Name: prefix + `+"."+` + value.Name,
+						}
+					}
+				}
+				// if field.IsPlural {
+				// 	model.PreloadMap[field.PluralName] = ColumnSetting{
+				// 		Name: fmt.Sprintf("models.%vRels.%v", model.Name, strcase.ToCamel(field.BoilerName)),
+				// 	}
+				// } else {
+				// 	model.PreloadMap[field.Name] = ColumnSetting{
+				// 		Name:        fmt.Sprintf("models.%vRels.%v", model.Name, strcase.ToCamel(field.BoilerName)),
+				// 		IDAvailable: true,
+				// 	}
+				// }
+
+			}
+
+		}
+	}
 }
 
 func isStruct(t types.Type) bool {
