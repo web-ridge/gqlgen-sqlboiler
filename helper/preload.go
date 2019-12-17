@@ -90,18 +90,12 @@ func StripPreloadsWithLevel(preloads []string, level int) []string {
 	}
 	strippedPreloads := []string{}
 	for _, preload := range preloads {
-		strippedPreload := strings.SplitN(preload, ".", level)
+		strippedPreload := strings.SplitN(preload, ".", level+1)
 		if len(strippedPreload) > 1 {
 			strippedPreloads = append(strippedPreloads, strippedPreload[1])
 		}
 	}
 	return strippedPreloads
-}
-
-// e.g. sometimes input is deeper and we want
-// flowBlock.block.blockChoice => when we fetch block in database we want to strip flowBlock
-func StripPreloads(preloads []string) (preloadsWithoutFirstLevel []string) {
-	return StripPreloadsWithLevel(preloads, 1)
 }
 
 func GetNestedPreloads(ctx *graphql.RequestContext, fields []graphql.CollectedField, prefix string) (preloads []string) {
