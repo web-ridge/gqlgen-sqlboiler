@@ -38,16 +38,14 @@ func GetPreloadMods(ctx context.Context, preloadColumnMap map[string]ColumnSetti
 	gPreloads := GetPreloads(ctx)
 	for _, gPreload := range gPreloads {
 		dPreloadParts := []string{}
-		for _, gPreloadPart := range strings.Split(gPreload, ".") {
-			columnSetting, ok := preloadColumnMap[gPreloadPart]
-			if ok {
-				if columnSetting.IDAvailable {
-					if PreloadsContainMoreThanId(gPreloads, gPreloadPart) {
-						dPreloadParts = append(dPreloadParts, columnSetting.Name)
-					}
-				} else {
+		columnSetting, ok := preloadColumnMap[gPreload]
+		if ok {
+			if columnSetting.IDAvailable {
+				if PreloadsContainMoreThanId(gPreloads, gPreload) {
 					dPreloadParts = append(dPreloadParts, columnSetting.Name)
 				}
+			} else {
+				dPreloadParts = append(dPreloadParts, columnSetting.Name)
 			}
 		}
 		if len(dPreloadParts) > 0 {
