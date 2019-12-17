@@ -35,32 +35,73 @@ func PreloadsContain(a []string, v string) bool {
 }
 
 func GetPreloadMods(ctx context.Context, preloadColumnMap map[string]ColumnSetting) (queryMods []qm.QueryMod) {
-	gPreloads := GetPreloads(ctx)
-	for _, gPreload := range gPreloads {
-		dPreloadParts := []string{}
-		columnSetting, ok := preloadColumnMap[gPreload]
+	preloads := GetPreloadsFromContext(ctx)
+	for _, preload := range preloads {
+		dbPreloads := []string{}
+		columnSetting, ok := preloadColumnMap[preload]
 		if ok {
 			if columnSetting.IDAvailable {
-				if PreloadsContainMoreThanId(gPreloads, gPreload) {
-					dPreloadParts = append(dPreloadParts, columnSetting.Name)
+				if PreloadsContainMoreThanId(preloads, preload) {
+					dbPreloads = append(dbPreloads, columnSetting.Name)
 				}
 			} else {
-				dPreloadParts = append(dPreloadParts, columnSetting.Name)
+				dbPreloads = append(dbPreloads, columnSetting.Name)
 			}
 		}
-		if len(dPreloadParts) > 0 {
-			queryMods = append(queryMods, qm.Load(strings.Join(dPreloadParts, ".")))
+		if len(dbPreloads) > 0 {
+			queryMods = append(queryMods, qm.Load(strings.Join(dbPreloads, ".")))
 		}
 	}
 	return
 }
 
-func GetPreloads(ctx context.Context) []string {
-	return GetNestedPreloads(
+func GetPreloadsFromContext(ctx context.Context) []string {
+	return StripPreloadsWithLevel(GetNestedPreloads(
 		graphql.GetRequestContext(ctx),
 		graphql.CollectFieldsCtx(ctx, nil),
 		"",
-	)
+	), GetInputLevelFromContext(ctx))
+}
+
+// A private key for context that only this package can access. This is important
+// to prevent collisions between different context uses
+var inputCtxKey = &contextKey{"inputLevelWebRidge"}
+
+type contextKey struct {
+	name string
+}
+
+// GetInputLevelFromContext finds the user from the context. REQUIRES Middleware to have run.
+func GetInputLevelFromContext(ctx context.Context) int {
+	level, _ := ctx.Value(inputCtxKey).(int)
+	return level
+}
+
+// GetLevelFromContext finds the user from the context. REQUIRES Middleware to have run.
+func ContextWithInputLevel(ctx context.Context, level int) context.Context {
+	return context.WithValue(ctx, inputCtxKey, level)
+}
+
+// e.g. sometimes input is deeper and we want
+// flowBlock.block.blockChoice => when we fetch block in database we want to strip flowBlock
+func StripPreloadsWithLevel(preloads []string, level int) []string {
+	if level == 0 {
+		return preloads
+	}
+	strippedPreloads := []string{}
+	for _, preload := range preloads {
+		strippedPreload := strings.SplitN(preload, ".", level)
+		if len(strippedPreload) > 1 {
+			strippedPreloads = append(strippedPreloads, strippedPreload[1])
+		}
+	}
+	return strippedPreloads
+}
+
+// e.g. sometimes input is deeper and we want
+// flowBlock.block.blockChoice => when we fetch block in database we want to strip flowBlock
+func StripPreloads(preloads []string) (preloadsWithoutFirstLevel []string) {
+	return StripPreloadsWithLevel(preloads, 1)
 }
 
 func GetNestedPreloads(ctx *graphql.RequestContext, fields []graphql.CollectedField, prefix string) (preloads []string) {
