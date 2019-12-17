@@ -38,24 +38,35 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 		{{ range $field := .Fields }}
 			{{- if $field.IsRelation -}}
 				{{- if $field.IsPlural }}
-					"{{ $field.Name }}":        helper.ColumnSetting{Name: models.{{ $model.Name|go }}Rels.{{ $field.BoilerName|go }}},
+					"{{ $field.PluralName }}":        helper.ColumnSetting{Name: models.{{ $model.Name|go }}Rels.{{ $field.BoilerName|go }}},
 				{{- else }}
 					"{{ $field.Name }}":        helper.ColumnSetting{Name: models.{{ $model.Name|go }}Rels.{{ $field.BoilerName|go }}, IDAvailable: true},
-				{{- end }}
-				{{ range $relationModel := $.Models }}
-					{{if eq $relationModel.Name  $model.Name}}
-						{{ range $relationField := $relationModel.Fields }}
+				{{- end -}}
+			{{- end -}}
+		{{- end }}
+		
+		{{ range $relationModel := $.Models }}
+	
+				{{ range $field := .Fields }}
+					{{ range $relationField := $relationModel.Fields }}
+						{{- if $field.IsRelation -}}
 							{{- if $relationField.IsRelation -}}
 								{{- if $relationField.IsPlural }}
+								// ?? {{$relationModel.Name}} === {{$model.Name}}
+								{{- if eq $relationModel.Name  $model.Name -}}
+								// YESS {{$relationModel.Name}} === {{$model.Name}}
+								//3
 									"{{ $field.Name }}.{{ $relationField.Name }}":        helper.ColumnSetting{Name: models.{{ $model.Name|go }}Rels.{{ $relationField.BoilerName|go }} + "."+models.{{ $relationModel.Name|go }}Rels.{{ $relationField.BoilerName|go }}},
 								{{- else }}
+
+								//4
 									"{{ $field.Name }}.{{ $relationField.Name }}":        helper.ColumnSetting{Name: models.{{ $model.Name|go }}Rels.{{ $relationField.BoilerName|go }} + "."+models.{{ $relationModel.Name|go }}Rels.{{ $relationField.BoilerName|go }}},
-								{{- end }}
+								{{- end -}}
 							{{- end }}
 						{{- end }}
 					{{- end }}
 				{{- end }}
-			{{- end -}}
+			{{- end }}
 		{{- end }}
 	}
 	{{ end }}
