@@ -42,6 +42,19 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 				{{- else }}
 					"{{ $field.Name }}":        helper.ColumnSetting{Name: models.{{ $model.Name|go }}Rels.{{ $field.BoilerName|go }}, IDAvailable: true},
 				{{- end }}
+				{{ range $relationModel := $.Models }}
+					{{if eq $relationModel.Name  $model.Name}}
+						{{ range $relationField := $relationModel.Fields }}
+							{{- if $relationField.IsRelation -}}
+								{{- if $relationField.IsPlural }}
+									"{{ $field.Name }}.{{ $relationField.Name }}":        helper.ColumnSetting{Name: models.{{ $model.Name|go }}Rels.{{ $relationField.BoilerName|go }} + "."+models.{{ $relationModel.Name|go }}Rels.{{ $relationField.BoilerName|go }}},
+								{{- else }}
+									"{{ $field.Name }}.{{ $relationField.Name }}":        helper.ColumnSetting{Name: models.{{ $model.Name|go }}Rels.{{ $relationField.BoilerName|go }} + "."+models.{{ $relationModel.Name|go }}Rels.{{ $relationField.BoilerName|go }}},
+								{{- end }}
+							{{- end }}
+						{{- end }}
+					{{- end }}
+				{{- end }}
 			{{- end -}}
 		{{- end }}
 	}
@@ -131,7 +144,6 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 						if !sameStructAsRoot || rootValue != m.R.{{ $field.Name|go }} {
 							r.{{ $field.Name|go }} ={{ $field.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }}, m)
 						}
-					
 					} else {
 						r.{{ $field.Name|go }} = {{ $field.Name|go }}With{{ $field.CustomBoilerType|go }}ID(m.{{ $field.Name|go }}ID)
 					}
