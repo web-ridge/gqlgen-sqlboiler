@@ -33,7 +33,7 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 
-	{{- if .IsInput -}}
+	{{- if .IsPayload -}}
 	var {{ .Name|go }}PreloadLevels = map[string]string{
 		{{ range $field := .Fields }}
 		{{- if $field.IsRelation -}}
@@ -44,6 +44,7 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 	{{ end }}
 
 	{{- if not .IsInput -}}
+	{{- if not .IsPayload -}}
 	var {{ $model.Name|go }}PreloadMap = map[string]helper.ColumnSetting{
 		{{ range $key, $value := $model.PreloadMap }}
 		 	"{{$key}}": helper.ColumnSetting{
@@ -53,8 +54,10 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 		{{- end }}
 	}
 	{{ end }}
+	{{ end }}
 
 	{{- if not .IsInput -}}
+	{{- if not .IsPayload -}}
 		func Get{{ .Name|go }}(ctx context.Context, db *sql.DB, whereFilters ...qm.QueryMod) (*graphql_models.{{ .Name|go }}, error) {
 			queryMods := helper.GetPreloadMods(ctx, {{ .Name|go }}PreloadMap)
 			queryMods = append(queryMods, whereFilters...)
@@ -175,6 +178,7 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 				}
 			{{- end -}}
 		{{- end }}
+	{{- end }}
 	{{- end }}
 	{{- if .IsInput }}
 				

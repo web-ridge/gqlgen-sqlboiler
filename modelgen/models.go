@@ -49,6 +49,7 @@ type Model struct {
 	Fields      []*Field
 	Implements  []string
 	IsInput     bool
+	IsPayload   bool
 	PreloadMap  map[string]ColumnSetting
 }
 
@@ -184,6 +185,9 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 			if !hasBoilerName {
 				boilerName, hasBoilerName = boilerStructMap[strings.TrimSuffix(modelName, "Input")]
 			}
+			if !hasBoilerName {
+				boilerName, hasBoilerName = boilerStructMap[strings.TrimSuffix(modelName, "Payload")]
+			}
 			// fmt.Println("GRAPHQL MODEL ::::", it.Name)
 			if strings.HasPrefix(modelName, "_") {
 				continue
@@ -201,6 +205,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 				PluralName:  pluralizer.Plural(modelName),
 				BoilerName:  boilerName,
 				IsInput:     strings.HasSuffix(modelName, "Input"),
+				IsPayload:   strings.HasSuffix(modelName, "Payload"),
 			}
 
 			for _, implementor := range schema.GetImplements(schemaType) {
@@ -291,6 +296,11 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					boilerType, ok = boilerTypeMap[boilerKey]
 				}
 
+				// if it.IsPayload {
+				// 	boilerKey := strings.TrimSuffix(it.Name, "Payload") + "." + structKey
+				// 	boilerType, ok = boilerTypeMap[boilerKey]
+				// }
+
 				var customBoilerName string
 				if !ok {
 					// ok appearently there are are sometimes when key contains 'type' the struct name is printed before
@@ -315,7 +325,9 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					}
 
 					if !ok {
-						if strings.Contains(boilerKey, "ClientMutationID") {
+						if it.IsPayload {
+							//ignore
+						} else if strings.Contains(boilerKey, "ClientMutationID") {
 							// ignore
 						} else if strings.Contains(boilerKey, ".") && pluralizer.IsPlural(strings.Split(boilerKey, ".")[1]) {
 							// ignore
@@ -418,7 +430,9 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 				}
 
 				if boilerType == "" {
-					if pluralizer.IsPlural(name) {
+					if it.IsPayload {
+						// ignore
+					} else if pluralizer.IsPlural(name) {
 						// ignore
 					} else {
 						fmt.Println("[WARN] boiler type not available for, continue", name)
