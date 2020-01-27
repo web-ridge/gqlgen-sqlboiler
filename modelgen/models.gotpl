@@ -33,23 +33,19 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 
-	// var FlowBlockPayloadPreloadLevels = struct {
-	// 	FlowBlock string
-	// }{
-	// 	FlowBlock: "flowBlock",
-	// }
+
 
 	{{- if .IsPayload -}}
-	var {{ .Name|go }}PreloadLevels = struct{
+	var {{ .Name|go }}PreloadLevels = struct {
 		{{ range $field := .Fields }}
 		{{- if $field.IsRelation -}}
-		"{{- $field.Name|go }}": string,
+		{{- $field.Name|go }} string
 		{{- end }}
 		{{- end }}
 	}{
 		{{ range $field := .Fields }}
 		{{- if $field.IsRelation -}}
-		"{{- $field.Name|go }}": "{{- $field.Name }}",
+		{{- $field.Name|go }}: "{{- $field.Name }}",
 		{{- end }}
 		{{- end }}
 	}
