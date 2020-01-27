@@ -56,11 +56,11 @@ func GetPreloadMods(ctx context.Context, preloadColumnMap map[string]ColumnSetti
 }
 
 func GetPreloadsFromContext(ctx context.Context) []string {
-	return StripPreloadsWithLevel(GetNestedPreloads(
+	return StripPreloads(GetNestedPreloads(
 		graphql.GetRequestContext(ctx),
 		graphql.CollectFieldsCtx(ctx, nil),
 		"",
-	), GetInputLevelFromContext(ctx))
+	), GetPreloadLevelFromContext(ctx))
 }
 
 // A private key for context that only this package can access. This is important
@@ -72,30 +72,26 @@ type contextKey struct {
 }
 
 // GetInputLevelFromContext finds the user from the context. REQUIRES Middleware to have run.
-func GetInputLevelFromContext(ctx context.Context) int {
-	level, _ := ctx.Value(inputCtxKey).(int)
+func GetPreloadLevelFromContext(ctx context.Context) string {
+	level, _ := ctx.Value(inputCtxKey).(string)
 	return level
 }
 
 // GetLevelFromContext finds the user from the context. REQUIRES Middleware to have run.
-func ContextWithInputLevel(ctx context.Context, level int) context.Context {
+func ContextWithPreloadLevel(ctx context.Context, level string) context.Context {
 	return context.WithValue(ctx, inputCtxKey, level)
 }
 
 // e.g. sometimes input is deeper and we want
-// flowBlock.block.blockChoice => when we fetch block in database we want to strip flowBlock
-func StripPreloadsWithLevel(preloads []string, level int) []string {
-	if level == 0 {
+// createdFlowBlock.block.blockChoice => when we fetch block in database we want to strip flowBlock
+func StripPreloads(preloads []string, prefix string) []string {
+	if prefix == "" {
 		return preloads
 	}
-	strippedPreloads := []string{}
-	for _, preload := range preloads {
-		strippedPreload := strings.SplitN(preload, ".", level+1)
-		if len(strippedPreload) > 1 {
-			strippedPreloads = append(strippedPreloads, strippedPreload[1])
-		}
+	for i, preload := range preloads {
+		preloads[i] = strings.TrimPrefix(preload, prefix+".")
 	}
-	return strippedPreloads
+	return preloads
 }
 
 func GetNestedPreloads(ctx *graphql.RequestContext, fields []graphql.CollectedField, prefix string) (preloads []string) {

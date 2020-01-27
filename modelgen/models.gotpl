@@ -33,6 +33,12 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 
+	{{- if .IsInput -}}
+	{{ .Name|go }}PreloadLevel = map[string]string{
+		{{- $field.Name|go }}: {{- $field.Name }},
+	}
+	{{ end }}
+
 	{{- if not .IsInput -}}
 	var {{ $model.Name|go }}PreloadMap = map[string]helper.ColumnSetting{
 		{{ range $key, $value := $model.PreloadMap }}
