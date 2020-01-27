@@ -296,10 +296,10 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 					boilerType, ok = boilerTypeMap[boilerKey]
 				}
 
-				// if it.IsPayload {
-				// 	boilerKey := strings.TrimSuffix(it.Name, "Payload") + "." + structKey
-				// 	boilerType, ok = boilerTypeMap[boilerKey]
-				// }
+				if it.IsPayload {
+					boilerKey := strings.TrimSuffix(it.Name, "Payload") + "." + structKey
+					boilerType, ok = boilerTypeMap[boilerKey]
+				}
 
 				var customBoilerName string
 				if !ok {
