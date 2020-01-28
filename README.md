@@ -1,4 +1,4 @@
-This program generates code like this between your generated gqlgen program and sqlboiler with support for relay (unique id's etc). This in work in progress and we are working on automatically generating the basis Mutations like create, update, delete working based on your graphql scheme and your database models.
+This program generates code like this between your generated gqlgen program and sqlboiler with support for Relay.dev (unique id's etc). This in work in progress and we are working on automatically generating the basis Mutations like create, update, delete working based on your graphql scheme and your database models.
 
 To make this program a success very tight coupling between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed.
 
