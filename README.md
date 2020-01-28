@@ -9,11 +9,11 @@ https://github.com/rexxars/sql-to-graphql (programming an alternative in go with
 Generate GrapQL API with: https://github.com/99designs/gqlgen  
 Generate converts between gqlgen-sqlboiler with this program
 
-DONE: generate converts between sqlboiler structs and graphql (with relations included)  
-DONE: generate converts between input models and sqlboiler
-WIP: Fetch sqlboiler preloads from graphql context  
-TODO: generate CRUD resolvers based on mutations in graphql scheme
-TODO: clean clode because it's a
+DONE: Generate converts between sqlboiler structs and graphql (with relations included)  
+DONE: Generate converts between input models and sqlboiler
+DONE: Fetch sqlboiler preloads from graphql context  
+TODO: Generate CRUD resolvers based on mutations in graphql scheme
+TODO: Refactor some code and document it
 
 ## Case
 
