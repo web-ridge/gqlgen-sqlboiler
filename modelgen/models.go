@@ -8,13 +8,13 @@ import (
 	"sort"
 	"strings"
 
-	pluralize "github.com/gertd/go-pluralize"
-
 	"github.com/99designs/gqlgen/codegen/config"
 	"github.com/99designs/gqlgen/codegen/templates"
 	"github.com/99designs/gqlgen/plugin"
+	pluralize "github.com/gertd/go-pluralize"
 	"github.com/iancoleman/strcase"
 	"github.com/vektah/gqlparser/ast"
+	"github.com/web-ridge/gqlgen-sqlboiler/boiler"
 )
 
 var pathRegex *regexp.Regexp
@@ -157,7 +157,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 		PackageName:        "convert", // TODO convert?
 	}
 
-	boilerTypeMap, boilerStructMap := ParseBoilerFile(m.backendModelsPath)
+	boilerTypeMap, boilerStructMap := boiler.ParseBoilerFile(m.backendModelsPath)
 
 	for _, schemaType := range schema.Types {
 
