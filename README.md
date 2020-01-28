@@ -3,8 +3,7 @@ This program generates code like this between your generated gqlgen program and 
 To make this program a success very tight coupling between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed.
 
 Generate database structs with: https://github.com/volatiletech/sqlboiler  
-Generate GrapQL scheme with (??):
-https://github.com/rexxars/sql-to-graphql (programming an alternative in go with support for sqlboiler aliases and such https://github.com/web-ridge/sqlboiler-graphql-schema)
+Generate GrapQL scheme from sqlboiler structs: https://github.com/web-ridge/sqlboiler-graphql-schema WORK IN PROGRESS, Write your own schema for now or https://github.com/rexxars/sql-to-graphql)
 
 Generate GrapQL API with: https://github.com/99designs/gqlgen  
 Generate converts between gqlgen-sqlboiler with this program
