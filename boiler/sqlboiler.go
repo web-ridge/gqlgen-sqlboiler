@@ -7,7 +7,6 @@ import (
 	"go/token"
 	"io/ioutil"
 	"path/filepath"
-	"sort"
 	"strings"
 )
 
@@ -61,6 +60,7 @@ func ParseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 
 			// 	}
 			// }
+			var i int
 			for _, decl := range src.Decls {
 				typeDecl, ok := decl.(*ast.GenDecl)
 				if !ok {
@@ -81,7 +81,7 @@ func ParseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 						continue
 					}
 
-					for i, field := range safeStructDecl.Fields.List {
+					for _, field := range safeStructDecl.Fields.List {
 						// if t := reflect.TypeOf(field.Type); t.Kind() == reflect.Ptr {
 						// 	fmt.Println("TYPE OF STRUCT", "*"+t.Elem().Name())
 						// 	// return
@@ -159,6 +159,7 @@ func ParseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 						default:
 							// fmt.Println("ignoring....", field.Names)
 						}
+						i++
 					}
 				}
 
@@ -168,11 +169,11 @@ func ParseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 	}
 
 	// To store the keys in slice in sorted order
-	var keys []string
-	for k := range fieldsMap {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
+	// var keys []string
+	// for k := range fieldsMap {
+	// 	keys = append(keys, k)
+	// }
+	// sort.Strings(keys)
 
 	// fmt.Println(" ")
 	// fmt.Println(" ")
