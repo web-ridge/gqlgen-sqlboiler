@@ -1,6 +1,6 @@
 This program generates code like this between your generated gqlgen and sqlboiler with support for Relay.dev (unique id's etc). This in work in progress and we are working on automatically generating the basis Mutations like create, update, delete working based on your graphql scheme and your database models.
 
-To make this program a success very tight coupling between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed.
+To make this program a success tight coupling (same naming) between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed. However everything is created with support for change so you could write some extra GrapQL resolvers if you'd like. 
 
 ## Flow
 1. Generate database structs with: https://github.com/volatiletech/sqlboiler  
