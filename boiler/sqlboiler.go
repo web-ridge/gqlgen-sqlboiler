@@ -19,19 +19,20 @@ var ignoreFiles = []string{"boil_queries.go", "boil_table_names.go", "boil_types
 // Address.Longitude: null.String
 // Address.Latitude : null.Decimal
 // needed to generate the right convert code
-func ParseBoilerFile(dir string) (map[string]string, map[string]string) {
+func ParseBoilerFile(dir string) (map[string]string, map[string]string, map[string]int) {
 	fieldsMap := make(map[string]string, 0)
 	structsMap := make(map[string]string, 0)
+	fieldsOrder := make(map[string]int, 0)
 	// fmt.Println(dir)
 	dir, err := filepath.Abs(dir)
 	if err != nil {
 		fmt.Println("abs error", err)
-		return fieldsMap, structsMap
+		return fieldsMap, structsMap, fieldsOrder
 	}
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		fmt.Println("readdir error", err)
-		return fieldsMap, structsMap
+		return fieldsMap, structsMap, fieldsOrder
 	}
 
 	fset := token.NewFileSet()
@@ -80,7 +81,7 @@ func ParseBoilerFile(dir string) (map[string]string, map[string]string) {
 						continue
 					}
 
-					for _, field := range safeStructDecl.Fields.List {
+					for i, field := range safeStructDecl.Fields.List {
 						// if t := reflect.TypeOf(field.Type); t.Kind() == reflect.Ptr {
 						// 	fmt.Println("TYPE OF STRUCT", "*"+t.Elem().Name())
 						// 	// return
@@ -109,9 +110,10 @@ func ParseBoilerFile(dir string) (map[string]string, map[string]string) {
 								// field = v
 								if si, ok := xv.X.(*ast.Ident); ok {
 
-									key := safeTypeSpec.Name.String() + "." + name
+									k := safeTypeSpec.Name.String() + "." + name
 									//https://stackoverflow.com/questions/28246970/how-to-parse-a-method-declaration
-									fieldsMap[key] = si.Name
+									fieldsMap[k] = si.Name
+									fieldsOrder[k] = i
 								}
 
 							} else {
@@ -125,9 +127,10 @@ func ParseBoilerFile(dir string) (map[string]string, map[string]string) {
 							// if strings.HasPrefix(name, "_") || strings.HasPrefix(structName, "_") {
 							// 	continue
 							// }
-							key := safeTypeSpec.Name.String() + "." + name
+							k := safeTypeSpec.Name.String() + "." + name
 
-							fieldsMap[key] = t.X.(*ast.Ident).Name + "." + t.Sel.Name
+							fieldsMap[k] = t.X.(*ast.Ident).Name + "." + t.Sel.Name
+							fieldsOrder[k] = i
 						// case *ast.StarExpr:
 						// 	// Used for pointers to external structs
 						// case *ast.ArrayType:
@@ -142,7 +145,9 @@ func ParseBoilerFile(dir string) (map[string]string, map[string]string) {
 							// 	continue
 							// }
 							// fmt.Println(name + " : " + typeName)
-							fieldsMap[safeTypeSpec.Name.String()+"."+name] = typeName
+							k := safeTypeSpec.Name.String() + "." + name
+							fieldsMap[k] = typeName
+							fieldsOrder[k] = i
 							// tag := ""
 							// if field.Tag != nil {
 							// 	tag = field.Tag.Value //the tag as a string
@@ -189,5 +194,5 @@ func ParseBoilerFile(dir string) (map[string]string, map[string]string) {
 	// fmt.Println(" ")
 	// fmt.Println(" ")
 
-	return fieldsMap, structsMap
+	return fieldsMap, structsMap, fieldsOrder
 }

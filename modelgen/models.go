@@ -157,7 +157,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 		PackageName:        "convert", // TODO convert?
 	}
 
-	boilerTypeMap, boilerStructMap := boiler.ParseBoilerFile(m.backendModelsPath)
+	boilerTypeMap, boilerStructMap, _ := boiler.ParseBoilerFile(m.backendModelsPath)
 
 	for _, schemaType := range schema.Types {
 
