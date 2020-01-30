@@ -5,11 +5,11 @@ To make this program a success very tight coupling between your database and gra
 ## Flow
 1. Generate database structs with: https://github.com/volatiletech/sqlboiler  
     e.g. `sqlboiler mysql`
-2. Generate GrapQL scheme from sqlboiler structs: https://github.com/web-ridge/sqlboiler-graphql-schema 
+2. Generate GrapQL scheme from sqlboiler structs: https://github.com/web-ridge/sqlboiler-graphql-schema  
     e.g. `go run github.com/web-ridge/sqlboiler-graphql-schema --output=../schema.graphql`
 3. Generate GrapQL structs with: https://github.com/99designs/gqlgen  
     e.g. `go run github.com/99designs/gqlgen`
-4. Generate converts between gqlgen-sqlboiler with this program
+4. Generate converts between gqlgen-sqlboiler with this program  
     e.g. `go run convert_plugin.go`
 
 DONE: Generate converts between sqlboiler structs and graphql (with relations included)   
