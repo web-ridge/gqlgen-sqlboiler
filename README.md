@@ -1,12 +1,16 @@
-This program generates code like this between your generated gqlgen program and sqlboiler with support for Relay.dev (unique id's etc). This in work in progress and we are working on automatically generating the basis Mutations like create, update, delete working based on your graphql scheme and your database models.
+This program generates code like this between your generated gqlgen and sqlboiler with support for Relay.dev (unique id's etc). This in work in progress and we are working on automatically generating the basis Mutations like create, update, delete working based on your graphql scheme and your database models.
 
 To make this program a success very tight coupling between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed.
 
-Generate database structs with: https://github.com/volatiletech/sqlboiler  
-Generate GrapQL scheme from sqlboiler structs: https://github.com/web-ridge/sqlboiler-graphql-schema WORK IN PROGRESS, Write your own schema for now or https://github.com/rexxars/sql-to-graphql)
-
-Generate GrapQL API with: https://github.com/99designs/gqlgen  
-Generate converts between gqlgen-sqlboiler with this program
+## Flow
+1. Generate database structs with: https://github.com/volatiletech/sqlboiler  
+    e.g. `sqlboiler mysql`
+2. Generate GrapQL scheme from sqlboiler structs: https://github.com/web-ridge/sqlboiler-graphql-schema 
+    e.g. `go run github.com/web-ridge/sqlboiler-graphql-schema --output=../schema.graphql`
+3. Generate GrapQL structs with: https://github.com/99designs/gqlgen  
+    e.g. `go run github.com/99designs/gqlgen`
+4. Generate converts between gqlgen-sqlboiler with this program
+    e.g. `go run convert_plugin.go`
 
 DONE: Generate converts between sqlboiler structs and graphql (with relations included)   
 DONE: Generate converts between input models and sqlboiler   
