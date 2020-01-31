@@ -167,7 +167,7 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 		{{ range $field := .Fields }}
 			{{- if and $field.IsID $field.IsPrimaryID }}
 				// Custom nullable function
-				// func {{ $model.Name|go }}IDNullable(v *{{$field.GraphType}})(null.{{$field.BoilerType|go}}) {
+				// func {{ $model.Name|go }}{{}}IDNullable(v *{{$field.GraphType}})(null.{{$field.BoilerType|go}}) {
 
 			{{- end -}}
 			{{- if $field.IsPrimaryID }}

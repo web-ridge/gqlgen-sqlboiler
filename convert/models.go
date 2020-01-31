@@ -401,6 +401,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 						customBoilerIDFunction = it.BoilerName + "ID" + "Unique"
 						customGraphIDFunction = it.BoilerName + "ID"
 					} else {
+						// TODO: We want to have the model name of the relationship of the foreign key
 						customBoilerIDFunction = boilerName + "Unique"
 						customGraphIDFunction = name
 					}
@@ -417,8 +418,8 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 
 					if isNullableID && (!graphTypeIsNullable || !boilerTypeIsNullable) {
 						fmt.Println(fmt.Printf(`
-						ERROR: nullable differs in model: %v, 
-						you should make it the same 
+						WARNING: nullable differs in model: %v, 
+						it's recommended to make it the same 
 						schema name: %v is nullable=%v 
 						boiler name:  %v is nullable=%v`,
 							it.Name,
@@ -427,6 +428,8 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 						))
 					}
 				}
+
+				// just some (old) Relay clutter which is not needed anymore + we can't do anything with it
 				if name == "clientMutationId" {
 					continue
 				}
