@@ -358,7 +358,7 @@ type IDConvertConfig struct {
 }
 
 // func getModelBasedOnBoilerType
-func getConvertConfigID(m *Model, models []*Model, typ types.Type, name string, boilerName string, boilerType string, isID bool) (cc IDConvertConfig) {
+func getConvertConfigID(m *Model, typ types.Type, name string, boilerName string, boilerType string, isID bool) (cc IDConvertConfig) {
 	if isID {
 		// fmt.Println("isId")
 		if boilerName == "id" {
