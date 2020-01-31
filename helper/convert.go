@@ -45,6 +45,10 @@ func NullDotTimeToPointerInt(v null.Time) *int {
 	return &u
 }
 
+func TimeTimeToInt(v time.Time) int {
+	return int(v.Unix())
+}
+
 func NullDotStringToString(v null.String) string {
 	if v.Ptr() == nil {
 		return ""
