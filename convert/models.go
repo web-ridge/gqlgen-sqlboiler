@@ -21,19 +21,22 @@ var pathRegex *regexp.Regexp
 var pluralizer *pluralize.Client
 
 func init() {
+	var initError error
 	pluralizer = pluralize.NewClient()
-	pathRegex, _ = regexp.Compile(`src\/(.*)`)
+	pathRegex, initError = regexp.Compile(`src\/(.*)`)
+	if initError != nil {
+		fmt.Println("could not compile the path regex")
+	}
 }
 
 type ModelBuild struct {
 	BackendModelsPath  string
 	FrontendModelsPath string
-
-	PackageName string
-	Interfaces  []*Interface
-	Models      []*Model
-	Enums       []*Enum
-	Scalars     []string
+	PackageName        string
+	Interfaces         []*Interface
+	Models             []*Model
+	Enums              []*Enum
+	Scalars            []string
 }
 
 type Interface struct {
@@ -46,6 +49,7 @@ type Model struct {
 	Name        string
 	BoilerName  string
 	PluralName  string
+	PureFields  []*ast.FieldDefinition
 	Fields      []*Field
 	Implements  []string
 	IsInput     bool
@@ -147,10 +151,6 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 	cfg.InjectBuiltins(schema)
 
 	// fmt.Println("cfg.InjectBuiltins(schema)")
-	binder, err := cfg.NewBinder(schema)
-	if err != nil {
-		return err
-	}
 
 	b := &ModelBuild{
 		FrontendModelsPath: getGoImportFromFile(m.frontendModelsPath),
@@ -160,319 +160,365 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 
 	boilerTypeMap, boilerStructMap, _ := boiler.ParseBoilerFile(m.backendModelsPath)
 
+	// get models based on the schema and sqlboiler structs
+	models := getModelsFromSchema(schema, boilerStructMap)
+
+	// Now we have all model's let enhance them with fields
+	enhanceModelsWithFields(schema, cfg, models, boilerTypeMap)
+
+	// Add preload maps
+	enhanceModelsWithPreloadMap(models)
+
+	// Add models to the build config
+	b.Models = models
+	interfaces, enums, scalars := getExtrasFromSchema(schema)
+	b.Interfaces = interfaces
+	b.Enums = enums
+	b.Scalars = scalars
+	// Sort in same order
+	sort.Slice(b.Models, func(i, j int) bool { return b.Models[i].Name < b.Models[j].Name })
+	for _, m := range b.Models {
+		cfg.Models.Add(m.Name, cfg.Model.ImportPath()+"."+templates.ToGo(m.Name))
+	}
+
+	if len(b.Models) == 0 {
+		fmt.Println("return nil")
+		return nil
+	}
+
+	renderError := templates.Render(templates.Options{
+		PackageName:     "convert",
+		Filename:        m.filename,
+		Data:            b,
+		GeneratedHeader: true,
+	})
+
+	if renderError != nil {
+		fmt.Println("renderError", renderError)
+	}
+	return nil
+}
+
+// getFieldType check's if user has defined a
+func getFieldType(binder *config.Binder, schema *ast.Schema, cfg *config.Config, field *ast.FieldDefinition) (types.Type, error) {
+	var typ types.Type
+	var err error
+
+	fieldDef := schema.Types[field.Type.Name()]
+	if cfg.Models.UserDefined(field.Type.Name()) {
+		pkg, typeName := PkgAndType(cfg.Models[field.Type.Name()].Model[0])
+		typ, err = binder.FindType(pkg, typeName)
+		if err != nil {
+			return typ, err
+		}
+	} else {
+		switch fieldDef.Kind {
+		case ast.Scalar:
+			// no user defined model, referencing a default scalar
+			typ = types.NewNamed(
+				types.NewTypeName(0, cfg.Model.Pkg(), "string", nil),
+				nil,
+				nil,
+			)
+
+		case ast.Interface, ast.Union:
+			// no user defined model, referencing a generated interface type
+			typ = types.NewNamed(
+				types.NewTypeName(0, cfg.Model.Pkg(), templates.ToGo(field.Type.Name()), nil),
+				types.NewInterfaceType([]*types.Func{}, []types.Type{}),
+				nil,
+			)
+
+		case ast.Enum:
+			// no user defined model, must reference a generated enum
+			typ = types.NewNamed(
+				types.NewTypeName(0, cfg.Model.Pkg(), templates.ToGo(field.Type.Name()), nil),
+				nil,
+				nil,
+			)
+
+		case ast.Object, ast.InputObject:
+			// no user defined model, must reference a generated struct
+			typ = types.NewNamed(
+				types.NewTypeName(0, cfg.Model.Pkg(), templates.ToGo(field.Type.Name()), nil),
+				types.NewStruct(nil, nil),
+				nil,
+			)
+
+		default:
+			panic(fmt.Errorf("unknown ast type %s", fieldDef.Kind))
+		}
+	}
+
+	return typ, err
+}
+
+func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*Model, boilerTypeMap map[string]string) {
+
+	binder, binderErr := cfg.NewBinder(schema)
+	if binderErr != nil {
+		fmt.Println("could not bind config: ", binderErr)
+		return
+	}
+
+	for _, m := range models {
+		// skip boiler plate from ggqlgen, we only want the models
+		if strings.HasPrefix(m.Name, "_") {
+			continue
+		}
+
+		// Let's convert the pure ast fields to something usable for our template
+		for _, field := range m.PureFields {
+			fieldDef := schema.Types[field.Type.Name()]
+
+			// This calls some qglgen boilerType which gets the gqlgen type
+			typ, err := getFieldType(binder, schema, cfg, field)
+			if err != nil {
+				fmt.Println("Could not get field type from graphql schema: ", err)
+			}
+
+			name := field.Name
+			if nameOveride := cfg.Models[m.Name].Fields[field.Name].FieldName; nameOveride != "" {
+				// TODO: map overrides to sqlboiler the other way around?
+				name = nameOveride
+			}
+
+			// just some (old) Relay clutter which is not needed anymore + we can't do anything with it
+			if name == "clientMutationId" {
+				continue
+			}
+
+			// override type struct with qqlgen code
+			typ = binder.CopyModifiersFromAst(field.Type, typ)
+			if isStruct(typ) && (fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject) {
+				typ = types.NewPointer(typ)
+			}
+
+			// get golang friendly fieldName because we want to check if boiler name is available
+			gqlFieldName := getgqlFieldName(name)
+
+			// generate some booleans because these checks will be used a lot
+			isRelation := fieldDef.Kind == ast.Object
+			isID := strings.Contains(gqlFieldName, "ID")
+			isPrimaryID := gqlFieldName == "ID"
+
+			// get sqlboiler information of the field
+			boilerName, _, boilerType := getBoilerKeyAndType(m, name, gqlFieldName, isRelation, boilerTypeMap)
+
+			// get some custom convert functions if the fields are more advanced, like relationships or custom enums
+			convertConfig := getConvertConfig(typ, boilerType)
+
+			// get some custom ID functions because we want to support unique id's we need to add them to foreign keys
+			convertIDConfig := getConvertConfigID(m, typ, name, boilerName, boilerType, isID)
+
+			// log some warnings when fields could not be converted
+			if boilerType == "" {
+				// TODO: add filter + where here
+				if m.IsPayload {
+					// ignore
+				} else if pluralizer.IsPlural(name) {
+					// ignore
+				} else {
+					fmt.Println("[WARN] boiler type not available for, continue", name)
+				}
+			}
+
+			m.Fields = append(m.Fields, &Field{
+				IsID:                   isID,
+				IsPrimaryID:            isPrimaryID,
+				IsRelation:             isRelation,
+				IsCustomFunction:       convertConfig.isCustom,
+				CustomFromFunction:     convertConfig.customFrom,
+				CustomToFunction:       convertConfig.customTo,
+				CustomBoilerIDFunction: convertIDConfig.boilerIDFunc,
+				CustomGraphIDFunction:  convertIDConfig.graphIDFunc,
+				CustomGraphType:        convertConfig.customGraphType,
+				CustomBoilerType:       convertConfig.customBoilerType,
+				IsNullableID:           convertIDConfig.isNullableID,
+				BoilerType:             boilerType,
+				GraphType:              typ.String(),
+				Name:                   name,
+				CamelCaseName:          strcase.ToLowerCamel(name),
+				IsPlural:               pluralizer.IsPlural(name),
+				PluralName:             pluralizer.Plural(name),
+				BoilerName:             boilerName,
+				PluralBoilerName:       pluralizer.Plural(boilerName),
+				Type:                   typ,
+				Description:            field.Description,
+				Tag:                    `json:"` + field.Name + `"`,
+			})
+		}
+	}
+}
+
+type IDConvertConfig struct {
+	boilerIDFunc string
+	graphIDFunc  string
+	isNullableID bool
+}
+
+// func getModelBasedOnBoilerType
+func getConvertConfigID(m *Model, models []*Model, typ types.Type, name string, boilerName string, boilerType string, isID bool) (cc IDConvertConfig) {
+	if isID {
+		// fmt.Println("isId")
+		if boilerName == "id" {
+			cc.boilerIDFunc = m.BoilerName + "ID" + "Unique"
+			cc.graphIDFunc = m.BoilerName + "ID"
+		} else {
+			// TODO: We want to have the model name of the relationship of the foreign key
+
+			cc.boilerIDFunc = boilerName + "Unique"
+			cc.graphIDFunc = name
+		}
+		// fmt.Println("boilerType", boilerType)
+		// fmt.Println("graphType", typ.String())
+
+		graphTypeIsNullable := strings.HasPrefix(typ.String(), "*")
+		boilerTypeIsNullable := strings.HasPrefix(boilerType, "null.")
+		cc.isNullableID = graphTypeIsNullable || boilerTypeIsNullable
+		if cc.isNullableID {
+			cc.boilerIDFunc = cc.boilerIDFunc + "Nullable"
+			cc.graphIDFunc = cc.graphIDFunc + "Nullable"
+		}
+
+		if cc.isNullableID && (!graphTypeIsNullable || !boilerTypeIsNullable) {
+			fmt.Println(fmt.Printf(`
+				WARNING: nullable differs in model: %v, 
+				it's recommended to make it the same 
+				schema name: %v is nullable=%v 
+				boiler name:  %v is nullable=%v`,
+				m.Name,
+				name,
+				graphTypeIsNullable,
+				boilerName,
+				boilerTypeIsNullable,
+			))
+		}
+	}
+	return
+}
+
+type ConvertConfig struct {
+	isCustom         bool
+	customFrom       string
+	customTo         string
+	customGraphType  string
+	customBoilerType string
+}
+
+func getConvertConfig(typ types.Type, boilerType string) (cc ConvertConfig) {
+	if typ.String() != boilerType {
+		// fmt.Println(fmt.Sprintf("%v != %v", typ.String(), boilerType))
+
+		graphType := typ.String()
+		boilType := boilerType
+
+		// Make this go-friendly for the helper/convert.go package
+		if strings.HasPrefix(graphType, "*") {
+			graphType = strings.TrimPrefix(graphType, "*")
+			graphType = strcase.ToCamel(graphType)
+			graphType = "Pointer" + graphType
+		}
+
+		// Make this go-friendly for the helper/convert.go package
+		if strings.HasPrefix(boilType, "null.") {
+			boilType = strings.TrimPrefix(boilType, "null.")
+			boilType = strcase.ToCamel(boilType)
+			boilType = "NullDot" + boilType
+		}
+
+		// Make this go-friendly for the helper/convert.go package
+		if strings.HasPrefix(boilType, "types.") {
+			boilType = strings.TrimPrefix(boilType, "types.")
+			boilType = strcase.ToCamel(boilType)
+			boilType = "Types" + boilType
+		}
+
+		cc.isCustom = true
+		cc.customFrom = strcase.ToCamel(graphType) + "To" + strcase.ToCamel(boilType)
+		cc.customTo = strcase.ToCamel(boilType) + "To" + strcase.ToCamel(graphType)
+		cc.customGraphType = strcase.ToCamel(graphType)
+		cc.customBoilerType = strcase.ToCamel(boilType)
+	}
+
+	return
+}
+
+func getBoilerKeyAndType(m *Model, originalFieldName string, gqlFieldName string, isRelation bool,
+	boilerTypeMap map[string]string) (string, string, string) {
+	boilerKey := m.Name + "." + gqlFieldName
+	boilerType, ok := boilerTypeMap[boilerKey]
+	if m.IsInput {
+		boilerKey := strings.TrimSuffix(m.Name, "Input") + "." + gqlFieldName
+		boilerType, ok = boilerTypeMap[boilerKey]
+	}
+
+	if m.IsPayload {
+		boilerKey := strings.TrimSuffix(m.Name, "Payload") + "." + gqlFieldName
+		boilerType, ok = boilerTypeMap[boilerKey]
+	}
+
+	boilerName := originalFieldName
+	if !ok {
+		// there are are cases when key contains 'type' the struct name is printed before
+		cn := strings.TrimPrefix(gqlFieldName, m.Name)
+		secondKey := m.Name + "." + cn
+		if isRelation {
+			cn = strings.TrimPrefix(gqlFieldName, m.Name)
+			secondKey = m.Name + "." + gqlFieldName + "ID"
+			boilerType, ok = boilerTypeMap[secondKey]
+			if ok {
+				boilerName = cn
+				boilerKey = secondKey
+			}
+		} else {
+			cn = strings.TrimPrefix(gqlFieldName, m.Name)
+			secondKey = m.Name + "." + cn
+			boilerType, ok = boilerTypeMap[secondKey]
+			if ok {
+				boilerName = cn
+				boilerKey = secondKey
+			}
+		}
+
+		if !ok {
+			if m.IsPayload {
+				//ignore
+			} else if strings.Contains(boilerKey, "ClientMutationID") {
+				// ignore
+			} else if strings.Contains(boilerKey, ".") && pluralizer.IsPlural(strings.Split(boilerKey, ".")[1]) {
+				// ignore
+				// 	Could not find boilerType for key:type =  Flow.FlowBlocks
+			} else {
+				fmt.Println("Could not find boilerType for key:type = ", boilerKey, ":", boilerType)
+			}
+		}
+
+	}
+
+	return boilerName, boilerKey, boilerType
+}
+
+func getgqlFieldName(name string) string {
+	gqlFieldName := strcase.ToCamel(name)
+
+	// in golang Id = ID
+	gqlFieldName = strings.Replace(gqlFieldName, "Id", "ID", -1)
+	// in golang Url = URL
+	gqlFieldName = strings.Replace(gqlFieldName, "Url", "URL", -1)
+
+	return gqlFieldName
+}
+
+func getExtrasFromSchema(schema *ast.Schema) (interfaces []*Interface, enums []*Enum, scalars []string) {
 	for _, schemaType := range schema.Types {
-
-		// if cfg.Models.UserDefined(schemaType.Name) {
-		// 	fmt.Println("continue")
-		// 	continue
-		// }
-
 		switch schemaType.Kind {
 		case ast.Interface, ast.Union:
-			it := &Interface{
+			interfaces = append(interfaces, &Interface{
 				Description: schemaType.Description,
 				Name:        schemaType.Name,
-			}
+			})
 
-			b.Interfaces = append(b.Interfaces, it)
-		case ast.Object, ast.InputObject:
-			if schemaType == schema.Query ||
-				schemaType == schema.Mutation ||
-				schemaType == schema.Subscription {
-				continue
-			}
-			modelName := schemaType.Name
-			boilerName, hasBoilerName := boilerStructMap[modelName]
-			if !hasBoilerName {
-				boilerName, hasBoilerName = boilerStructMap[strings.TrimSuffix(modelName, "Input")]
-			}
-			if !hasBoilerName {
-				boilerName, hasBoilerName = boilerStructMap[strings.TrimSuffix(modelName, "Payload")]
-			}
-			// fmt.Println("GRAPHQL MODEL ::::", it.Name)
-			if strings.HasPrefix(modelName, "_") {
-				continue
-			}
-
-			// We will try to handle Input mutations to graphql objects
-			if !hasBoilerName {
-				fmt.Println(fmt.Sprintf("    [WARN] Skip  %v because it there is no database model found", modelName))
-				continue
-			}
-
-			it := &Model{
-				Description: schemaType.Description,
-				Name:        modelName,
-				PluralName:  pluralizer.Plural(modelName),
-				BoilerName:  boilerName,
-				IsInput:     strings.HasSuffix(modelName, "Input"),
-				IsPayload:   strings.HasSuffix(modelName, "Payload"),
-			}
-
-			for _, implementor := range schema.GetImplements(schemaType) {
-				it.Implements = append(it.Implements, implementor.Name)
-			}
-
-			for _, field := range schemaType.Fields {
-				var typ types.Type
-				fieldDef := schema.Types[field.Type.Name()]
-
-				if cfg.Models.UserDefined(field.Type.Name()) {
-					pkg, typeName := PkgAndType(cfg.Models[field.Type.Name()].Model[0])
-					typ, err = binder.FindType(pkg, typeName)
-					if err != nil {
-						return err
-					}
-				} else {
-
-					switch fieldDef.Kind {
-					case ast.Scalar:
-						// no user defined model, referencing a default scalar
-						typ = types.NewNamed(
-							types.NewTypeName(0, cfg.Model.Pkg(), "string", nil),
-							nil,
-							nil,
-						)
-
-					case ast.Interface, ast.Union:
-						// no user defined model, referencing a generated interface type
-						typ = types.NewNamed(
-							types.NewTypeName(0, cfg.Model.Pkg(), templates.ToGo(field.Type.Name()), nil),
-							types.NewInterfaceType([]*types.Func{}, []types.Type{}),
-							nil,
-						)
-
-					case ast.Enum:
-						// no user defined model, must reference a generated enum
-						typ = types.NewNamed(
-							types.NewTypeName(0, cfg.Model.Pkg(), templates.ToGo(field.Type.Name()), nil),
-							nil,
-							nil,
-						)
-
-					case ast.Object, ast.InputObject:
-						// no user defined model, must reference a generated struct
-						typ = types.NewNamed(
-							types.NewTypeName(0, cfg.Model.Pkg(), templates.ToGo(field.Type.Name()), nil),
-							types.NewStruct(nil, nil),
-							nil,
-						)
-
-					default:
-						panic(fmt.Errorf("unknown ast type %s", fieldDef.Kind))
-					}
-				}
-
-				name := field.Name
-				if nameOveride := cfg.Models[schemaType.Name].Fields[field.Name].FieldName; nameOveride != "" {
-					name = nameOveride
-				}
-
-				// fmt.Println(fieldDef)
-				// fmt.Println("-----       -----")
-				typ = binder.CopyModifiersFromAst(field.Type, typ)
-				isRelation := fieldDef.Kind == ast.Object
-
-				// fmt.Println(isRelation, "isRelation")
-				// fmt.Println(ast.Object, "ast.Object")
-				// fmt.Println(typ, "typ")
-
-				if isStruct(typ) && (fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject) {
-					typ = types.NewPointer(typ)
-				}
-
-				if strings.HasPrefix(it.Name, "_") {
-					continue
-				}
-
-				structKey := strcase.ToCamel(name)
-				structKey = strings.Replace(structKey, "Id", "ID", -1)
-				structKey = strings.Replace(structKey, "Url", "URL", -1)
-				isID := strings.Contains(structKey, "ID")
-				isPrimaryID := structKey == "ID"
-				boilerKey := it.Name + "." + structKey
-				// fmt.Println(boilerKey, ":", boilerType)
-				boilerType, ok := boilerTypeMap[boilerKey]
-				if it.IsInput {
-					boilerKey := strings.TrimSuffix(it.Name, "Input") + "." + structKey
-					boilerType, ok = boilerTypeMap[boilerKey]
-				}
-
-				if it.IsPayload {
-					boilerKey := strings.TrimSuffix(it.Name, "Payload") + "." + structKey
-					boilerType, ok = boilerTypeMap[boilerKey]
-				}
-
-				var customBoilerName string
-				if !ok {
-					// ok appearently there are are sometimes when key contains 'type' the struct name is printed before
-					cn := strings.TrimPrefix(structKey, it.Name)
-					secondKey := it.Name + "." + cn
-					if isRelation {
-						cn = strings.TrimPrefix(structKey, it.Name)
-						secondKey = it.Name + "." + structKey + "ID"
-						boilerType, ok = boilerTypeMap[secondKey]
-						if ok {
-							customBoilerName = cn
-							boilerKey = secondKey
-						}
-					} else {
-						cn = strings.TrimPrefix(structKey, it.Name)
-						secondKey = it.Name + "." + cn
-						boilerType, ok = boilerTypeMap[secondKey]
-						if ok {
-							customBoilerName = cn
-							boilerKey = secondKey
-						}
-					}
-
-					if !ok {
-						if it.IsPayload {
-							//ignore
-						} else if strings.Contains(boilerKey, "ClientMutationID") {
-							// ignore
-						} else if strings.Contains(boilerKey, ".") && pluralizer.IsPlural(strings.Split(boilerKey, ".")[1]) {
-							// ignore
-							// 	Could not find boilerType for key:type =  Flow.FlowBlocks
-						} else {
-							fmt.Println("Could not find boilerType for key:type = ", boilerKey, ":", boilerType)
-						}
-					}
-
-				}
-
-				var isCustomFunction bool
-				var customFromFunction string
-				var customToFunction string
-				var customGraphType string
-				var customBoilerType string
-
-				if typ.String() != boilerType {
-					// fmt.Println(fmt.Sprintf("%v != %v", typ.String(), boilerType))
-
-					graphType := typ.String()
-					boilType := boilerType
-					if strings.HasPrefix(graphType, "*") {
-						graphType = strings.TrimPrefix(graphType, "*")
-						graphType = strcase.ToCamel(graphType)
-						graphType = "Pointer" + graphType
-					}
-					if strings.HasPrefix(boilType, "null.") {
-						boilType = strings.TrimPrefix(boilType, "null.")
-						boilType = strcase.ToCamel(boilType)
-						boilType = "NullDot" + boilType
-					}
-					if strings.HasPrefix(boilType, "types.") {
-						boilType = strings.TrimPrefix(boilType, "types.")
-						boilType = strcase.ToCamel(boilType)
-						boilType = "Types" + boilType
-					}
-
-					isCustomFunction = true
-
-					customFromFunction = strcase.ToCamel(graphType) + "To" + strcase.ToCamel(boilType)
-					customToFunction = strcase.ToCamel(boilType) + "To" + strcase.ToCamel(graphType)
-					// fmt.Println("before", typ.String())
-					customGraphType = strcase.ToCamel(graphType)
-
-					customBoilerType = strcase.ToCamel(boilType)
-					// fmt.Println("after", customGraphType)
-				}
-
-				// if isId {
-				// 	fmt.Println(isId)
-				// } else {
-				// 	fmt.Println(name)
-				// }
-				// fmt.Println(boilerType)
-				var boilerName string
-				if customBoilerName != "" {
-					boilerName = customBoilerName
-				} else {
-					boilerName = name
-				}
-
-				var customBoilerIDFunction string
-				var customGraphIDFunction string
-				var isNullableID bool
-				if isID {
-					// fmt.Println("isId")
-					if boilerName == "id" {
-						customBoilerIDFunction = it.BoilerName + "ID" + "Unique"
-						customGraphIDFunction = it.BoilerName + "ID"
-					} else {
-						// TODO: We want to have the model name of the relationship of the foreign key
-						customBoilerIDFunction = boilerName + "Unique"
-						customGraphIDFunction = name
-					}
-					// fmt.Println("boilerType", boilerType)
-					// fmt.Println("graphType", typ.String())
-
-					graphTypeIsNullable := strings.HasPrefix(typ.String(), "*")
-					boilerTypeIsNullable := strings.HasPrefix(boilerType, "null.")
-					isNullableID = graphTypeIsNullable || boilerTypeIsNullable
-					if isNullableID {
-						customBoilerIDFunction = customBoilerIDFunction + "Nullable"
-						customGraphIDFunction = customGraphIDFunction + "Nullable"
-					}
-
-					if isNullableID && (!graphTypeIsNullable || !boilerTypeIsNullable) {
-						fmt.Println(fmt.Printf(`
-						WARNING: nullable differs in model: %v, 
-						it's recommended to make it the same 
-						schema name: %v is nullable=%v 
-						boiler name:  %v is nullable=%v`,
-							it.Name,
-							name, graphTypeIsNullable,
-							boilerName, boilerTypeIsNullable,
-						))
-					}
-				}
-
-				// just some (old) Relay clutter which is not needed anymore + we can't do anything with it
-				if name == "clientMutationId" {
-					continue
-				}
-
-				if boilerType == "" {
-					if it.IsPayload {
-						// ignore
-					} else if pluralizer.IsPlural(name) {
-						// ignore
-					} else {
-						fmt.Println("[WARN] boiler type not available for, continue", name)
-					}
-
-				}
-
-				it.Fields = append(it.Fields, &Field{
-					IsID:                   isID,
-					IsPrimaryID:            isPrimaryID,
-					IsRelation:             isRelation,
-					IsCustomFunction:       isCustomFunction,
-					CustomFromFunction:     customFromFunction,
-					CustomToFunction:       customToFunction,
-					CustomBoilerIDFunction: customBoilerIDFunction,
-					CustomGraphIDFunction:  customGraphIDFunction,
-					CustomGraphType:        customGraphType,
-					CustomBoilerType:       customBoilerType,
-					IsNullableID:           isNullableID,
-					BoilerType:             boilerType,
-					GraphType:              typ.String(),
-					Name:                   name,
-					CamelCaseName:          strcase.ToLowerCamel(name),
-					IsPlural:               pluralizer.IsPlural(name),
-					PluralName:             pluralizer.Plural(name),
-					BoilerName:             boilerName,
-					PluralBoilerName:       pluralizer.Plural(boilerName),
-					Type:                   typ,
-					Description:            field.Description,
-					Tag:                    `json:"` + field.Name + `"`,
-				})
-
-			}
-
-			b.Models = append(b.Models, it)
 		case ast.Enum:
 			it := &Enum{
 				Name:        schemaType.Name,
@@ -486,45 +532,70 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 				})
 			}
 
-			b.Enums = append(b.Enums, it)
+			enums = append(enums, it)
 		case ast.Scalar:
-			b.Scalars = append(b.Scalars, schemaType.Name)
+			scalars = append(scalars, schemaType.Name)
 		}
 	}
 
-	sort.Slice(b.Enums, func(i, j int) bool { return b.Enums[i].Name < b.Enums[j].Name })
-	sort.Slice(b.Models, func(i, j int) bool { return b.Models[i].Name < b.Models[j].Name })
-	sort.Slice(b.Interfaces, func(i, j int) bool { return b.Interfaces[i].Name < b.Interfaces[j].Name })
+	return
+}
 
-	for _, it := range b.Enums {
-		cfg.Models.Add(it.Name, cfg.Model.ImportPath()+"."+templates.ToGo(it.Name))
-	}
-	for _, it := range b.Models {
-		cfg.Models.Add(it.Name, cfg.Model.ImportPath()+"."+templates.ToGo(it.Name))
-	}
-	for _, it := range b.Interfaces {
-		cfg.Models.Add(it.Name, cfg.Model.ImportPath()+"."+templates.ToGo(it.Name))
-	}
-	for _, it := range b.Scalars {
-		cfg.Models.Add(it, "github.com/99designs/gqlgen/graphql.String")
-	}
+func getModelsFromSchema(schema *ast.Schema, boilerStructMap map[string]string) (models []*Model) {
+	for _, schemaType := range schema.Types {
 
-	if len(b.Models) == 0 && len(b.Enums) == 0 {
-		fmt.Println("return nil")
-		return nil
-	}
-	enhanceModelsWithPreloadMap(b.Models)
-	renderError := templates.Render(templates.Options{
-		PackageName:     "convert",
-		Filename:        m.filename,
-		Data:            b,
-		GeneratedHeader: true,
-	})
+		// if cfg.Models.UserDefined(schemaType.Name) {
+		// 	fmt.Println("continue")
+		// 	continue
+		// }
 
-	if renderError != nil {
-		fmt.Println("renderError", renderError)
+		switch schemaType.Kind {
+
+		case ast.Object, ast.InputObject:
+			{
+				if schemaType == schema.Query ||
+					schemaType == schema.Mutation ||
+					schemaType == schema.Subscription {
+					continue
+				}
+				modelName := schemaType.Name
+				boilerName, hasBoilerName := boilerStructMap[modelName]
+				if !hasBoilerName {
+					boilerName, hasBoilerName = boilerStructMap[strings.TrimSuffix(modelName, "Input")]
+				}
+				if !hasBoilerName {
+					boilerName, hasBoilerName = boilerStructMap[strings.TrimSuffix(modelName, "Payload")]
+				}
+				// fmt.Println("GRAPHQL MODEL ::::", m.Name)
+				if strings.HasPrefix(modelName, "_") {
+					continue
+				}
+
+				// We will try to handle Input mutations to graphql objects
+				if !hasBoilerName {
+					fmt.Println(fmt.Sprintf("    [WARN] Skip  %v because it there is no database model found", modelName))
+					continue
+				}
+
+				m := &Model{
+					Description: schemaType.Description,
+					Name:        modelName,
+					PluralName:  pluralizer.Plural(modelName),
+					BoilerName:  boilerName,
+					IsInput:     strings.HasSuffix(modelName, "Input"),
+					IsPayload:   strings.HasSuffix(modelName, "Payload"),
+				}
+
+				for _, implementor := range schema.GetImplements(schemaType) {
+					m.Implements = append(m.Implements, implementor.Name)
+				}
+
+				m.PureFields = append(m.PureFields, schemaType.Fields...)
+				models = append(models, m)
+			}
+		}
 	}
-	return nil
+	return
 }
 
 func isPreloadableModel(m *Model) bool {
