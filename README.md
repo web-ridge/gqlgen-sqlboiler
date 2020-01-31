@@ -8,11 +8,11 @@ Generate GrapQL scheme from sqlboiler structs: https://github.com/web-ridge/sqlb
 Generate GrapQL API with: https://github.com/99designs/gqlgen  
 Generate converts between gqlgen-sqlboiler with this program
 
-DONE: Generate converts between sqlboiler structs and graphql (with relations included)   
-DONE: Generate converts between input models and sqlboiler   
-DONE: Fetch sqlboiler preloads from graphql context    
-TODO: Generate CRUD resolvers based on mutations in graphql scheme   
-TODO: Refactor some code and document it   
+DONE: Generate converts between sqlboiler structs and graphql (with relations included)  
+DONE: Generate converts between input models and sqlboiler  
+DONE: Fetch sqlboiler preloads from graphql context  
+TODO: Generate CRUD resolvers based on mutations in graphql scheme  
+TODO: Refactor some code and document it
 
 ## Case
 
@@ -102,7 +102,7 @@ import (
 
 	"github.com/99designs/gqlgen/api"
 	"github.com/99designs/gqlgen/codegen/config"
-	cm "github.com/web-ridge/gqlgen-sqlboiler/modelgen"
+	cm "github.com/web-ridge/gqlgen-sqlboiler/convert"
 )
 
 func main() {
