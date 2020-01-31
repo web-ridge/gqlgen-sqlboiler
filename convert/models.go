@@ -93,12 +93,16 @@ type EnumValue struct {
 	Name        string
 }
 
-func New(filename, backendModelsPath, frontendModelsPath string) plugin.Plugin {
-	return &Plugin{filename: filename, backendModelsPath: backendModelsPath, frontendModelsPath: frontendModelsPath}
+func New(outputDirectory, backendModelsPath, frontendModelsPath string) plugin.Plugin {
+	return &Plugin{
+		outputDirectory:    outputDirectory,
+		backendModelsPath:  backendModelsPath,
+		frontendModelsPath: frontendModelsPath,
+	}
 }
 
 type Plugin struct {
-	filename           string
+	outputDirectory    string
 	backendModelsPath  string
 	frontendModelsPath string
 }
@@ -508,16 +512,25 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 		return nil
 	}
 	enhanceModelsWithPreloadMap(b.Models)
-	renderError := templates.Render(templates.Options{
-		PackageName:     "convert",
-		Filename:        m.filename,
+
+	if renderError := templates.Render(templates.Options{
+		PackageName:     "wr",
+		Filename:        "convert",
 		Data:            b,
 		GeneratedHeader: true,
-	})
-
-	if renderError != nil {
-		fmt.Println("renderError", renderError)
+	}); renderError != nil {
+		fmt.Println("renderError converts", renderError)
 	}
+
+	if renderError := templates.Render(templates.Options{
+		PackageName:     "wr",
+		Filename:        "preload",
+		Data:            b,
+		GeneratedHeader: true,
+	}); renderError != nil {
+		fmt.Println("renderError preloads", renderError)
+	}
+
 	return nil
 }
 
