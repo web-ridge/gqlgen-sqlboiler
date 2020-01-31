@@ -74,7 +74,8 @@ type Field struct {
 	CustomToFunction       string
 	CustomBoilerIDFunction string
 	CustomGraphIDFunction  string
-	IsId                   bool
+	IsID                   bool
+	IsPrimaryID            bool
 	IsNullableID           bool
 	IsRelation             bool
 	IsPlural               bool
@@ -93,16 +94,12 @@ type EnumValue struct {
 	Name        string
 }
 
-func New(outputDirectory, backendModelsPath, frontendModelsPath string) plugin.Plugin {
-	return &Plugin{
-		outputDirectory:    outputDirectory,
-		backendModelsPath:  backendModelsPath,
-		frontendModelsPath: frontendModelsPath,
-	}
+func New(filename, backendModelsPath, frontendModelsPath string) plugin.Plugin {
+	return &Plugin{filename: filename, backendModelsPath: backendModelsPath, frontendModelsPath: frontendModelsPath}
 }
 
 type Plugin struct {
-	outputDirectory    string
+	filename           string
 	backendModelsPath  string
 	frontendModelsPath string
 }
@@ -291,7 +288,8 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 				structKey := strcase.ToCamel(name)
 				structKey = strings.Replace(structKey, "Id", "ID", -1)
 				structKey = strings.Replace(structKey, "Url", "URL", -1)
-				isId := strings.Contains(structKey, "ID")
+				isID := strings.Contains(structKey, "ID")
+				isPrimaryID := structKey == "ID"
 				boilerKey := it.Name + "." + structKey
 				// fmt.Println(boilerKey, ":", boilerType)
 				boilerType, ok := boilerTypeMap[boilerKey]
@@ -397,7 +395,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 				var customBoilerIDFunction string
 				var customGraphIDFunction string
 				var isNullableID bool
-				if isId {
+				if isID {
 					// fmt.Println("isId")
 					if boilerName == "id" {
 						customBoilerIDFunction = it.BoilerName + "ID" + "Unique"
@@ -445,7 +443,8 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 				}
 
 				it.Fields = append(it.Fields, &Field{
-					IsId:                   isId,
+					IsID:                   isID,
+					IsPrimaryID:            isPrimaryID,
 					IsRelation:             isRelation,
 					IsCustomFunction:       isCustomFunction,
 					CustomFromFunction:     customFromFunction,
@@ -512,25 +511,16 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 		return nil
 	}
 	enhanceModelsWithPreloadMap(b.Models)
-
-	if renderError := templates.Render(templates.Options{
-		PackageName:     "wr",
-		Filename:        "convert",
+	renderError := templates.Render(templates.Options{
+		PackageName:     "convert",
+		Filename:        m.filename,
 		Data:            b,
 		GeneratedHeader: true,
-	}); renderError != nil {
-		fmt.Println("renderError converts", renderError)
-	}
+	})
 
-	if renderError := templates.Render(templates.Options{
-		PackageName:     "wr",
-		Filename:        "preload",
-		Data:            b,
-		GeneratedHeader: true,
-	}); renderError != nil {
-		fmt.Println("renderError preloads", renderError)
+	if renderError != nil {
+		fmt.Println("renderError", renderError)
 	}
-
 	return nil
 }
 

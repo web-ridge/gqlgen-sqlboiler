@@ -105,10 +105,14 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 
 	
 		{{ range $field := .Fields }}
-			{{- if $field.IsId -}}
+			{{- if $field.IsPrimaryID -}}
 				func {{ $model.Name|go }}IDUnique(v {{$field.BoilerType}})({{$field.GraphType}}) {
+					// 	{{  $field.BoilerName|go }}
+					// 	{{  $field.CustomGraphIDFunction|go }}
+					// 	{{ $field.CustomBoilerIDFunction|go }}
 					return helper.{{ $field.CustomToFunction }}IDUnique(v, "{{ $model.Name|go }}")
 				}
+				
 			{{- end -}}
 		{{- end }}
 	
@@ -123,7 +127,7 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 				{{- with .Description }}
 					{{.|prefixLines "// "}}
 				{{- end}}
-				{{- if $field.IsId -}}
+				{{- if $field.IsID -}}
 					{{- $field.Name|go }}:  {{ $field.CustomBoilerIDFunction|go }}(m.{{ $field.BoilerName|go }}),
 				{{- else if $field.IsRelation -}}
 				{{- else if $field.IsCustomFunction }}
@@ -161,10 +165,12 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 	}
 
 		{{ range $field := .Fields }}
-			{{- if $field.IsId -}}
-				func {{ $model.Name|go }}ID(v {{$field.GraphType}})({{$field.BoilerType}}) {
-					return helper.{{ $field.CustomFromFunction }}ID(v, "{{ $model.Name|go }}")
-				}
+			{{- if and $field.IsID $field.IsPrimaryID }}
+				// Custom nullable function
+				// func {{ $model.Name|go }}IDNullable(v *{{$field.GraphType}})(null.{{$field.BoilerType|go}}) {
+
+			{{- end -}}
+			{{- if $field.IsPrimaryID }}
 				func {{ $model.Name|go }}IDNullable(v *{{$field.GraphType}})(null.{{$field.BoilerType|go}}) {
 					if v == nil {
 						return null.{{$field.BoilerType|go}}{
@@ -177,8 +183,12 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 						{{$field.BoilerType|go}}: s,
 					}
 				}
-				func {{ $model.Name|go }}IDsToInts(a []string) []{{$field.BoilerType}} {
-					r := make([]int, len(a))
+				func {{ $model.Name|go }}ID(v {{$field.GraphType}})({{$field.BoilerType}}) {
+					return helper.{{ $field.CustomFromFunction }}ID(v, "{{ $model.Name|go }}")
+				}
+				
+				func {{ $model.Name|go }}IDsTo{{$field.BoilerType|go}}s(a []string) []{{$field.BoilerType}} {
+					r := make([]{{$field.BoilerType}}, len(a))
 					for i, v := range a {
 						r[i] = {{ $model.Name|go }}ID(v)
 					}
@@ -204,7 +214,7 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 			}	
 			r := &models.{{ .BoilerName|go }}{
 			{{ range $field := .Fields -}}
-				{{ if $field.IsId }}
+				{{ if $field.IsID }}
 					{{- $field.BoilerName|go }} : {{ $field.CustomGraphIDFunction|go }}(m.{{ $field.Name|go }}),
 				{{ else if $field.IsRelation }}
 				{{ else if $field.IsCustomFunction }}
@@ -223,7 +233,7 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 				switch key {
 					{{ range $field := .Fields -}}
 					case "{{ $field.CamelCaseName }}":
-						{{ if $field.IsId -}}
+						{{ if $field.IsID -}}
 							modelM[models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }}] = {{ $field.CustomGraphIDFunction|go }}(m.{{ $field.Name|go }})
 						{{ else if $field.IsRelation -}}
 						{{ else if $field.IsCustomFunction -}}
