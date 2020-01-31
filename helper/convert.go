@@ -49,6 +49,10 @@ func TimeTimeToInt(v time.Time) int {
 	return int(v.Unix())
 }
 
+func IntToTimeTime(v int) time.Time {
+	return time.Unix(int64(v), 0)
+}
+
 func NullDotStringToString(v null.String) string {
 	if v.Ptr() == nil {
 		return ""
