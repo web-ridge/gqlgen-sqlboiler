@@ -461,10 +461,10 @@ func getConvertConfigID(m *Model, models []*Model, field *Field, relationField *
 	} else {
 		// TODO: We want to have the model name of the relationship of the foreign key
 		// Let 's say you have called your foreign key
-		if relationField != nil {
-			cc.boilerIDFunc = relationField.BoilerType + "Unique"
+		if relationOfInputField != nil {
+			cc.boilerIDFunc = relationOfInputField.BoilerRelationShipName + "ID" + "Unique"
 			// fmt.Println(m.Name, "relationField != nil cc.graphIDFunc = ", relationField.Type.String())
-			cc.graphIDFunc = relationField.Type.String()
+			cc.graphIDFunc = relationOfInputField.BoilerRelationShipName + "ID"
 		} else {
 			cc.boilerIDFunc = field.BoilerName + "Unique"
 			// fmt.Println("relationField == nil cc.graphIDFunc = ", field.Name)
