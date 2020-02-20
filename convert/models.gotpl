@@ -107,9 +107,6 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 		{{ range $field := .Fields }}
 			{{- if $field.IsPrimaryID -}}
 				func {{ $model.Name|go }}IDUnique(v {{$field.BoilerType}})({{$field.GraphType}}) {
-					// 	{{  $field.BoilerName|go }}
-					// 	{{  $field.CustomGraphIDFunction|go }}
-					// 	{{ $field.CustomBoilerIDFunction|go }}
 					return helper.{{ $field.CustomToFunction }}IDUnique(v, "{{ $model.Name|go }}")
 				}
 				
