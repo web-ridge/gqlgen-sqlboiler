@@ -310,8 +310,12 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 				} else if pluralizer.IsPlural(name) {
 					// ignore
 				} else {
-					fmt.Println("[WARN] boiler type not available for, continue", name)
+					fmt.Println("[WARN] boiler type not available for ", name)
 				}
+			}
+
+			if boilerName == "" {
+				fmt.Println("[WARN] boiler name not available for ", name, gqlFieldName)
 			}
 
 			m.Fields = append(m.Fields, &Field{
@@ -336,6 +340,7 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 	// After we've added the fields we want to enhance some fields with extra information
 	// We want all existing models and fields because othwerwise we can not know the relationsships
 	for _, model := range models {
+
 		for _, field := range model.Fields {
 
 			// Use case: field.name = OwnerID
@@ -344,8 +349,14 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 			// e.g We have an adress with a ContactPersonID and an OwnerID both are coupled to Person in the database.
 			// For the convert we need PersonNullableID() convert and not ContactPersonNullableID()
 			var relationField *Field
+			var relationOfInputField *Field
 			if field.IsID && !field.IsPrimaryID {
-				relationField = findRelationField(model.Name, field.Name, models)
+				relationField = findRelationModelForForeignKey(model.Name, field.Name, models)
+				relationOfInputField = findRelationModelForForeignKeyAndInput(model.Name, field.Name, models)
+			}
+
+			if model.IsInput && relationField != nil {
+				fmt.Println("Found relationship in an input model: ", model.Name, field.Name, relationField.Name)
 			}
 
 			// get some custom convert functions if the fields are more advanced, like relationships or custom enums
@@ -360,33 +371,64 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 
 				// get some custom ID functions because we want to support unique id's we need to add custom converts
 				// instead of just pure foreign keys
-				convertIDConfig := getConvertConfigID(model, models, field, relationField)
+				convertIDConfig := getConvertConfigID(model, models, field, relationField, relationOfInputField)
 				field.CustomBoilerIDFunction = convertIDConfig.boilerIDFunc
 				field.CustomGraphIDFunction = convertIDConfig.graphIDFunc
 				field.IsNullableID = convertIDConfig.isNullableID
+
+				// fmt.Println("IsID CustomBoilerIDFunction", field.CustomBoilerIDFunction)
+				// fmt.Println("IsID CustomGraphIDFunction", field.CustomGraphIDFunction)
+
 			}
 		}
 	}
 }
 
-func findRelationField(searchModel string, searchField string, models []*Model) *Field {
-	// The relationship is defined in the normal model but not in the input, where etc structs
-	// So just find the normal model and get the relationship type :)
-	searchModel = strings.TrimSuffix(searchModel, "Input")
-	// TODO: where filters etc
-
-	for _, model := range models {
-		if model.Name == searchModel {
-			// we have an UserID field but we want the User type
-			searchField = strings.TrimSuffix(searchField, "Id")
-			for _, field := range model.Fields {
-				if field.Name == searchField {
-					fmt.Println("Found graph type", field.Name, searchField)
-					return field
-				}
-			}
+func findModel(models []*Model, search string) *Model {
+	for _, m := range models {
+		if m.Name == search {
+			return m
 		}
 	}
+	return nil
+}
+
+func findField(fields []*Field, search string) *Field {
+	for _, f := range fields {
+		if f.Name == search {
+			return f
+		}
+	}
+	return nil
+}
+func findRelationModelForForeignKeyAndInput(currentModelName string, foreignKey string, models []*Model) *Field {
+	// The relationship is defined in the normal model but not in the input, where etc structs
+	// So just find the normal model and get the relationship type :)
+	currentModelName = strings.TrimSuffix(currentModelName, "Input")
+	return findRelationModelForForeignKey(currentModelName, foreignKey, models)
+}
+
+func findRelationModelForForeignKey(currentModelName string, foreignKey string, models []*Model) *Field {
+
+	model := findModel(models, currentModelName)
+	if model != nil {
+		// Use case
+		// we a foreignKey of ParentID but the foreign key resolves to Calamity
+		// We could know this based on the boilerType information
+		// withou this function the generated convert is like this
+
+		// r.Parent = ParentToGraphQL(m.R.Parent, m)
+		// but it needs to be
+		// r.Parent = CalamityToGraphQL(m.R.Parent, m)
+		foreignKey = strings.TrimSuffix(foreignKey, "Id")
+
+		field := findField(model.Fields, foreignKey)
+		if field != nil {
+			fmt.Println("Found graph type", field.Name, foreignKey)
+			return field
+		}
+	}
+
 	return nil
 }
 
@@ -397,7 +439,7 @@ type IDConvertConfig struct {
 }
 
 // func getModelBasedOnBoilerType
-func getConvertConfigID(m *Model, models []*Model, field *Field, relationField *Field) (cc IDConvertConfig) {
+func getConvertConfigID(m *Model, models []*Model, field *Field, relationField *Field, relationOfInputField *Field) (cc IDConvertConfig) {
 
 	// fmt.Println("isId")
 	if field.IsPrimaryID {
@@ -408,9 +450,12 @@ func getConvertConfigID(m *Model, models []*Model, field *Field, relationField *
 		// Let 's say you have called your foreign key
 		if relationField != nil {
 			cc.boilerIDFunc = relationField.BoilerType + "Unique"
-			cc.graphIDFunc = relationField.GraphType
+			// fmt.Println(m.Name, "relationField != nil cc.graphIDFunc = ", relationField.Type.String())
+			cc.graphIDFunc = relationField.Type.String()
 		} else {
 			cc.boilerIDFunc = field.BoilerName + "Unique"
+			// fmt.Println("relationField == nil cc.graphIDFunc = ", field.Name)
+
 			cc.graphIDFunc = field.Name
 		}
 	}
@@ -452,6 +497,7 @@ type ConvertConfig struct {
 
 func getConvertConfig(field *Field, relationField *Field) (cc ConvertConfig) {
 	graphType := field.Type.String()
+
 	if graphType != field.BoilerType {
 		// fmt.Println(fmt.Sprintf("%v != %v", typ.String(), boilerType))
 
@@ -505,11 +551,14 @@ func getBoilerKeyAndType(m *Model, originalFieldName string, gqlFieldName string
 
 	boilerName := originalFieldName
 	if !ok {
-		// there are are cases when key contains 'type' the struct name is printed before
-		cn := strings.TrimPrefix(gqlFieldName, m.Name)
+		cn := gqlFieldName
+		if gqlFieldName != m.Name {
+			// there are are cases when key contains 'type' the struct name is printed before
+			cn = strings.TrimPrefix(gqlFieldName, m.Name)
+		}
+		// TODO: rewrite to make cleaner and document more
 		secondKey := m.Name + "." + cn
 		if isRelation {
-			cn = strings.TrimPrefix(gqlFieldName, m.Name)
 			secondKey = m.Name + "." + gqlFieldName + "ID"
 			boilerType, ok = boilerTypeMap[secondKey]
 			if ok {
@@ -517,7 +566,6 @@ func getBoilerKeyAndType(m *Model, originalFieldName string, gqlFieldName string
 				boilerKey = secondKey
 			}
 		} else {
-			cn = strings.TrimPrefix(gqlFieldName, m.Name)
 			secondKey = m.Name + "." + cn
 			boilerType, ok = boilerTypeMap[secondKey]
 			if ok {
@@ -621,9 +669,14 @@ func getModelsFromSchema(schema *ast.Schema, boilerStructMap map[string]string) 
 					continue
 				}
 
-				// We will try to handle Input mutations to graphql objects
+				// We will try to find a corresponding boiler struct
 				if !hasBoilerName {
-					fmt.Println(fmt.Sprintf("    [WARN] Skip  %v because it there is no database model found", modelName))
+					if strings.HasSuffix(modelName, "Filter") && modelName != "Filter" {
+						// silent continue
+						continue
+					}
+
+					fmt.Println(fmt.Sprintf("    [WARN] Skip  %v because no database model found", modelName))
 					continue
 				}
 
