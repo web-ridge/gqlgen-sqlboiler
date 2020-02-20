@@ -92,18 +92,23 @@ func PointerBoolToNullDotBool(v *bool) null.Bool {
 	return null.BoolFromPtr(v)
 }
 
-func TypesNullDecimalToPointerString(v types.NullDecimal) *string {
-	s := v.String()
-	if s == "" {
-		return nil
-	}
-	return &s
+func TypesNullDecimalToFloat64(v types.NullDecimal) float64 {
+	f, _ := v.Float64()
+	return f
 }
 
 func Float64ToTypesNullDecimal(v float64) types.NullDecimal {
 	d := new(decimal.Big)
 	d.SetFloat64(v)
 	return types.NewNullDecimal(d)
+}
+
+func TypesNullDecimalToPointerString(v types.NullDecimal) *string {
+	s := v.String()
+	if s == "" {
+		return nil
+	}
+	return &s
 }
 
 func PointerStringToTypesNullDecimal(v *string) types.NullDecimal {
@@ -127,6 +132,7 @@ func PointerStringToTypesNullDecimal(v *string) types.NullDecimal {
 func PointerIntToNullDotInt(v *int) null.Int {
 	return null.IntFromPtr((v))
 }
+
 func PointerIntToNullDotUint(v *int) null.Uint {
 	if v == nil {
 		return null.UintFromPtr(nil)
@@ -134,19 +140,23 @@ func PointerIntToNullDotUint(v *int) null.Uint {
 	uv := *v
 	return null.UintFrom(uint(uv))
 }
+
 func NullDotIntToPointerInt(v null.Int) *int {
 	return v.Ptr()
 }
+
 func IntToInt8(v int) int8 {
 	return int8(v)
 }
+
 func Int8ToInt(v int8) int {
 	return int(v)
 }
+
 func NullDotFloat64ToPointerFloat64(v null.Float64) *float64 {
 	return v.Ptr()
-
 }
+
 func PointerFloat64ToNullDotFloat64(v *float64) null.Float64 {
 	return null.Float64FromPtr(v)
 }
@@ -194,15 +204,19 @@ func PointerIntToNullDotBool(v *int) null.Bool {
 		Bool:  *v == 1,
 	}
 }
+
 func NullDotIntIsZero(v null.Int) bool {
 	return v.IsZero()
 }
+
 func NullDotUintIsZero(v null.Uint) bool {
 	return v.IsZero()
 }
+
 func UintIsZero(v uint) bool {
 	return v == 0
 }
+
 func IntIsZero(v int) bool {
 	return v == 0
 }

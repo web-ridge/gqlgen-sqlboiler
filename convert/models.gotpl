@@ -107,9 +107,6 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 		{{ range $field := .Fields }}
 			{{- if $field.IsPrimaryID -}}
 				func {{ $model.Name|go }}IDUnique(v {{$field.BoilerType}})({{$field.GraphType}}) {
-					// 	{{  $field.BoilerName|go }}
-					// 	{{  $field.CustomGraphIDFunction|go }}
-					// 	{{ $field.CustomBoilerIDFunction|go }}
 					return helper.{{ $field.CustomToFunction }}IDUnique(v, "{{ $model.Name|go }}")
 				}
 				
@@ -143,18 +140,18 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 			{{- if $field.IsRelation }}
 				{{- if $field.IsPlural }}
 					if m.R != nil && m.R.{{ $field.Name|go }} != nil  {
-						r.{{ $field.Name|go }} = {{ $field.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }}, m)
+						r.{{ $field.Name|go }} = {{ $field.PlularBoilerRelationShipName|go }}ToGraphQL(m.R.{{ $field.Name|go }}, m)
 					} 
 				{{- else }}	
 				
 				if !helper.{{ $field.CustomBoilerType }}IsZero(m.{{ $field.Name|go }}ID) {
 					if m.R != nil && m.R.{{ $field.Name|go }} != nil  {
-						rootValue, sameStructAsRoot := root.(*models.{{ $field.BoilerName|go }})
+						rootValue, sameStructAsRoot := root.(*models.{{ $field.BoilerRelationShipName|go }})
 						if !sameStructAsRoot || rootValue != m.R.{{ $field.Name|go }} {
-							r.{{ $field.Name|go }} ={{ $field.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }}, m)
+							r.{{ $field.Name|go }} ={{ $field.BoilerRelationShipName|go }}ToGraphQL(m.R.{{ $field.Name|go }}, m)
 						}
 					} else {
-						r.{{ $field.Name|go }} = {{ $field.Name|go }}With{{ $field.CustomBoilerType|go }}ID(m.{{ $field.Name|go }}ID)
+						r.{{ $field.Name|go }} = {{ $field.BoilerRelationShipName|go }}With{{ $field.CustomBoilerType|go }}ID(m.{{ $field.Name|go }}ID)
 					}
 				}
 				{{- end -}}

@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"io/ioutil"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -169,11 +170,11 @@ func ParseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 	}
 
 	// To store the keys in slice in sorted order
-	// var keys []string
-	// for k := range fieldsMap {
-	// 	keys = append(keys, k)
-	// }
-	// sort.Strings(keys)
+	var keys []string
+	for k := range fieldsMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 
 	// fmt.Println(" ")
 	// fmt.Println(" ")
