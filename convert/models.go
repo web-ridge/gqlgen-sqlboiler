@@ -68,6 +68,7 @@ type Field struct {
 	CamelCaseName          string
 	PluralName             string
 	BoilerName             string
+	BoilerRelationShipName string
 	PluralBoilerName       string
 	BoilerType             string
 	GraphType              string
@@ -82,9 +83,10 @@ type Field struct {
 	IsPrimaryID            bool
 	IsNullableID           bool
 	IsRelation             bool
-	IsPlural               bool
-	CustomGraphType        string
-	CustomBoilerType       string
+
+	IsPlural         bool
+	CustomGraphType  string
+	CustomBoilerType string
 }
 
 type Enum struct {
@@ -301,7 +303,7 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 			isPrimaryID := gqlFieldName == "ID"
 
 			// get sqlboiler information of the field
-			boilerName, _, boilerType := getBoilerKeyAndType(m, name, gqlFieldName, isRelation, boilerTypeMap)
+			boilerName, _, boilerType, boilerRelationShipName := getBoilerKeyAndType(m, name, gqlFieldName, isRelation, boilerTypeMap)
 
 			// log some warnings when fields could not be converted
 			if boilerType == "" {
@@ -320,20 +322,21 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 			}
 
 			m.Fields = append(m.Fields, &Field{
-				IsID:             isID,
-				IsPrimaryID:      isPrimaryID,
-				IsRelation:       isRelation,
-				BoilerType:       boilerType,
-				GraphType:        typ.String(),
-				Name:             name,
-				CamelCaseName:    strcase.ToLowerCamel(name),
-				IsPlural:         pluralizer.IsPlural(name),
-				PluralName:       pluralizer.Plural(name),
-				BoilerName:       boilerName,
-				PluralBoilerName: pluralizer.Plural(boilerName),
-				Type:             typ,
-				Description:      field.Description,
-				Tag:              `json:"` + field.Name + `"`,
+				IsID:                   isID,
+				IsPrimaryID:            isPrimaryID,
+				IsRelation:             isRelation,
+				BoilerType:             boilerType,
+				GraphType:              typ.String(),
+				Name:                   name,
+				CamelCaseName:          strcase.ToLowerCamel(name),
+				IsPlural:               pluralizer.IsPlural(name),
+				PluralName:             pluralizer.Plural(name),
+				BoilerName:             boilerName,
+				BoilerRelationShipName: boilerRelationShipName,
+				PluralBoilerName:       pluralizer.Plural(boilerName),
+				Type:                   typ,
+				Description:            field.Description,
+				Tag:                    `json:"` + field.Name + `"`,
 			})
 		}
 	}
@@ -425,7 +428,7 @@ func findRelationModelForForeignKey(currentModelName string, foreignKey string, 
 
 		field := findField(model.Fields, foreignKey)
 		if field != nil {
-			fmt.Println("Found graph type", field.Name, foreignKey)
+			fmt.Println("Found graph type", field.Name, "for foreign key", foreignKey)
 			return field
 		}
 	}
@@ -537,8 +540,9 @@ func getConvertConfig(field *Field, relationField *Field) (cc ConvertConfig) {
 }
 
 func getBoilerKeyAndType(m *Model, originalFieldName string, gqlFieldName string, isRelation bool,
-	boilerTypeMap map[string]string) (string, string, string) {
+	boilerTypeMap map[string]string) (string, string, string, string) {
 	boilerKey := m.Name + "." + gqlFieldName
+
 	boilerType, ok := boilerTypeMap[boilerKey]
 	if m.IsInput {
 		boilerKey := strings.TrimSuffix(m.Name, "Input") + "." + gqlFieldName
@@ -551,6 +555,7 @@ func getBoilerKeyAndType(m *Model, originalFieldName string, gqlFieldName string
 	}
 
 	boilerName := originalFieldName
+	boilerRelationName := ""
 	if !ok {
 
 		// TODO: rewrite to make cleaner and document more
@@ -573,6 +578,19 @@ func getBoilerKeyAndType(m *Model, originalFieldName string, gqlFieldName string
 			}
 		}
 
+		// resolve type of relation
+		if isRelation {
+			relationKey := strcase.ToLowerCamel(m.Name) + "R." + strcase.ToCamel(boilerName)
+			relationType, relationOk := boilerTypeMap[relationKey]
+
+			if relationOk {
+				boilerRelationName = relationType
+			} else {
+				fmt.Println("Could not find type of relationship ", relationKey, relationType, relationOk)
+			}
+
+		}
+
 		// We could not find the name/type this could be a false alarm since not all fields can be mapped
 		// to the database struct
 		if !ok {
@@ -590,7 +608,7 @@ func getBoilerKeyAndType(m *Model, originalFieldName string, gqlFieldName string
 
 	}
 
-	return boilerName, boilerKey, boilerType
+	return boilerName, boilerKey, boilerType, boilerRelationName
 }
 
 func getgqlFieldName(name string) string {

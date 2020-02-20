@@ -149,12 +149,12 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 				
 				if !helper.{{ $field.CustomBoilerType }}IsZero(m.{{ $field.Name|go }}ID) {
 					if m.R != nil && m.R.{{ $field.Name|go }} != nil  {
-						rootValue, sameStructAsRoot := root.(*models.{{ $field.BoilerName|go }})
+						rootValue, sameStructAsRoot := root.(*models.{{ $field.BoilerRelationShipName|go }})
 						if !sameStructAsRoot || rootValue != m.R.{{ $field.Name|go }} {
-							r.{{ $field.Name|go }} ={{ $field.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }}, m)
+							r.{{ $field.Name|go }} ={{ $field.BoilerRelationShipName|go }}ToGraphQL(m.R.{{ $field.Name|go }}, m)
 						}
 					} else {
-						r.{{ $field.Name|go }} = {{ $field.Name|go }}With{{ $field.CustomBoilerType|go }}ID(m.{{ $field.Name|go }}ID)
+						r.{{ $field.Name|go }} = {{ $field.BoilerRelationShipName|go }}With{{ $field.CustomBoilerType|go }}ID(m.{{ $field.Name|go }}ID)
 					}
 				}
 				{{- end -}}
