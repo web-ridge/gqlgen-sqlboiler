@@ -63,26 +63,27 @@ type ColumnSetting struct {
 }
 
 type Field struct {
-	Description            string
-	Name                   string
-	CamelCaseName          string
-	PluralName             string
-	BoilerName             string
-	BoilerRelationShipName string
-	PluralBoilerName       string
-	BoilerType             string
-	GraphType              string
-	Type                   types.Type
-	Tag                    string
-	IsCustomFunction       bool
-	CustomFromFunction     string
-	CustomToFunction       string
-	CustomBoilerIDFunction string
-	CustomGraphIDFunction  string
-	IsID                   bool
-	IsPrimaryID            bool
-	IsNullableID           bool
-	IsRelation             bool
+	Description                  string
+	Name                         string
+	CamelCaseName                string
+	PluralName                   string
+	BoilerName                   string
+	BoilerRelationShipName       string
+	PlularBoilerRelationShipName string
+	PluralBoilerName             string
+	BoilerType                   string
+	GraphType                    string
+	Type                         types.Type
+	Tag                          string
+	IsCustomFunction             bool
+	CustomFromFunction           string
+	CustomToFunction             string
+	CustomBoilerIDFunction       string
+	CustomGraphIDFunction        string
+	IsID                         bool
+	IsPrimaryID                  bool
+	IsNullableID                 bool
+	IsRelation                   bool
 
 	IsPlural         bool
 	CustomGraphType  string
@@ -255,6 +256,13 @@ func getFieldType(binder *config.Binder, schema *ast.Schema, cfg *config.Config,
 	return typ, err
 }
 
+func getPlularBoilerRelationShipName(modelName string) string {
+	// sqlboiler adds Slice when multiple, we don't want that
+	// since our converts are named plular of model and not Slice
+	// e.g. UsersToGraphQL and not UserSliceToGraphQL
+	modelName = strings.TrimSuffix(modelName, "Slice")
+	return pluralizer.Plural(modelName)
+}
 func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*Model, boilerTypeMap map[string]string) {
 
 	binder, binderErr := cfg.NewBinder(schema)
@@ -322,21 +330,22 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 			}
 
 			m.Fields = append(m.Fields, &Field{
-				IsID:                   isID,
-				IsPrimaryID:            isPrimaryID,
-				IsRelation:             isRelation,
-				BoilerType:             boilerType,
-				GraphType:              typ.String(),
-				Name:                   name,
-				CamelCaseName:          strcase.ToLowerCamel(name),
-				IsPlural:               pluralizer.IsPlural(name),
-				PluralName:             pluralizer.Plural(name),
-				BoilerName:             boilerName,
-				BoilerRelationShipName: boilerRelationShipName,
-				PluralBoilerName:       pluralizer.Plural(boilerName),
-				Type:                   typ,
-				Description:            field.Description,
-				Tag:                    `json:"` + field.Name + `"`,
+				IsID:                         isID,
+				IsPrimaryID:                  isPrimaryID,
+				IsRelation:                   isRelation,
+				BoilerType:                   boilerType,
+				GraphType:                    typ.String(),
+				Name:                         name,
+				CamelCaseName:                strcase.ToLowerCamel(name),
+				IsPlural:                     pluralizer.IsPlural(name),
+				PluralName:                   pluralizer.Plural(name),
+				BoilerName:                   boilerName,
+				BoilerRelationShipName:       boilerRelationShipName,
+				PlularBoilerRelationShipName: getPlularBoilerRelationShipName(boilerRelationShipName),
+				PluralBoilerName:             pluralizer.Plural(boilerName),
+				Type:                         typ,
+				Description:                  field.Description,
+				Tag:                          `json:"` + field.Name + `"`,
 			})
 		}
 	}
