@@ -280,7 +280,8 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 				name = nameOveride
 			}
 
-			// just some (old) Relay clutter which is not needed anymore + we can't do anything with it
+			// just some (old) Relay clutter which is not needed anymore + we won't do anything with it
+			// in our database converts.
 			if name == "clientMutationId" {
 				continue
 			}
@@ -551,36 +552,36 @@ func getBoilerKeyAndType(m *Model, originalFieldName string, gqlFieldName string
 
 	boilerName := originalFieldName
 	if !ok {
-		cn := gqlFieldName
-		if gqlFieldName != m.Name {
-			// there are are cases when key contains 'type' the struct name is printed before
-			cn = strings.TrimPrefix(gqlFieldName, m.Name)
-		}
+
 		// TODO: rewrite to make cleaner and document more
-		secondKey := m.Name + "." + cn
+
+		// If it a relation check to see if a foreign key is available
 		if isRelation {
-			secondKey = m.Name + "." + gqlFieldName + "ID"
+			secondKey := m.Name + "." + gqlFieldName + "ID"
 			boilerType, ok = boilerTypeMap[secondKey]
 			if ok {
-				boilerName = cn
+				boilerName = gqlFieldName
 				boilerKey = secondKey
 			}
 		} else {
-			secondKey = m.Name + "." + cn
+			// Not a relation? Just find the field name and get the type ;)
+			secondKey := m.Name + "." + gqlFieldName
 			boilerType, ok = boilerTypeMap[secondKey]
 			if ok {
-				boilerName = cn
+				boilerName = gqlFieldName
 				boilerKey = secondKey
 			}
 		}
 
+		// We could not find the name/type this could be a false alarm since not all fields can be mapped
+		// to the database struct
 		if !ok {
 			if m.IsPayload {
-				//ignore
+				// ignore because developer is free to write a very customized payload without us printing false alarms
 			} else if strings.Contains(boilerKey, "ClientMutationID") {
-				// ignore
+				// ignore because this is Relay clutter which is not needed anymore
 			} else if strings.Contains(boilerKey, ".") && pluralizer.IsPlural(strings.Split(boilerKey, ".")[1]) {
-				// ignore
+				// TODO: Find out why this is ignored and write it down
 				// 	Could not find boilerType for key:type =  Flow.FlowBlocks
 			} else {
 				fmt.Println("Could not find boilerType for key:type = ", boilerKey, ":", boilerType)
