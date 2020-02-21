@@ -16,7 +16,7 @@ import (
 	"github.com/99designs/gqlgen/plugin"
 	pluralize "github.com/gertd/go-pluralize"
 	"github.com/iancoleman/strcase"
-	"github.com/vektah/gqlparser/ast"
+	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/web-ridge/gqlgen-sqlboiler/boiler"
 )
 
@@ -143,19 +143,6 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 	// }
 	cfg := copyConfig(*ignoredConfig)
 
-	// fmt.Println("cfg.LoadSchema()")
-	schema, _, err := cfg.LoadSchema()
-	if err != nil {
-		return err
-	}
-	// fmt.Println("cfg.Autobind(schema)")
-	err = cfg.Autobind(schema)
-	if err != nil {
-		return err
-	}
-
-	cfg.InjectBuiltins(schema)
-
 	// fmt.Println("cfg.InjectBuiltins(schema)")
 
 	b := &ModelBuild{
@@ -167,17 +154,17 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 	boilerTypeMap, boilerStructMap, _ := boiler.ParseBoilerFile(m.backendModelsPath)
 
 	// get models based on the schema and sqlboiler structs
-	models := getModelsFromSchema(schema, boilerStructMap)
+	models := getModelsFromSchema(cfg.Schema, boilerStructMap)
 
 	// Now we have all model's let enhance them with fields
-	enhanceModelsWithFields(schema, cfg, models, boilerTypeMap)
+	enhanceModelsWithFields(cfg.Schema, cfg, models, boilerTypeMap)
 
 	// Add preload maps
 	enhanceModelsWithPreloadMap(models)
 
 	// Add models to the build config
 	b.Models = models
-	interfaces, enums, scalars := getExtrasFromSchema(schema)
+	interfaces, enums, scalars := getExtrasFromSchema(cfg.Schema)
 	b.Interfaces = interfaces
 	b.Enums = enums
 	b.Scalars = scalars
@@ -199,6 +186,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 		Filename:        m.directory + "/" + "preload.go",
 		Data:            b,
 		GeneratedHeader: true,
+		Packages:        cfg.Packages,
 	}); renderError != nil {
 		fmt.Println("renderError", renderError)
 	}
@@ -209,6 +197,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 		Filename:        m.directory + "/" + "convert.go",
 		Data:            b,
 		GeneratedHeader: true,
+		Packages:        cfg.Packages,
 	}); renderError != nil {
 		fmt.Println("renderError", renderError)
 	}
@@ -219,6 +208,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 		Filename:        m.directory + "/" + "convert_input.go",
 		Data:            b,
 		GeneratedHeader: true,
+		Packages:        cfg.Packages,
 	}); renderError != nil {
 		fmt.Println("renderError", renderError)
 	}
@@ -245,8 +235,7 @@ func getFieldType(binder *config.Binder, schema *ast.Schema, cfg *config.Config,
 
 	fieldDef := schema.Types[field.Type.Name()]
 	if cfg.Models.UserDefined(field.Type.Name()) {
-		pkg, typeName := PkgAndType(cfg.Models[field.Type.Name()].Model[0])
-		typ, err = binder.FindType(pkg, typeName)
+		typ, err = binder.FindTypeFromName(cfg.Models[field.Type.Name()].Model[0])
 		if err != nil {
 			return typ, err
 		}
@@ -301,11 +290,7 @@ func getPlularBoilerRelationShipName(modelName string) string {
 }
 func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*Model, boilerTypeMap map[string]string) {
 
-	binder, binderErr := cfg.NewBinder(schema)
-	if binderErr != nil {
-		fmt.Println("could not bind config: ", binderErr)
-		return
-	}
+	binder := cfg.NewBinder()
 
 	// Generate the basic of the fields
 	for _, m := range models {
