@@ -16,8 +16,11 @@ To make this program a success tight coupling (same naming) between your databas
 DONE: Generate converts between sqlboiler structs and graphql (with relations included)  
 DONE: Generate converts between input models and sqlboiler  
 DONE: Fetch sqlboiler preloads from graphql context  
-TODO: Generate CRUD resolvers based on mutations in graphql scheme  
-TODO: Refactor some code and document it
+DONE: Support for foreign keys named differently than their corresponding model
+TODO: New plugin which generates CRUD resolvers based on mutations in graphql scheme  
+TODO: Generate code which implements the generated where and search filters
+TODO: Support CRUD of relationships inside input types
+TODO: Support gqlgen multiple .graphql files
 
 ## Case
 
