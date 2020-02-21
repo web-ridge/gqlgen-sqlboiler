@@ -21,49 +21,9 @@
 {{ reserveImport  $.BackendModelsPath }}
 {{ reserveImport  $.FrontendModelsPath }}
 
-func getInputFromContext(ctx context.Context, key string) map[string]interface{} {
-	requestContext := graphql.GetRequestContext(ctx)
-	m, ok := requestContext.Variables[key].(map[string]interface{})
-	if !ok {
-		fmt.Println("can not get input from context")
-	}
-	return m
-}
 
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
-
-
-
-	{{- if .IsPayload -}}
-	var {{ .Name|go }}PreloadLevels = struct {
-		{{ range $field := .Fields }}
-		{{- if $field.IsRelation -}}
-		{{- $field.Name|go }} string
-		{{- end }}
-		{{- end }}
-	}{
-		{{ range $field := .Fields }}
-		{{- if $field.IsRelation -}}
-		{{- $field.Name|go }}: "{{- $field.Name }}",
-		{{- end }}
-		{{- end }}
-	}
-	{{ end }}
-
-	{{- if not .IsInput -}}
-	{{- if not .IsPayload -}}
-	var {{ $model.Name|go }}PreloadMap = map[string]helper.ColumnSetting{
-		{{ range $key, $value := $model.PreloadMap }}
-		 	"{{$key}}": helper.ColumnSetting{
-				 Name: {{$value.Name}},
-				 IDAvailable: {{$value.IDAvailable}},
-			 },
-		{{- end }}
-	}
-	{{ end }}
-	{{ end }}
-
 	{{- if not .IsInput -}}
 	{{- if not .IsPayload -}}
 		func Get{{ .Name|go }}(ctx context.Context, db *sql.DB, whereFilters ...qm.QueryMod) (*graphql_models.{{ .Name|go }}, error) {
@@ -189,68 +149,5 @@ func getInputFromContext(ctx context.Context, key string) map[string]interface{}
 			{{- end -}}
 		{{- end }}
 	{{- end }}
-	{{- end }}
-	{{- if .IsInput }}
-				
-		func {{ .PluralName|go }}ToBoiler(am []*graphql_models.{{ .Name|go }})( []*models.{{ .BoilerName|go }}) {
-			ar := make([]*models.{{ .BoilerName|go }}, len(am))
-			for i,m := range am {
-				ar[i] = {{ .Name|go }}ToBoiler(m)
-			}
-			return ar
-		}
-		
-		func {{ .Name|go }}ToBoiler(m *graphql_models.{{ .Name|go }})( *models.{{ .BoilerName|go }}) {
-			if m == nil {
-				return nil
-			}	
-			r := &models.{{ .BoilerName|go }}{
-			{{ range $field := .Fields -}}
-				{{ if $field.IsID }}
-					{{- $field.BoilerName|go }} : {{ $field.CustomGraphIDFunction|go }}(m.{{ $field.Name|go }}),
-				{{ else if $field.IsRelation }}
-				{{ else if $field.IsCustomFunction }}
-					{{- $field.BoilerName|go }} : helper.{{ $field.CustomFromFunction }}(m.{{ $field.Name|go }}),
-				{{ else }}	
-					{{- $field.BoilerName|go }}: m.{{ $field.Name|go }},
-				{{ end }}
-			{{- end -}}
-			}
-			return r
-		}
-		func {{ .Name|go }}ToModelM(ctx context.Context, m graphql_models.{{ .Name|go }}) models.M {
-			input := getInputFromContext(ctx, "input")
-			modelM := models.M{}
-			for key, _ := range input {
-				switch key {
-					{{ range $field := .Fields -}}
-					case "{{ $field.CamelCaseName }}":
-						{{ if $field.IsID -}}
-							modelM[models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }}] = {{ $field.CustomGraphIDFunction|go }}(m.{{ $field.Name|go }})
-						{{ else if $field.IsRelation -}}
-						{{ else if $field.IsCustomFunction -}}
-							modelM[models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }}] = helper.{{ $field.CustomFromFunction }}(m.{{ $field.Name|go }})
-						{{ else -}}	
-							modelM[models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }}] = m.{{ $field.Name|go }}
-						{{ end -}}
-					{{ end -}}
-				}
-			}
-			return modelM
-		}
-		func {{ .Name|go }}ToBoilerWhitelist(ctx context.Context, extraColumns ...string) boil.Columns {
-			input := getInputFromContext(ctx, "input")
-			columnsWhichAreSet := []string{}
-			for key, _ := range input {
-				switch key {
-					{{ range $field := .Fields -}}
-					case "{{ $field.CamelCaseName }}":
-						columnsWhichAreSet = append(columnsWhichAreSet, models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }})
-					{{ end -}}
-				}
-			}
-			columnsWhichAreSet = append(columnsWhichAreSet, extraColumns...)
-			return boil.Whitelist(columnsWhichAreSet...)
-		}
 	{{- end }}
 {{- end }}

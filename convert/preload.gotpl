@@ -1,0 +1,58 @@
+{{ reserveImport "context"  }}
+{{ reserveImport "fmt"  }}
+{{ reserveImport "io"  }}
+{{ reserveImport "strconv"  }}
+{{ reserveImport "time"  }}
+{{ reserveImport "sync"  }}
+{{ reserveImport "errors"  }}
+{{ reserveImport "bytes"  }}
+{{ reserveImport "strings"  }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/boil"}}
+{{ reserveImport "github.com/ericlagergren/decimal"  }}
+{{ reserveImport "github.com/volatiletech/null"  }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/types"  }}
+{{ reserveImport "github.com/web-ridge/gqlgen-sqlboiler/helper" }}
+{{ reserveImport "github.com/vektah/gqlparser" }}
+{{ reserveImport "github.com/vektah/gqlparser/ast" }}
+{{ reserveImport "github.com/99designs/gqlgen/graphql" }}
+{{ reserveImport "github.com/99designs/gqlgen/graphql/introspection" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/queries/qm" }}
+{{ reserveImport "database/sql" }}
+{{ reserveImport  $.BackendModelsPath }}
+{{ reserveImport  $.FrontendModelsPath }}
+
+{{ range $model := .Models }}
+	{{with .Description }} {{.|prefixLines "// "}} {{end}}
+
+
+
+	{{- if .IsPayload -}}
+	var {{ .Name|go }}PreloadLevels = struct {
+		{{ range $field := .Fields }}
+		{{- if $field.IsRelation -}}
+		{{- $field.Name|go }} string
+		{{- end }}
+		{{- end }}
+	}{
+		{{ range $field := .Fields }}
+		{{- if $field.IsRelation -}}
+		{{- $field.Name|go }}: "{{- $field.Name }}",
+		{{- end }}
+		{{- end }}
+	}
+	{{ end }}
+
+	{{- if not .IsInput -}}
+	{{- if not .IsPayload -}}
+	var {{ $model.Name|go }}PreloadMap = map[string]helper.ColumnSetting{
+		{{ range $key, $value := $model.PreloadMap }}
+		 	"{{$key}}": helper.ColumnSetting{
+				 Name: {{$value.Name}},
+				 IDAvailable: {{$value.IDAvailable}},
+			 },
+		{{- end }}
+	}
+	{{ end }}
+	{{ end }}
+
+{{- end }}

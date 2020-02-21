@@ -3,8 +3,11 @@ package convert
 import (
 	"fmt"
 	"go/types"
+	"io/ioutil"
+	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -101,12 +104,12 @@ type EnumValue struct {
 	Name        string
 }
 
-func New(filename, backendModelsPath, frontendModelsPath string) plugin.Plugin {
-	return &Plugin{filename: filename, backendModelsPath: backendModelsPath, frontendModelsPath: frontendModelsPath}
+func New(directory, backendModelsPath, frontendModelsPath string) plugin.Plugin {
+	return &Plugin{directory: directory, backendModelsPath: backendModelsPath, frontendModelsPath: frontendModelsPath}
 }
 
 type Plugin struct {
-	filename           string
+	directory          string
 	backendModelsPath  string
 	frontendModelsPath string
 }
@@ -156,9 +159,9 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 	// fmt.Println("cfg.InjectBuiltins(schema)")
 
 	b := &ModelBuild{
+		PackageName:        m.directory,
 		FrontendModelsPath: getGoImportFromFile(m.frontendModelsPath),
 		BackendModelsPath:  getGoImportFromFile(m.backendModelsPath),
-		PackageName:        "convert", // TODO convert?
 	}
 
 	boilerTypeMap, boilerStructMap, _ := boiler.ParseBoilerFile(m.backendModelsPath)
@@ -178,6 +181,7 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 	b.Interfaces = interfaces
 	b.Enums = enums
 	b.Scalars = scalars
+
 	// Sort in same order
 	sort.Slice(b.Models, func(i, j int) bool { return b.Models[i].Name < b.Models[j].Name })
 	for _, m := range b.Models {
@@ -189,17 +193,49 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 		return nil
 	}
 
-	renderError := templates.Render(templates.Options{
-		PackageName:     "convert",
-		Filename:        m.filename,
+	if renderError := templates.Render(templates.Options{
+		Template:        getTemplate("preload.gotpl"),
+		PackageName:     m.directory,
+		Filename:        m.directory + "/" + "preload.go",
 		Data:            b,
 		GeneratedHeader: true,
-	})
-
-	if renderError != nil {
+	}); renderError != nil {
 		fmt.Println("renderError", renderError)
 	}
+
+	if renderError := templates.Render(templates.Options{
+		Template:        getTemplate("convert.gotpl"),
+		PackageName:     m.directory,
+		Filename:        m.directory + "/" + "convert.go",
+		Data:            b,
+		GeneratedHeader: true,
+	}); renderError != nil {
+		fmt.Println("renderError", renderError)
+	}
+
+	if renderError := templates.Render(templates.Options{
+		Template:        getTemplate("convert_input.gotpl"),
+		PackageName:     m.directory,
+		Filename:        m.directory + "/" + "convert_input.go",
+		Data:            b,
+		GeneratedHeader: true,
+	}); renderError != nil {
+		fmt.Println("renderError", renderError)
+	}
+
 	return nil
+}
+
+func getTemplate(filename string) string {
+	// load path relative to calling source file
+	_, callerFile, _, _ := runtime.Caller(1)
+	rootDir := filepath.Dir(callerFile)
+	content, err := ioutil.ReadFile(path.Join(rootDir, filename))
+	if err != nil {
+		fmt.Println("Could not read .gotpl file", err)
+		return "Could not read .gotpl file"
+	}
+	return string(content)
 }
 
 // getFieldType check's if user has defined a
