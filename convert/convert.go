@@ -137,13 +137,7 @@ func getGoImportFromFile(dir string) string {
 }
 
 func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
-	// fmt.Println("cfg.Check()")
-	// if err := cfg.Check(); err != nil {
-	// 	return err
-	// }
 	cfg := copyConfig(*ignoredConfig)
-
-	// fmt.Println("cfg.InjectBuiltins(schema)")
 
 	b := &ModelBuild{
 		PackageName:        m.directory,
