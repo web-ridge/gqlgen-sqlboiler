@@ -1,23 +1,41 @@
 package resolvergen
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/99designs/gqlgen/codegen"
 	"github.com/99designs/gqlgen/codegen/config"
 	"github.com/99designs/gqlgen/codegen/templates"
-	"github.com/99designs/gqlgen/internal/rewrite"
 	"github.com/99designs/gqlgen/plugin"
+	pluralize "github.com/gertd/go-pluralize"
 	"github.com/pkg/errors"
 )
 
-func New() plugin.Plugin {
-	return &Plugin{}
+var pathRegex *regexp.Regexp
+var pluralizer *pluralize.Client
+
+func init() {
+	var initError error
+	pluralizer = pluralize.NewClient()
+	pathRegex, initError = regexp.Compile(`src\/(.*)`)
+	if initError != nil {
+		fmt.Println("could not compile the path regex")
+	}
 }
 
-type Plugin struct{}
+func New(convertHelpersDir, backendModelsPath, frontendModelsPath string) plugin.Plugin {
+	return &Plugin{convertHelpersDir: convertHelpersDir, backendModelsPath: backendModelsPath, frontendModelsPath: frontendModelsPath}
+}
+
+type Plugin struct {
+	convertHelpersDir  string
+	backendModelsPath  string
+	frontendModelsPath string
+}
 
 var _ plugin.CodeGenerator = &Plugin{}
 
@@ -43,10 +61,23 @@ func (m *Plugin) GenerateCode(data *codegen.Data) error {
 func (m *Plugin) generateSingleFile(data *codegen.Data) error {
 	file := File{}
 
-	if _, err := os.Stat(data.Config.Resolver.Filename); err == nil {
-		// file already exists and we dont support updating resolvers with layout = single so just return
-		return nil
-	}
+	// if _, err := os.Stat(data.Config.Resolver.Filename); err == nil {
+	// 	// file already exists and we dont support updating resolvers with layout = single so just return
+	// 	return nil
+	// }
+
+	file.imports = append(file.imports, Import{
+		Alias:      "helpers",
+		ImportPath: getGoImportFromFile(m.convertHelpersDir),
+	})
+	file.imports = append(file.imports, Import{
+		Alias:      "dm",
+		ImportPath: getGoImportFromFile(m.backendModelsPath),
+	})
+	file.imports = append(file.imports, Import{
+		Alias:      "fm",
+		ImportPath: getGoImportFromFile(m.frontendModelsPath),
+	})
 
 	for _, o := range data.Objects {
 		if o.HasResolvers() {
@@ -56,9 +87,13 @@ func (m *Plugin) generateSingleFile(data *codegen.Data) error {
 			if !f.IsResolver {
 				continue
 			}
-
-			resolver := Resolver{o, f, `panic("not implemented")`}
-			file.Resolvers = append(file.Resolvers, &resolver)
+			resolver := &Resolver{
+				Object:         o,
+				Field:          f,
+				Implementation: `panic("not implemented yet")`,
+			}
+			enhanceResolver(resolver)
+			file.Resolvers = append(file.Resolvers, resolver)
 		}
 	}
 
@@ -79,7 +114,7 @@ func (m *Plugin) generateSingleFile(data *codegen.Data) error {
 }
 
 func (m *Plugin) generatePerSchema(data *codegen.Data) error {
-	rewriter, err := rewrite.New(data.Config.Resolver.ImportPath())
+	rewriter, err := NewRewriter(data.Config.Resolver.ImportPath())
 	if err != nil {
 		return err
 	}
@@ -104,17 +139,22 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 
 			structName := templates.LcFirst(o.Name) + templates.UcFirst(data.Config.Resolver.Type)
 			implementation := strings.TrimSpace(rewriter.GetMethodBody(structName, f.GoFieldName))
+			// enhanceResolverWithBools(f)
 			if implementation == "" {
 				implementation = `panic(fmt.Errorf("not implemented"))`
 			}
 
-			resolver := Resolver{o, f, implementation}
+			resolver := &Resolver{
+				Object:         o,
+				Field:          f,
+				Implementation: implementation,
+			}
 			fn := gqlToResolverName(data.Config.Resolver.Dir(), f.Position.Src.Name)
 			if files[fn] == nil {
 				files[fn] = &File{}
 			}
 
-			files[fn].Resolvers = append(files[fn].Resolvers, &resolver)
+			files[fn].Resolvers = append(files[fn].Resolvers, resolver)
 		}
 	}
 
@@ -175,7 +215,7 @@ type File struct {
 	//resolver method implementations, for example when extending a type in a different graphql schema file
 	Objects         []*codegen.Object
 	Resolvers       []*Resolver
-	imports         []rewrite.Import
+	imports         []Import
 	RemainingSource string
 }
 
@@ -191,9 +231,19 @@ func (f *File) Imports() string {
 }
 
 type Resolver struct {
-	Object         *codegen.Object
-	Field          *codegen.Field
-	Implementation string
+	Object          *codegen.Object
+	Field           *codegen.Field
+	Implementation  string
+	IsSingle        bool
+	IsList          bool
+	IsCreate        bool
+	IsUpdate        bool
+	IsDelete        bool
+	IsBatchCreate   bool
+	IsBatchUpdate   bool
+	IsBatchDelete   bool
+	ModelName       string
+	PluralModelName string
 }
 
 func gqlToResolverName(base string, gqlname string) string {
@@ -201,4 +251,64 @@ func gqlToResolverName(base string, gqlname string) string {
 	ext := filepath.Ext(gqlname)
 
 	return filepath.Join(base, strings.TrimSuffix(gqlname, ext)+".resolvers.go")
+}
+
+func enhanceResolver(r *Resolver) {
+	nameOfResolver := r.Field.GoFieldName
+
+	r.ModelName = getModelName(nameOfResolver)
+	r.PluralModelName = getModelNamePlural(nameOfResolver)
+
+	if r.Object.Name == "Mutation" {
+		r.IsCreate = containsPrefixAndPartAfterThatIsSingle(nameOfResolver, "Create")
+		r.IsUpdate = containsPrefixAndPartAfterThatIsSingle(nameOfResolver, "Update")
+		r.IsDelete = containsPrefixAndPartAfterThatIsSingle(nameOfResolver, "Delete")
+
+		r.IsBatchCreate = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Create")
+		r.IsBatchUpdate = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Update")
+		r.IsBatchDelete = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Delete")
+	} else if r.Object.Name == "Query" {
+		r.IsList = pluralizer.IsPlural(nameOfResolver)
+		r.IsSingle = !r.IsList
+	} else {
+		fmt.Println("[WARN] Only Query and Mutation are handled we don't recognize the following: ", r.Object.Name)
+	}
+}
+
+var stripPrefixes = []string{"Create", "Update", "Delete"}
+
+func getModelName(v string) string {
+	for _, prefix := range stripPrefixes {
+		v = strings.TrimPrefix(v, prefix)
+	}
+	return pluralizer.Singular(v)
+}
+
+func getModelNamePlural(v string) string {
+	for _, prefix := range stripPrefixes {
+		v = strings.TrimPrefix(v, prefix)
+	}
+	return pluralizer.Plural(v)
+}
+
+func containsPrefixAndPartAfterThatIsSingle(v string, prefix string) bool {
+	partAfterThat := strings.TrimPrefix(v, prefix)
+	return strings.HasPrefix(v, prefix) && pluralizer.IsSingular(partAfterThat)
+}
+
+func containsPrefixAndPartAfterThatIsPlural(v string, prefix string) bool {
+	partAfterThat := strings.TrimPrefix(v, prefix)
+	return strings.HasPrefix(v, prefix) && pluralizer.IsPlural(partAfterThat)
+}
+
+func getGoImportFromFile(dir string) string {
+	// graphql_models
+
+	longPath, err := filepath.Abs(dir)
+	if err != nil {
+		fmt.Println("error while trying to convert folder to gopath", err)
+	}
+	// src/Users/richardlindhout/go/src/gitlab.com/eyeontarget/app/backend/graphql_models
+	return strings.TrimPrefix(pathRegex.FindString(longPath), "src/")
+
 }

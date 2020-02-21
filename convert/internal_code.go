@@ -1,10 +1,10 @@
 /*
-All code copied from
+All code copied from to prevent not allowed error
 https://github.com/99designs/gqlgen/internal/code
 
+Made issue to make these helper public
+https://github.com/99designs/gqlgen/issues/1058
 
-to fix import from
-// "github.com/99designs/gqlgen/internal/code"
 
 */
 

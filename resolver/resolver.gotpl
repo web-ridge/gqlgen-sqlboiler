@@ -6,7 +6,9 @@
 {{ reserveImport "sync"  }}
 {{ reserveImport "errors"  }}
 {{ reserveImport "bytes"  }}
-
+{{ reserveImport "github.com/volatiletech/sqlboiler/queries/qm" }}
+{{ reserveImport "github.com/web-ridge/gqlgen-sqlboiler/helper" }}
+{{ reserveImport "database/sql" }}
 {{ reserveImport "github.com/vektah/gqlparser/v2" }}
 {{ reserveImport "github.com/vektah/gqlparser/v2/ast" }}
 {{ reserveImport "github.com/99designs/gqlgen/graphql" }}
@@ -15,12 +17,93 @@
 {{ .Imports }}
 
 {{ if .HasRoot }}
-	type {{.ResolverType}} struct {}
+	type {{.ResolverType}} struct {
+		db *sql.DB
+	}
 {{ end }}
 
 {{ range $resolver := .Resolvers -}}
 	func (r *{{lcFirst $resolver.Object.Name}}{{ucFirst $.ResolverType}}) {{$resolver.Field.GoFieldName}}{{ $resolver.Field.ShortResolverDeclaration }} {
-		{{ $resolver.Implementation }}
+	
+
+		{{- if .IsSingle }}
+			dbID := helpers.{{ .ModelName }}ID(id)
+			queryMods := helper.GetPreloadMods(ctx, helpers.{{ .ModelName|go }}PreloadMap)
+			queryMods = append(queryMods, dm.{{ .ModelName|go }}Where.ID.EQ(dbID))
+			m, err := dm.{{ .PluralModelName|go }}(queryMods...).One(ctx, r.db)
+			return helpers.{{ .ModelName|go }}ToGraphQL(m, m), err
+
+		{{- end -}}
+
+		{{- if .IsList }}
+			queryMods := helper.GetPreloadMods(ctx, helpers.{{ .ModelName|go }}PreloadMap)
+			a, err := dm.{{ .PluralModelName|go }}(queryMods...).All(ctx, r.db)
+			return helpers.{{ .PluralModelName|go }}ToGraphQL(a, nil), err
+
+		{{- end -}}
+
+		{{- if .IsCreate }}
+			m := helpers.{{ .ModelName }}InputToBoiler(&input)
+			if err := m.Insert(ctx, r.db, helpers.{{ .ModelName }}InputToBoilerWhitelist(ctx)); err != nil {
+				return nil, err
+			}
+
+			// resolve requested fields after creating
+			queryMods := helper.GetPreloadMods(ctx, helpers.{{ .ModelName|go }}PreloadMap)
+			queryMods = append(queryMods, dm.{{ .ModelName|go }}Where.ID.EQ(m.ID))
+			m, err := dm.{{ .PluralModelName|go }}(queryMods...).One(ctx, r.db)
+			return &fm.{{ .ModelName|go }}Payload{
+				{{ .ModelName|go }}: helpers.{{ .ModelName|go }}ToGraphQL(m, m),
+			}, err
+
+		{{- end -}}
+
+		{{- if .IsUpdate }}
+			dbID := helpers.{{ .ModelName }}ID(id)
+			if _, err := dm.{{ .PluralModelName }}(
+				dm.{{ .ModelName }}Where.ID.EQ(dbID),
+			).UpdateAll(ctx, r.db, helpers.{{ .ModelName }}InputToModelM(ctx, input)); err != nil {
+				return nil, err
+			}
+
+			// resolve requested fields after updating
+			queryMods := helper.GetPreloadMods(ctx, helpers.{{ .ModelName|go }}PreloadMap)
+			queryMods = append(queryMods, dm.{{ .ModelName|go }}Where.ID.EQ(dbID))
+			m, err := dm.{{ .PluralModelName|go }}(queryMods...).One(ctx, r.db)
+			return &fm.{{ .ModelName|go }}Payload{
+				{{ .ModelName|go }}: helpers.{{ .ModelName|go }}ToGraphQL(m, m),
+			}, err
+
+		{{- end -}}
+
+		{{- if .IsDelete }}
+			queryMods := []qm.QueryMod{
+				dm.{{ .ModelName|go }}Where.ID.EQ(helpers.{{ .ModelName|go }}ID(id)),
+			}
+			 _, err := dm.{{ .PluralModelName|go }}(queryMods...).DeleteAll(ctx, r.db)
+			return &fm.{{ .ModelName|go }}DeletePayload{
+				ID: id,
+			}, err
+
+		{{- end -}}
+
+		{{- if .IsBatchCreate }}
+		// TODO: Implement batch create
+		return nil, nil
+
+		{{- end -}}
+
+		{{- if .IsBatchUpdate }}
+		// TODO: Implement batch update
+		return nil, nil
+
+		{{- end -}}
+
+		{{- if .IsBatchDelete }}
+		// TODO: Implement batch delete
+		return nil, nil
+
+		{{- end }}
 	}
 
 {{ end }}
