@@ -30,6 +30,15 @@
 			dbID := helpers.{{ .ModelName }}ID(id)
 			queryMods := helper.GetPreloadMods(ctx, helpers.{{ .ModelName|go }}PreloadMap)
 			queryMods = append(queryMods, dm.{{ .ModelName|go }}Where.ID.EQ(dbID))
+			{{- if .HasOrganizationID }}
+				queryMods = append(queryMods, dm.{{ .ModelName }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
+			{{- end }}
+			{{- if .HasUserOrganizationID }}
+				queryMods = append(queryMods, dm.{{ .ModelName }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
+			{{- end }}
+			{{- if .HasUserID }}
+				queryMods = append(queryMods, dm.{{ .ModelName }}Where.UserID.EQ(auth.UserIDFromContext(ctx)))
+			{{- end }}
 			m, err := dm.{{ .PluralModelName|go }}(queryMods...).One(ctx, r.db)
 			return helpers.{{ .ModelName|go }}ToGraphQL(m, m), err
 
@@ -44,13 +53,32 @@
 
 		{{- if .IsCreate }}
 			m := helpers.{{ .ModelName }}InputToBoiler(&input)
-			if err := m.Insert(ctx, r.db, helpers.{{ .ModelName }}InputToBoilerWhitelist(ctx)); err != nil {
+
+			{{- if .HasOrganizationID }}
+				m.OrganizationID = auth.OrganizationIDFromContext(ctx)
+			{{- end }}
+			{{- if .HasUserOrganizationID }}
+				m.UserOrganizationID = auth.OrganizationIDFromContext(ctx)
+			{{- end }}
+			{{- if .HasUserID }}
+				m.UserID = auth.UserIDFromContext(ctx)
+			{{- end }}
+			if err := m.Insert(ctx, r.db, helpers.{{ .ModelName }}InputToBoilerWhitelist(ctx{{ .BoilerWhiteList }})); err != nil {
 				return nil, err
 			}
 
 			// resolve requested fields after creating
-			queryMods := helper.GetPreloadMods(ctx, helpers.{{ .ModelName|go }}PreloadMap)
+			queryMods := helper.GetPreloadModsWithLevel(ctx, helpers.{{ .ModelName|go }}PreloadMap, helpers.{{ .ModelName|go }}PayloadPreloadLevels.{{ .ModelName|go }})
 			queryMods = append(queryMods, dm.{{ .ModelName|go }}Where.ID.EQ(m.ID))
+			{{- if .HasOrganizationID }}
+				queryMods = append(queryMods, dm.{{ .ModelName }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
+			{{- end }}
+			{{- if .HasUserOrganizationID }}
+				queryMods = append(queryMods, dm.{{ .ModelName }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
+			{{- end }}
+			{{- if .HasUserID }}
+				queryMods = append(queryMods, dm.{{ .ModelName }}Where.UserID.EQ(auth.UserIDFromContext(ctx)))
+			{{- end }}
 			m, err := dm.{{ .PluralModelName|go }}(queryMods...).One(ctx, r.db)
 			return &fm.{{ .ModelName|go }}Payload{
 				{{ .ModelName|go }}: helpers.{{ .ModelName|go }}ToGraphQL(m, m),
@@ -62,13 +90,32 @@
 			dbID := helpers.{{ .ModelName }}ID(id)
 			if _, err := dm.{{ .PluralModelName }}(
 				dm.{{ .ModelName }}Where.ID.EQ(dbID),
+				{{- if .HasOrganizationID }}
+					dm.{{ .ModelName }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
+				{{- end }}
+				{{- if .HasUserOrganizationID }}
+					dm.{{ .ModelName }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
+				{{- end }}
+				{{- if .HasUserID }}
+					dm.{{ .ModelName }}Where.UserID.EQ(auth.UserIDFromContext(ctx)),
+				{{- end }}
 			).UpdateAll(ctx, r.db, helpers.{{ .ModelName }}InputToModelM(ctx, input)); err != nil {
 				return nil, err
 			}
 
 			// resolve requested fields after updating
-			queryMods := helper.GetPreloadMods(ctx, helpers.{{ .ModelName|go }}PreloadMap)
+			queryMods := helper.GetPreloadModsWithLevel(ctx, helpers.{{ .ModelName|go }}PreloadMap, helpers.{{ .ModelName|go }}PayloadPreloadLevels.{{ .ModelName|go }})
 			queryMods = append(queryMods, dm.{{ .ModelName|go }}Where.ID.EQ(dbID))
+			{{- if .HasOrganizationID }}
+				queryMods = append(queryMods, dm.{{ .ModelName }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
+			{{- end }}
+			{{- if .HasUserOrganizationID }}
+				queryMods = append(queryMods, dm.{{ .ModelName }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
+			{{- end }}
+			{{- if .HasUserID }}
+				queryMods = append(queryMods, dm.{{ .ModelName }}Where.UserID.EQ(auth.UserIDFromContext(ctx)))
+			{{- end }}
+
 			m, err := dm.{{ .PluralModelName|go }}(queryMods...).One(ctx, r.db)
 			return &fm.{{ .ModelName|go }}Payload{
 				{{ .ModelName|go }}: helpers.{{ .ModelName|go }}ToGraphQL(m, m),
@@ -79,6 +126,15 @@
 		{{- if .IsDelete }}
 			queryMods := []qm.QueryMod{
 				dm.{{ .ModelName|go }}Where.ID.EQ(helpers.{{ .ModelName|go }}ID(id)),
+				{{- if .HasOrganizationID }}
+					dm.{{ .ModelName }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
+				{{- end }}
+				{{- if .HasUserOrganizationID }}
+					dm.{{ .ModelName }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
+				{{- end }}
+				{{- if .HasUserID }}
+					dm.{{ .ModelName }}Where.UserID.EQ(auth.UserIDFromContext(ctx)),
+				{{- end }}
 			}
 			 _, err := dm.{{ .PluralModelName|go }}(queryMods...).DeleteAll(ctx, r.db)
 			return &fm.{{ .ModelName|go }}DeletePayload{

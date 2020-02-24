@@ -35,7 +35,11 @@ func PreloadsContain(a []string, v string) bool {
 }
 
 func GetPreloadMods(ctx context.Context, preloadColumnMap map[string]ColumnSetting) (queryMods []qm.QueryMod) {
-	preloads := GetPreloadsFromContext(ctx)
+	return GetPreloadModsWithLevel(ctx, preloadColumnMap, "")
+}
+
+func GetPreloadModsWithLevel(ctx context.Context, preloadColumnMap map[string]ColumnSetting, level string) (queryMods []qm.QueryMod) {
+	preloads := GetPreloadsFromContext(ctx, level)
 	for _, preload := range preloads {
 		dbPreloads := []string{}
 		columnSetting, ok := preloadColumnMap[preload]
@@ -55,31 +59,12 @@ func GetPreloadMods(ctx context.Context, preloadColumnMap map[string]ColumnSetti
 	return
 }
 
-func GetPreloadsFromContext(ctx context.Context) []string {
+func GetPreloadsFromContext(ctx context.Context, level string) []string {
 	return StripPreloads(GetNestedPreloads(
 		graphql.GetRequestContext(ctx),
 		graphql.CollectFieldsCtx(ctx, nil),
 		"",
-	), GetPreloadLevelFromContext(ctx))
-}
-
-// A private key for context that only this package can access. This is important
-// to prevent collisions between different context uses
-var inputCtxKey = &contextKey{"inputLevelWebRidge"}
-
-type contextKey struct {
-	name string
-}
-
-// GetInputLevelFromContext finds the user from the context. REQUIRES Middleware to have run.
-func GetPreloadLevelFromContext(ctx context.Context) string {
-	level, _ := ctx.Value(inputCtxKey).(string)
-	return level
-}
-
-// GetLevelFromContext finds the user from the context. REQUIRES Middleware to have run.
-func ContextWithPreloadLevel(ctx context.Context, level string) context.Context {
-	return context.WithValue(ctx, inputCtxKey, level)
+	), level)
 }
 
 // e.g. sometimes input is deeper and we want

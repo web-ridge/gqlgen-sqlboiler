@@ -13,6 +13,7 @@ import (
 	"github.com/99designs/gqlgen/plugin"
 	pluralize "github.com/gertd/go-pluralize"
 	"github.com/pkg/errors"
+	"github.com/web-ridge/gqlgen-sqlboiler/boiler"
 )
 
 var pathRegex *regexp.Regexp
@@ -65,6 +66,7 @@ func (m *Plugin) generateSingleFile(data *codegen.Data) error {
 	// 	// file already exists and we dont support updating resolvers with layout = single so just return
 	// 	return nil
 	// }
+	boilerTypeMap, _, _ := boiler.ParseBoilerFile(m.backendModelsPath)
 
 	file.imports = append(file.imports, Import{
 		Alias:      "helpers",
@@ -92,7 +94,7 @@ func (m *Plugin) generateSingleFile(data *codegen.Data) error {
 				Field:          f,
 				Implementation: `panic("not implemented yet")`,
 			}
-			enhanceResolver(resolver)
+			enhanceResolver(resolver, boilerTypeMap)
 			file.Resolvers = append(file.Resolvers, resolver)
 		}
 	}
@@ -231,19 +233,23 @@ func (f *File) Imports() string {
 }
 
 type Resolver struct {
-	Object          *codegen.Object
-	Field           *codegen.Field
-	Implementation  string
-	IsSingle        bool
-	IsList          bool
-	IsCreate        bool
-	IsUpdate        bool
-	IsDelete        bool
-	IsBatchCreate   bool
-	IsBatchUpdate   bool
-	IsBatchDelete   bool
-	ModelName       string
-	PluralModelName string
+	Object                *codegen.Object
+	Field                 *codegen.Field
+	Implementation        string
+	IsSingle              bool
+	IsList                bool
+	IsCreate              bool
+	IsUpdate              bool
+	IsDelete              bool
+	IsBatchCreate         bool
+	IsBatchUpdate         bool
+	IsBatchDelete         bool
+	ModelName             string
+	PluralModelName       string
+	HasOrganizationID     bool
+	HasUserOrganizationID bool
+	HasUserID             bool
+	BoilerWhiteList       string
 }
 
 func gqlToResolverName(base string, gqlname string) string {
@@ -253,11 +259,31 @@ func gqlToResolverName(base string, gqlname string) string {
 	return filepath.Join(base, strings.TrimSuffix(gqlname, ext)+".resolvers.go")
 }
 
-func enhanceResolver(r *Resolver) {
+func hasField(boilerTypeMap map[string]string, modelName, fieldName string) bool {
+	k := modelName + "." + fieldName
+	// fmt.Println("try to get boiler type from map with key: ", k)
+	_, ok := boilerTypeMap[k]
+
+	return ok
+}
+
+func enhanceResolver(r *Resolver, boilerTypeMap map[string]string) {
 	nameOfResolver := r.Field.GoFieldName
 
 	r.ModelName = getModelName(nameOfResolver)
 	r.PluralModelName = getModelNamePlural(nameOfResolver)
+	if hasField(boilerTypeMap, r.ModelName, "OrganizationID") {
+		r.HasOrganizationID = true
+		r.BoilerWhiteList += fmt.Sprintf(", dm.%vColumns.OrganizationID", r.ModelName)
+	}
+	if hasField(boilerTypeMap, r.ModelName, "UserOrganizationID") {
+		r.HasUserOrganizationID = true
+		r.BoilerWhiteList += fmt.Sprintf(", dm.%vColumns.UserOrganizationID", r.ModelName)
+	}
+	if hasField(boilerTypeMap, r.ModelName, "UserID") {
+		r.HasUserID = true
+		r.BoilerWhiteList += fmt.Sprintf(", dm.%vColumns.UserID", r.ModelName)
+	}
 
 	if r.Object.Name == "Mutation" {
 		r.IsCreate = containsPrefixAndPartAfterThatIsSingle(nameOfResolver, "Create")
@@ -302,13 +328,10 @@ func containsPrefixAndPartAfterThatIsPlural(v string, prefix string) bool {
 }
 
 func getGoImportFromFile(dir string) string {
-	// graphql_models
-
 	longPath, err := filepath.Abs(dir)
 	if err != nil {
 		fmt.Println("error while trying to convert folder to gopath", err)
 	}
 	// src/Users/richardlindhout/go/src/gitlab.com/eyeontarget/app/backend/graphql_models
 	return strings.TrimPrefix(pathRegex.FindString(longPath), "src/")
-
 }
