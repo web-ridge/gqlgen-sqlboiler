@@ -17,10 +17,13 @@ DONE: Generate converts between sqlboiler structs and graphql (with relations in
 DONE: Generate converts between input models and sqlboiler  
 DONE: Fetch sqlboiler preloads from graphql context  
 DONE: Support for foreign keys named differently than their corresponding model
-TODO: New plugin which generates CRUD resolvers based on mutations in graphql scheme  
+DONE: New plugin which generates CRUD resolvers based on mutations in graphql scheme  
 TODO: Generate code which implements the generated where and search filters
+TODO: Batch create/update/delete generation in resolvers
+TODO: Crud of adding/removing relationships from many-to-many
 TODO: Support CRUD of relationships inside input types
 TODO: Support gqlgen multiple .graphql files
+TODO: Edges/connections
 
 ## Case
 
@@ -177,6 +180,7 @@ import (
 	"github.com/99designs/gqlgen/api"
 	"github.com/99designs/gqlgen/codegen/config"
 	cm "github.com/web-ridge/gqlgen-sqlboiler/convert"
+	rm "github.com/web-ridge/gqlgen-sqlboiler/resolver"
 )
 
 func main() {
@@ -186,11 +190,19 @@ func main() {
 		os.Exit(2)
 	}
 
+	convertHelpersDir := "helpers"
+	sqlboilerDir := "models"
+	gqlgenModelDir := "graphql_models"
 	err = api.Generate(cfg,
 		api.AddPlugin(cm.New(
-			"helpers",        // directory where convert.go, convert_input.go and preload.go should live
-			"models",         // directory where sqlboiler files are put
-			"graphql_models", // directory where gqlgen models live
+			convertHelpersDir, // directory where convert.go, convert_input.go and preload.go should live
+			sqlboilerDir,      // directory where sqlboiler files are put
+			gqlgenModelDir,    // directory where gqlgen models live
+		)),
+		api.AddPlugin(rm.New(
+			convertHelpersDir,
+			sqlboilerDir,
+			gqlgenModelDir,
 		)),
 	)
 	if err != nil {
@@ -199,7 +211,6 @@ func main() {
 		os.Exit(3)
 	}
 }
-
 ```
 
 `go run convert_plugin.go`
