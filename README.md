@@ -11,7 +11,7 @@ To make this program a success tight coupling (same naming) between your databas
 3. Generate GrapQL structs with: https://github.com/99designs/gqlgen  
    e.g. `go run github.com/99designs/gqlgen`
 4. Generate converts between gqlgen-sqlboiler with this program  
-   e.g. `go run convert_plugin.go`
+   e.g. `go run convert_plugin.go` for file contents of that program see bottom of this readme
 
 DONE: Generate converts between sqlboiler structs and graphql (with relations included)  
 DONE: Generate converts between input models and sqlboiler  
@@ -32,10 +32,11 @@ You have a personal project with a very big database and a 'Laravel API'. I want
 ## Example result of this plugin
 
 ```golang
-func AddressToGraphQL(m *models.Address, root interface{}) *graphql_models.Address {
+func AddressToGraphQL(m *models.Address, roots []interface{}) *graphql_models.Address {
 	if m == nil {
 		return nil
 	}
+
 	r := &graphql_models.Address{
 		ID:          AddressIDUnique(m.ID),
 		Street:      helper.NullDotStringToPointerString(m.Street),
@@ -47,81 +48,75 @@ func AddressToGraphQL(m *models.Address, root interface{}) *graphql_models.Addre
 		Description: helper.NullDotStringToPointerString(m.Description),
 		Name:        helper.NullDotStringToPointerString(m.Name),
 		Permission:  helper.NullDotBoolToPointerBool(m.Permission),
-		DeletedAt:   helper.NullDotTimeToPointerInt(m.DeletedAt),
 		UpdatedAt:   helper.NullDotTimeToPointerInt(m.UpdatedAt),
+		DeletedAt:   helper.NullDotTimeToPointerInt(m.DeletedAt),
 		CreatedAt:   helper.NullDotTimeToPointerInt(m.CreatedAt),
 	}
 
-	if !helper.UintIsZero(m.AddressStatusID) {
+	if helper.UintIsFilled(m.AddressStatusID) {
 		if m.R != nil && m.R.AddressStatus != nil {
-			rootValue, sameStructAsRoot := root.(*models.AddressStatus)
-			if !sameStructAsRoot || rootValue != m.R.AddressStatus {
-				r.AddressStatus = AddressStatusToGraphQL(m.R.AddressStatus, m)
+			if !alreadyConverted(roots, m.R.AddressStatus) {
+				r.AddressStatus = AddressStatusToGraphQL(m.R.AddressStatus, append(roots, m))
 			}
 		} else {
 			r.AddressStatus = AddressStatusWithUintID(m.AddressStatusID)
 		}
 	}
 
-	if !helper.NullDotUintIsZero(m.CompanyID) {
+	if helper.NullDotUintIsFilled(m.CompanyID) {
 		if m.R != nil && m.R.Company != nil {
-			rootValue, sameStructAsRoot := root.(*models.Company)
-			if !sameStructAsRoot || rootValue != m.R.Company {
-				r.Company = CompanyToGraphQL(m.R.Company, m)
+			if !alreadyConverted(roots, m.R.Company) {
+				r.Company = CompanyToGraphQL(m.R.Company, append(roots, m))
 			}
 		} else {
 			r.Company = CompanyWithNullDotUintID(m.CompanyID)
 		}
 	}
 
-	if !helper.NullDotUintIsZero(m.ContactPersonID) {
+	if helper.NullDotUintIsFilled(m.ContactPersonID) {
 		if m.R != nil && m.R.ContactPerson != nil {
-			rootValue, sameStructAsRoot := root.(*models.Person)
-			if !sameStructAsRoot || rootValue != m.R.ContactPerson {
-				r.ContactPerson = PersonToGraphQL(m.R.ContactPerson, m)
+			if !alreadyConverted(roots, m.R.ContactPerson) {
+				r.ContactPerson = PersonToGraphQL(m.R.ContactPerson, append(roots, m))
 			}
 		} else {
 			r.ContactPerson = PersonWithNullDotUintID(m.ContactPersonID)
 		}
 	}
 
-	if !helper.NullDotUintIsZero(m.HouseTypeID) {
+	if helper.NullDotUintIsFilled(m.HouseTypeID) {
 		if m.R != nil && m.R.HouseType != nil {
-			rootValue, sameStructAsRoot := root.(*models.HouseType)
-			if !sameStructAsRoot || rootValue != m.R.HouseType {
-				r.HouseType = HouseTypeToGraphQL(m.R.HouseType, m)
+			if !alreadyConverted(roots, m.R.HouseType) {
+				r.HouseType = HouseTypeToGraphQL(m.R.HouseType, append(roots, m))
 			}
 		} else {
 			r.HouseType = HouseTypeWithNullDotUintID(m.HouseTypeID)
 		}
 	}
 
-	if !helper.NullDotUintIsZero(m.OwnerID) {
+	if helper.NullDotUintIsFilled(m.OwnerID) {
 		if m.R != nil && m.R.Owner != nil {
-			rootValue, sameStructAsRoot := root.(*models.Person)
-			if !sameStructAsRoot || rootValue != m.R.Owner {
-				r.Owner = PersonToGraphQL(m.R.Owner, m)
+			if !alreadyConverted(roots, m.R.Owner) {
+				r.Owner = PersonToGraphQL(m.R.Owner, append(roots, m))
 			}
 		} else {
 			r.Owner = PersonWithNullDotUintID(m.OwnerID)
 		}
 	}
 
-	if !helper.UintIsZero(m.UserOrganizationID) {
+	if helper.UintIsFilled(m.UserOrganizationID) {
 		if m.R != nil && m.R.UserOrganization != nil {
-			rootValue, sameStructAsRoot := root.(*models.UserOrganization)
-			if !sameStructAsRoot || rootValue != m.R.UserOrganization {
-				r.UserOrganization = UserOrganizationToGraphQL(m.R.UserOrganization, m)
+			if !alreadyConverted(roots, m.R.UserOrganization) {
+				r.UserOrganization = UserOrganizationToGraphQL(m.R.UserOrganization, append(roots, m))
 			}
 		} else {
 			r.UserOrganization = UserOrganizationWithUintID(m.UserOrganizationID)
 		}
 	}
 	if m.R != nil && m.R.Calamities != nil {
-		r.Calamities = CalamitiesToGraphQL(m.R.Calamities, m)
+		r.Calamities = CalamitiesToGraphQL(m.R.Calamities, append(roots, m))
 	}
 	if m.R != nil && m.R.People != nil {
-		r.People = PeopleToGraphQL(m.R.People, m)
+		r.People = PeopleToGraphQL(m.R.People, append(roots, m))
 	}
 
 	return r
