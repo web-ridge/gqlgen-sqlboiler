@@ -40,7 +40,7 @@
 				queryMods = append(queryMods, dm.{{ .ModelName }}Where.UserID.EQ(auth.UserIDFromContext(ctx)))
 			{{- end }}
 			m, err := dm.{{ .PluralModelName|go }}(queryMods...).One(ctx, r.db)
-			return helpers.{{ .ModelName|go }}ToGraphQL(m, m), err
+			return helpers.{{ .ModelName|go }}ToGraphQL(m, nil), err
 
 		{{- end -}}
 
@@ -81,7 +81,7 @@
 			{{- end }}
 			m, err := dm.{{ .PluralModelName|go }}(queryMods...).One(ctx, r.db)
 			return &fm.{{ .ModelName|go }}Payload{
-				{{ .ModelName|go }}: helpers.{{ .ModelName|go }}ToGraphQL(m, m),
+				{{ .ModelName|go }}: helpers.{{ .ModelName|go }}ToGraphQL(m, nil),
 			}, err
 
 		{{- end -}}
@@ -118,7 +118,7 @@
 
 			m, err := dm.{{ .PluralModelName|go }}(queryMods...).One(ctx, r.db)
 			return &fm.{{ .ModelName|go }}Payload{
-				{{ .ModelName|go }}: helpers.{{ .ModelName|go }}ToGraphQL(m, m),
+				{{ .ModelName|go }}: helpers.{{ .ModelName|go }}ToGraphQL(m, nil),
 			}, err
 
 		{{- end -}}

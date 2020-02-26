@@ -21,6 +21,15 @@
 {{ reserveImport  $.BackendModelsPath }}
 {{ reserveImport  $.FrontendModelsPath }}
 
+func alreadyConverted(roots []interface{}, check interface{}) bool {
+	var matched int
+	for _, root := range roots {
+		if root == check {
+			matched++
+		}
+	}
+	return matched > 2
+}
 
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
@@ -47,10 +56,10 @@
 			return {{ .Name|go }}WithIntID(id.Int)
 		}
 
-		func {{ .PluralName|go }}ToGraphQL(am []*models.{{ .Name|go }}, root interface{})( []*graphql_models.{{ .Name|go }}) {
+		func {{ .PluralName|go }}ToGraphQL(am []*models.{{ .Name|go }}, roots []interface{})( []*graphql_models.{{ .Name|go }}) {
 			ar := make([]*graphql_models.{{ .Name|go }}, len(am))
 			for i,m := range am {
-				ar[i] = {{ .Name|go }}ToGraphQL(m, root)
+				ar[i] = {{ .Name|go }}ToGraphQL(m, append(roots, m))
 			}
 			return ar
 		}
@@ -67,7 +76,7 @@
 	
 
 
-	func {{ .Name|go }}ToGraphQL(m *models.{{ .BoilerName|go }}, root interface{})( *graphql_models.{{ .Name|go }}) {
+	func {{ .Name|go }}ToGraphQL(m *models.{{ .BoilerName|go }}, roots []interface{})( *graphql_models.{{ .Name|go }}) {
 		if m == nil {
 			return nil
 		}
@@ -93,15 +102,14 @@
 			{{- if $field.IsRelation }}
 				{{- if $field.IsPlural }}
 					if m.R != nil && m.R.{{ $field.Name|go }} != nil  {
-						r.{{ $field.Name|go }} = {{ $field.PlularBoilerRelationShipName|go }}ToGraphQL(m.R.{{ $field.Name|go }}, m)
+						r.{{ $field.Name|go }} = {{ $field.PlularBoilerRelationShipName|go }}ToGraphQL(m.R.{{ $field.Name|go }}, append(roots, m))
 					} 
 				{{- else }}	
 				
 				if !helper.{{ $field.CustomBoilerType }}IsZero(m.{{ $field.Name|go }}ID) {
 					if m.R != nil && m.R.{{ $field.Name|go }} != nil  {
-						rootValue, sameStructAsRoot := root.(*models.{{ $field.BoilerRelationShipName|go }})
-						if !sameStructAsRoot || rootValue != m.R.{{ $field.Name|go }} {
-							r.{{ $field.Name|go }} ={{ $field.BoilerRelationShipName|go }}ToGraphQL(m.R.{{ $field.Name|go }}, m)
+						if !alreadyConverted(roots,  m.R.{{ $field.Name|go }}) {
+							r.{{ $field.Name|go }} ={{ $field.BoilerRelationShipName|go }}ToGraphQL(m.R.{{ $field.Name|go }}, append(roots, m))
 						}
 					} else {
 						r.{{ $field.Name|go }} = {{ $field.BoilerRelationShipName|go }}With{{ $field.CustomBoilerType|go }}ID(m.{{ $field.Name|go }}ID)
@@ -127,6 +135,18 @@
 						Valid: s != 0,
 						{{$field.BoilerType|go}}: s,
 					}
+				}
+
+				func {{ $model.Name|go }}ID(v {{$field.GraphType}})({{$field.BoilerType}}) {
+					return helper.{{ $field.CustomFromFunction }}ID(v)
+				}
+
+				func {{ $model.Name|go }}IDsToUints(a []string) []uint {
+					return helper.IDsToUints(a)
+				}
+
+				func {{ $model.Name|go }}IDsToInts(a []string) []int {
+					return helper.IDsToInts(a)
 				}
 				
 			{{- end -}}
