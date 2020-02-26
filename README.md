@@ -18,13 +18,13 @@ DONE: Generate converts between input models and sqlboiler
 DONE: Fetch sqlboiler preloads from graphql context  
 DONE: Support for foreign keys named differently than their corresponding model
 DONE: New plugin which generates CRUD resolvers based on mutations in graphql scheme  
-TODO: Generate code which implements the generated where and search filters
-TODO: Batch create/update/delete generation in resolvers
-TODO: Crud of adding/removing relationships from many-to-many
-TODO: Support CRUD of relationships inside input types
-TODO: Support gqlgen multiple .graphql files
-TODO: Edges/connections
-TODO: Do a three-way-diff merge for changes and let user choose parts of code which should not take over generated code
+TODO: Generate code which implements the generated where and search filters  
+TODO: Batch create/update/delete generation in resolvers  
+TODO: Crud of adding/removing relationships from many-to-many  
+TODO: Support CRUD of relationships inside input types  
+TODO: Support gqlgen multiple .graphql files  
+TODO: Edges/connections  
+TODO: Do a three-way-diff merge for changes and let user choose parts of code which should not take over generated code  
 
 ## Case
 
