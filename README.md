@@ -1,6 +1,6 @@
-This program generates code like this between your generated gqlgen and sqlboiler with support for Relay.dev (unique id's etc). This in work in progress and we are working on automatically generating the basis Mutations like create, update, delete working based on your graphql scheme and your database models.
+This program generates code like this between your generated gqlgen and sqlboiler with support for Relay.dev (unique id's etc). We can automatically generate the implementation of queries and mutations like create, update, delete working based on your graphql scheme and your sqlboiler models.
 
-To make this program a success tight coupling (same naming) between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed. However everything is created with support for change so you could write some extra GrapQL resolvers if you'd like.
+To make this program a success tight coupling (same naming) between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed. However everything is created with support for change so you could write some extra GrapQL resolvers if you'd like without a problem.  
 
 ## Flow
 
@@ -24,6 +24,7 @@ TODO: Crud of adding/removing relationships from many-to-many
 TODO: Support CRUD of relationships inside input types
 TODO: Support gqlgen multiple .graphql files
 TODO: Edges/connections
+TODO: Do a three-way-diff merge for changes and let user choose parts of code which should not take over generated code
 
 ## Case
 
