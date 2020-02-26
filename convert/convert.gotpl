@@ -106,7 +106,7 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 					} 
 				{{- else }}	
 				
-				if !helper.{{ $field.CustomBoilerType }}IsZero(m.{{ $field.Name|go }}ID) {
+				if helper.{{ $field.CustomBoilerType }}IsFilled(m.{{ $field.Name|go }}ID) {
 					if m.R != nil && m.R.{{ $field.Name|go }} != nil  {
 						if !alreadyConverted(roots,  m.R.{{ $field.Name|go }}) {
 							r.{{ $field.Name|go }} ={{ $field.BoilerRelationShipName|go }}ToGraphQL(m.R.{{ $field.Name|go }}, append(roots, m))

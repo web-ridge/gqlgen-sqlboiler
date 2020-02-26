@@ -229,18 +229,18 @@ func PointerIntToNullDotBool(v *int) null.Bool {
 	}
 }
 
-func NullDotIntIsZero(v null.Int) bool {
-	return v.IsZero()
+func NullDotIntIsFilled(v null.Int) bool {
+	return !v.IsZero()
 }
 
-func NullDotUintIsZero(v null.Uint) bool {
-	return v.IsZero()
+func NullDotUintIsFilled(v null.Uint) bool {
+	return !v.IsZero()
 }
 
-func UintIsZero(v uint) bool {
-	return v == 0
+func UintIsFilled(v uint) bool {
+	return v != 0
 }
 
-func IntIsZero(v int) bool {
-	return v == 0
+func IntIsFilled(v int) bool {
+	return v != 0
 }
