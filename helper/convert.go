@@ -10,18 +10,42 @@ import (
 	"github.com/volatiletech/sqlboiler/types"
 )
 
-func StringToIntID(ID string, entityName string) int {
-	i, _ := strconv.ParseInt(strings.TrimPrefix(ID, entityName+"_"), 10, 64)
-	return int(i)
+func IDsToInts(ids []string) []int {
+	ints := make([]int, len(ids))
+	for _, s := range ids {
+		ints = append(ints, StringToIntID(s))
+	}
+	return ints
+}
+
+func IDsToUints(ids []string) []uint {
+	ints := make([]uint, len(ids))
+	for _, s := range ids {
+		ints = append(ints, StringToUintID(s))
+	}
+	return ints
+}
+
+func StringToIntID(ID string) int {
+	splitted := strings.Split(ID, "_")
+	if len(splitted) > 1 {
+		i, _ := strconv.ParseInt(splitted[1], 10, 64)
+		return int(i)
+	}
+	return 0
+}
+
+func StringToUintID(ID string) uint {
+	splitted := strings.Split(ID, "_")
+	if len(splitted) > 1 {
+		i, _ := strconv.ParseUint(splitted[1], 10, 64)
+		return uint(i)
+	}
+	return 0
 }
 
 func IntToStringIDUnique(id int, entityName string) string {
 	return entityName + "_" + strconv.Itoa(id)
-}
-
-func StringToUintID(ID string, entityName string) uint {
-	i, _ := strconv.ParseUint(strings.TrimPrefix(ID, entityName+"_"), 10, 64)
-	return uint(i)
 }
 
 func UintToStringIDUnique(id uint, entityName string) string {

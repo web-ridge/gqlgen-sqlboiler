@@ -29,21 +29,24 @@
 
 		func {{ .Name|go }}WithIntID(id int) *graphql_models.{{ .Name|go }} {
 			return &graphql_models.{{ .Name|go }}{
-				ID: helper.IntToStringIDUnique(id, "{{ $model.Name|go }}"),
+				ID: helper.IntToStringIDUnique(id, models.TableNames.{{ $model.Name|go }}),
 			}
 		}
+
 		func {{ .Name|go }}WithUintID(id uint) *graphql_models.{{ .Name|go }} {
 			return &graphql_models.{{ .Name|go }}{
-				ID: helper.UintToStringIDUnique(id, "{{ $model.Name|go }}"),
+				ID: helper.UintToStringIDUnique(id, models.TableNames.{{ $model.Name|go }}),
 			}
 		}
 
 		func {{ .Name|go }}WithNullDotUintID(id null.Uint) *graphql_models.{{ .Name|go }} {
 			return {{ .Name|go }}WithUintID(id.Uint)
 		}
+
 		func {{ .Name|go }}WithNullDotIntID(id null.Int) *graphql_models.{{ .Name|go }} {
 			return {{ .Name|go }}WithIntID(id.Int)
 		}
+
 		func {{ .PluralName|go }}ToGraphQL(am []*models.{{ .Name|go }}, root interface{})( []*graphql_models.{{ .Name|go }}) {
 			ar := make([]*graphql_models.{{ .Name|go }}, len(am))
 			for i,m := range am {
@@ -56,7 +59,7 @@
 		{{ range $field := .Fields }}
 			{{- if $field.IsPrimaryID -}}
 				func {{ $model.Name|go }}IDUnique(v {{$field.BoilerType}})({{$field.GraphType}}) {
-					return helper.{{ $field.CustomToFunction }}IDUnique(v, "{{ $model.Name|go }}")
+					return helper.{{ $field.CustomToFunction }}IDUnique(v, models.TableNames.{{ $model.Name|go }})
 				}
 				
 			{{- end -}}
@@ -68,6 +71,7 @@
 		if m == nil {
 			return nil
 		}
+
 		r := &graphql_models.{{ .Name|go }}{
 			{{ range $field := .Fields }}
 				{{- with .Description }}
@@ -84,7 +88,7 @@
 			{{- end }}
 		}
 
-		{{- range $field := .Fields }}
+		{{ range $field := .Fields }}
 	
 			{{- if $field.IsRelation }}
 				{{- if $field.IsPlural }}
@@ -118,23 +122,13 @@
 							Valid: false,
 						}
 					}
-					s := {{ $model.Name|go }}ID(*v)
+					s := helper.{{ $field.CustomFromFunction }}ID(*v)
 					return null.{{$field.BoilerType|go}}{
 						Valid: s != 0,
 						{{$field.BoilerType|go}}: s,
 					}
 				}
-				func {{ $model.Name|go }}ID(v {{$field.GraphType}})({{$field.BoilerType}}) {
-					return helper.{{ $field.CustomFromFunction }}ID(v, "{{ $model.Name|go }}")
-				}
 				
-				func {{ $model.Name|go }}IDsTo{{$field.BoilerType|go}}s(a []string) []{{$field.BoilerType}} {
-					r := make([]{{$field.BoilerType}}, len(a))
-					for i, v := range a {
-						r[i] = {{ $model.Name|go }}ID(v)
-					}
-					return r
-				}
 			{{- end -}}
 		{{- end }}
 	{{- end }}
