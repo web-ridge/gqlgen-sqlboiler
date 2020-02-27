@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ericlagergren/decimal"
+	"github.com/iancoleman/strcase"
 	"github.com/volatiletech/null"
 	"github.com/volatiletech/sqlboiler/types"
 )
@@ -27,7 +28,7 @@ func IDsToUints(ids []string) []uint {
 }
 
 func StringToIntID(ID string) int {
-	splitted := strings.Split(ID, "_")
+	splitted := strings.Split(ID, "-")
 	if len(splitted) > 1 {
 		i, _ := strconv.ParseInt(splitted[1], 10, 64)
 		return int(i)
@@ -36,7 +37,7 @@ func StringToIntID(ID string) int {
 }
 
 func StringToUintID(ID string) uint {
-	splitted := strings.Split(ID, "_")
+	splitted := strings.Split(ID, "-")
 	if len(splitted) > 1 {
 		i, _ := strconv.ParseUint(splitted[1], 10, 64)
 		return uint(i)
@@ -44,12 +45,12 @@ func StringToUintID(ID string) uint {
 	return 0
 }
 
-func IntToStringIDUnique(id int, entityName string) string {
-	return entityName + "_" + strconv.Itoa(id)
+func IntToStringIDUnique(id int, tableName string) string {
+	return strcase.ToLowerCamel(tableName) + "-" + strconv.Itoa(id)
 }
 
-func UintToStringIDUnique(id uint, entityName string) string {
-	return entityName + "_" + strconv.Itoa(int(id))
+func UintToStringIDUnique(id uint, tableName string) string {
+	return strcase.ToLowerCamel(tableName) + "-" + strconv.Itoa(int(id))
 }
 
 func NullDotBoolToPointerBool(v null.Bool) *bool {

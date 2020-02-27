@@ -207,6 +207,17 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 		fmt.Println("renderError", renderError)
 	}
 
+	if renderError := templates.Render(templates.Options{
+		Template:        getTemplate("filter.gotpl"),
+		PackageName:     m.directory,
+		Filename:        m.directory + "/" + "filter.go",
+		Data:            b,
+		GeneratedHeader: true,
+		Packages:        cfg.Packages,
+	}); renderError != nil {
+		fmt.Println("renderError", renderError)
+	}
+
 	return nil
 }
 

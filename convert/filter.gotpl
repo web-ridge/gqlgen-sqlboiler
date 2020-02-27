@@ -1,0 +1,24 @@
+{{ reserveImport "context"  }}
+{{ reserveImport "fmt"  }}
+{{ reserveImport "io"  }}
+{{ reserveImport "strconv"  }}
+{{ reserveImport "time"  }}
+{{ reserveImport "sync"  }}
+{{ reserveImport "errors"  }}
+{{ reserveImport "bytes"  }}
+{{ reserveImport "strings"  }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/boil"}}
+{{ reserveImport "github.com/ericlagergren/decimal"  }}
+{{ reserveImport "github.com/volatiletech/null"  }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/types"  }}
+{{ reserveImport "github.com/web-ridge/gqlgen-sqlboiler/helper" }}
+{{ reserveImport "github.com/vektah/gqlparser/v2" }}
+{{ reserveImport "github.com/vektah/gqlparser/v2/ast" }}
+{{ reserveImport "github.com/99designs/gqlgen/graphql" }}
+{{ reserveImport "github.com/99designs/gqlgen/graphql/introspection" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/queries/qm" }}
+{{ reserveImport "database/sql" }}
+{{ reserveImport  $.BackendModelsPath }}
+{{ reserveImport  $.FrontendModelsPath }}
+
+// TODO: generate filter structs
