@@ -52,7 +52,7 @@
 		{{- end -}}
 
 		{{- if .IsCreate }}
-			m := helpers.{{ .ModelName }}InputToBoiler(&input)
+			m := helpers.{{ .ModelName }}CreateInputToBoiler(&input)
 
 			{{- if .HasOrganizationID }}
 				m.OrganizationID = auth.OrganizationIDFromContext(ctx)
@@ -63,7 +63,7 @@
 			{{- if .HasUserID }}
 				m.UserID = auth.UserIDFromContext(ctx)
 			{{- end }}
-			if err := m.Insert(ctx, r.db, helpers.{{ .ModelName }}InputToBoilerWhitelist(ctx{{ .BoilerWhiteList }})); err != nil {
+			if err := m.Insert(ctx, r.db, helpers.{{ .ModelName }}CreateInputToBoilerWhitelist(ctx{{ .BoilerWhiteList }})); err != nil {
 				return nil, err
 			}
 
@@ -99,7 +99,7 @@
 				{{- if .HasUserID }}
 					dm.{{ .ModelName }}Where.UserID.EQ(auth.UserIDFromContext(ctx)),
 				{{- end }}
-			).UpdateAll(ctx, r.db, helpers.{{ .ModelName }}InputToModelM(ctx, input)); err != nil {
+			).UpdateAll(ctx, r.db, helpers.{{ .ModelName }}UpdateInputToModelM(ctx, input)); err != nil {
 				return nil, err
 			}
 

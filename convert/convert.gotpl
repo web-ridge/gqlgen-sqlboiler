@@ -136,6 +136,12 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 						{{$field.BoilerType|go}}: s,
 					}
 				}
+				func {{ $model.Name|go }}IDValueOfNullable(v *{{$field.GraphType}})({{$field.BoilerType}}) {
+					if v == nil {
+						return 0
+					}
+					return helper.{{ $field.CustomFromFunction }}ID(*v)
+				}
 
 				func {{ $model.Name|go }}ID(v {{$field.GraphType}})({{$field.BoilerType}}) {
 					return helper.{{ $field.CustomFromFunction }}ID(v)

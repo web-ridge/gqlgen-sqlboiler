@@ -48,16 +48,19 @@ type Interface struct {
 }
 
 type Model struct {
-	Description string
-	Name        string
-	BoilerName  string
-	PluralName  string
-	PureFields  []*ast.FieldDefinition
-	Fields      []*Field
-	Implements  []string
-	IsInput     bool
-	IsPayload   bool
-	PreloadMap  map[string]ColumnSetting
+	Description   string
+	Name          string
+	BoilerName    string
+	PluralName    string
+	PureFields    []*ast.FieldDefinition
+	Fields        []*Field
+	Implements    []string
+	IsInput       bool
+	IsCreateInput bool
+	IsUpdateInput bool
+	IsNormalInput bool
+	IsPayload     bool
+	PreloadMap    map[string]ColumnSetting
 }
 
 type ColumnSetting struct {
@@ -394,7 +397,7 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 				relationOfInputField = findRelationModelForForeignKeyAndInput(model.Name, field.Name, models)
 			}
 
-			if model.IsInput && relationField != nil {
+			if (model.IsInput) && relationField != nil {
 				fmt.Println("Found relationship in an input model: ", model.Name, field.Name, relationField.Name)
 			}
 
@@ -441,10 +444,8 @@ func findField(fields []*Field, search string) *Field {
 	return nil
 }
 func findRelationModelForForeignKeyAndInput(currentModelName string, foreignKey string, models []*Model) *Field {
-	// The relationship is defined in the normal model but not in the input, where etc structs
-	// So just find the normal model and get the relationship type :)
-	currentModelName = strings.TrimSuffix(currentModelName, "Input")
-	return findRelationModelForForeignKey(currentModelName, foreignKey, models)
+
+	return findRelationModelForForeignKey(getBaseModelFromName(currentModelName), foreignKey, models)
 }
 
 func findRelationModelForForeignKey(currentModelName string, foreignKey string, models []*Model) *Field {
@@ -504,12 +505,18 @@ func getConvertConfigID(m *Model, models []*Model, field *Field, relationField *
 	graphTypeIsNullable := strings.HasPrefix(field.Type.String(), "*")
 	boilerTypeIsNullable := strings.HasPrefix(field.BoilerType, "null.")
 	cc.isNullableID = graphTypeIsNullable || boilerTypeIsNullable
+
+	if m.IsUpdateInput && !boilerTypeIsNullable && graphTypeIsNullable {
+		cc.boilerIDFunc = cc.boilerIDFunc + "ValueOf"
+		cc.graphIDFunc = cc.graphIDFunc + "ValueOf"
+	}
+
 	if cc.isNullableID {
 		cc.boilerIDFunc = cc.boilerIDFunc + "Nullable"
 		cc.graphIDFunc = cc.graphIDFunc + "Nullable"
 	}
 
-	if cc.isNullableID && (!graphTypeIsNullable || !boilerTypeIsNullable) {
+	if cc.isNullableID && (!graphTypeIsNullable || !boilerTypeIsNullable) && !m.IsUpdateInput {
 		fmt.Println(fmt.Printf(`
 				WARNING: nullable differs in model: %v, 
 				it's recommended to make it the same 
@@ -580,13 +587,13 @@ func getBoilerKeyAndType(m *Model, originalFieldName string, gqlFieldName string
 
 	boilerType, ok := boilerTypeMap[boilerKey]
 	if m.IsInput {
-		boilerKey := strings.TrimSuffix(m.Name, "Input") + "." + gqlFieldName
-		boilerType, ok = boilerTypeMap[boilerKey]
+		newKey := getBaseModelFromName(m.Name) + "." + gqlFieldName
+		boilerType, ok = boilerTypeMap[newKey]
 	}
 
 	if m.IsPayload {
-		boilerKey := strings.TrimSuffix(m.Name, "Payload") + "." + gqlFieldName
-		boilerType, ok = boilerTypeMap[boilerKey]
+		newKey := strings.TrimSuffix(m.Name, "Payload") + "." + gqlFieldName
+		boilerType, ok = boilerTypeMap[newKey]
 	}
 
 	boilerName := originalFieldName
@@ -712,7 +719,7 @@ func getModelsFromSchema(schema *ast.Schema, boilerStructMap map[string]string) 
 				modelName := schemaType.Name
 				boilerName, hasBoilerName := boilerStructMap[modelName]
 				if !hasBoilerName {
-					boilerName, hasBoilerName = boilerStructMap[strings.TrimSuffix(modelName, "Input")]
+					boilerName, hasBoilerName = boilerStructMap[getBaseModelFromName(modelName)]
 				}
 				if !hasBoilerName {
 					boilerName, hasBoilerName = boilerStructMap[strings.TrimSuffix(modelName, "Payload")]
@@ -746,13 +753,21 @@ func getModelsFromSchema(schema *ast.Schema, boilerStructMap map[string]string) 
 					continue
 				}
 
+				isInput := strings.HasSuffix(modelName, "Input")
+				isCreateInput := strings.HasSuffix(modelName, "CreateInput")
+				isUpdateInput := strings.HasSuffix(modelName, "UpdateInput")
+				isNormalInput := isInput && !isCreateInput && !isUpdateInput
+
 				m := &Model{
-					Description: schemaType.Description,
-					Name:        modelName,
-					PluralName:  pluralizer.Plural(modelName),
-					BoilerName:  boilerName,
-					IsInput:     strings.HasSuffix(modelName, "Input"),
-					IsPayload:   strings.HasSuffix(modelName, "Payload"),
+					Description:   schemaType.Description,
+					Name:          modelName,
+					PluralName:    pluralizer.Plural(modelName),
+					BoilerName:    boilerName,
+					IsInput:       isInput,
+					IsUpdateInput: isUpdateInput,
+					IsCreateInput: isCreateInput,
+					IsNormalInput: isNormalInput,
+					IsPayload:     strings.HasSuffix(modelName, "Payload"),
 				}
 
 				for _, implementor := range schema.GetImplements(schemaType) {
@@ -853,6 +868,15 @@ func enhanceModelsWithPreloadMap(models []*Model) {
 
 		}
 	}
+}
+
+// The relationship is defined in the normal model but not in the input, where etc structs
+// So just find the normal model and get the relationship type :)
+func getBaseModelFromName(v string) string {
+	v = strings.TrimSuffix(v, "CreateInput")
+	v = strings.TrimSuffix(v, "UpdateInput")
+	v = strings.TrimSuffix(v, "Input")
+	return v
 }
 
 func isStruct(t types.Type) bool {
