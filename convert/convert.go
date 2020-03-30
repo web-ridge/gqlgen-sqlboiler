@@ -397,7 +397,7 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 				relationOfInputField = findRelationModelForForeignKeyAndInput(model.Name, field.Name, models)
 			}
 
-			if (model.IsInput) && relationField != nil {
+			if model.IsInput && relationField != nil {
 				fmt.Println("Found relationship in an input model: ", model.Name, field.Name, relationField.Name)
 			}
 
