@@ -335,7 +335,8 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 			gqlFieldName := getgqlFieldName(name)
 
 			// generate some booleans because these checks will be used a lot
-			isRelation := fieldDef.Kind == ast.Object
+			isRelation := fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject
+
 			isID := strings.Contains(gqlFieldName, "ID")
 			isPrimaryID := gqlFieldName == "ID"
 
@@ -453,7 +454,7 @@ func findRelationModelForForeignKey(currentModelName string, foreignKey string, 
 	model := findModel(models, currentModelName)
 	if model != nil {
 		// Use case
-		// we a foreignKey of ParentID but the foreign key resolves to Calamity
+		// we want a foreignKey of ParentID but the foreign key resolves to Calamity
 		// We could know this based on the boilerType information
 		// withou this function the generated convert is like this
 
@@ -583,18 +584,10 @@ func getConvertConfig(field *Field, relationField *Field) (cc ConvertConfig) {
 
 func getBoilerKeyAndType(m *Model, originalFieldName string, gqlFieldName string, isRelation bool,
 	boilerTypeMap map[string]string) (string, string, string, string) {
-	boilerKey := m.Name + "." + gqlFieldName
 
+	modelName := getBaseModelFromName(m.Name)
+	boilerKey := modelName + "." + gqlFieldName
 	boilerType, ok := boilerTypeMap[boilerKey]
-	if m.IsInput {
-		newKey := getBaseModelFromName(m.Name) + "." + gqlFieldName
-		boilerType, ok = boilerTypeMap[newKey]
-	}
-
-	if m.IsPayload {
-		newKey := strings.TrimSuffix(m.Name, "Payload") + "." + gqlFieldName
-		boilerType, ok = boilerTypeMap[newKey]
-	}
 
 	boilerName := originalFieldName
 	boilerRelationName := ""
@@ -604,7 +597,7 @@ func getBoilerKeyAndType(m *Model, originalFieldName string, gqlFieldName string
 
 		// If it a relation check to see if a foreign key is available
 		if isRelation {
-			secondKey := m.Name + "." + gqlFieldName + "ID"
+			secondKey := modelName + "." + gqlFieldName + "ID"
 			boilerType, ok = boilerTypeMap[secondKey]
 			if ok {
 				boilerName = gqlFieldName
@@ -612,7 +605,7 @@ func getBoilerKeyAndType(m *Model, originalFieldName string, gqlFieldName string
 			}
 		} else {
 			// Not a relation? Just find the field name and get the type ;)
-			secondKey := m.Name + "." + gqlFieldName
+			secondKey := modelName + "." + gqlFieldName
 			boilerType, ok = boilerTypeMap[secondKey]
 			if ok {
 				boilerName = gqlFieldName
@@ -621,8 +614,8 @@ func getBoilerKeyAndType(m *Model, originalFieldName string, gqlFieldName string
 		}
 
 		// resolve type of relation
-		if isRelation && !m.IsInput && !m.IsPayload {
-			relationKey := strcase.ToLowerCamel(m.Name) + "R." + strcase.ToCamel(boilerName)
+		if isRelation && !m.IsPayload {
+			relationKey := strcase.ToLowerCamel(modelName) + "R." + strcase.ToCamel(boilerName)
 			relationType, relationOk := boilerTypeMap[relationKey]
 
 			if relationOk {
@@ -630,6 +623,13 @@ func getBoilerKeyAndType(m *Model, originalFieldName string, gqlFieldName string
 			} else {
 				fmt.Println(fmt.Sprintf("[WARN] Skip %v because could not find type of relationship for key: %v.", boilerName, relationKey))
 			}
+		}
+
+		if isRelation && m.IsInput {
+			fmt.Println(fmt.Sprintf("[WARN] Relations for input not yet implemented %v.%v.", modelName, boilerName))
+			// if boilerRelationName != "" {
+			// 	fmt.Println("YES", boilerRelationName)
+			// }
 		}
 
 		// We could not find the name/type this could be a false alarm since not all fields can be mapped
@@ -800,6 +800,7 @@ func enhanceModelsWithPreloadMap(models []*Model) {
 		for _, field := range model.Fields {
 			// we only preload relations :-D
 			if !field.IsRelation {
+
 				continue
 			}
 			if field.IsPlural {
@@ -876,6 +877,7 @@ func getBaseModelFromName(v string) string {
 	v = strings.TrimSuffix(v, "CreateInput")
 	v = strings.TrimSuffix(v, "UpdateInput")
 	v = strings.TrimSuffix(v, "Input")
+	v = strings.TrimSuffix(v, "Payload")
 	return v
 }
 
