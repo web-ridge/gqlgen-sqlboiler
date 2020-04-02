@@ -27,32 +27,59 @@
 	
 
 		{{- if .IsSingle }}
-			dbID := helpers.{{ .ModelName }}ID(id)
-			queryMods := helper.GetPreloadMods(ctx, helpers.{{ .ModelName|go }}PreloadMap)
-			queryMods = append(queryMods, dm.{{ .ModelName|go }}Where.ID.EQ(dbID))
+			dbID := helpers.{{ .Model.Name }}ID(id)
+			queryMods := helper.GetPreloadMods(ctx, helpers.{{ .Model.Name|go }}PreloadMap)
+			queryMods = append(queryMods, dm.{{ .Model.Name|go }}Where.ID.EQ(dbID))
 			{{- if .HasOrganizationID }}
-				queryMods = append(queryMods, dm.{{ .ModelName }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
+				queryMods = append(queryMods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
 			{{- end }}
 			{{- if .HasUserOrganizationID }}
-				queryMods = append(queryMods, dm.{{ .ModelName }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
+				queryMods = append(queryMods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
 			{{- end }}
 			{{- if .HasUserID }}
-				queryMods = append(queryMods, dm.{{ .ModelName }}Where.UserID.EQ(auth.UserIDFromContext(ctx)))
+				queryMods = append(queryMods, dm.{{ .Model.Name }}Where.UserID.EQ(auth.UserIDFromContext(ctx)))
 			{{- end }}
-			m, err := dm.{{ .PluralModelName|go }}(queryMods...).One(ctx, r.db)
-			return helpers.{{ .ModelName|go }}ToGraphQL(m, nil), err
+			m, err := dm.{{ .Model.PluralName|go }}(queryMods...).One(ctx, r.db)
+			return helpers.{{ .Model.Name|go }}ToGraphQL(m, nil), err
 
 		{{- end -}}
 
 		{{- if .IsList }}
-			queryMods := helper.GetPreloadMods(ctx, helpers.{{ .ModelName|go }}PreloadMap)
-			a, err := dm.{{ .PluralModelName|go }}(queryMods...).All(ctx, r.db)
-			return helpers.{{ .PluralModelName|go }}ToGraphQL(a, nil), err
+			queryMods := helper.GetPreloadMods(ctx, helpers.{{ .Model.Name|go }}PreloadMap)
+			a, err := dm.{{ .Model.PluralName|go }}(queryMods...).All(ctx, r.db)
+			return helpers.{{ .Model.PluralName|go }}ToGraphQL(a, nil), err
 
 		{{- end -}}
 
 		{{- if .IsCreate }}
-			m := helpers.{{ .ModelName }}CreateInputToBoiler(&input)
+
+			m := helpers.{{ .InputModel.Name }}ToBoiler(&input)
+
+			// Create one-to-one relationships
+			{{ $model := .Model -}}
+			{{ range $field := .InputModel.Fields -}}
+				{{ if $field.IsRelation -}}
+					if input.{{ $field.Name|go }} != nil {
+						{{ $field.Name }} := helpers.{{ $field.BoilerRelationShipName }}CreateInputToBoiler(input.{{ $field.Name|go }})
+						{{ $field.Name }}.OrganizationID = auth.OrganizationIDFromContext(ctx)
+
+						{{ $field.Name }}Input := helpers.{{ $field.BoilerRelationShipName }}CreateInputToBoilerWhitelist(
+							ctx,
+							"input.{{ $field.Name }}",
+							dm.{{ $model.Name }}Columns.OrganizationID,
+						)
+
+						// TODO: create the nested relations of {{ $field.Name }}Input if they exist
+						if err := {{ $field.Name }}.Insert(ctx, r.db, {{ $field.Name }}Input); err != nil {
+							return nil, err
+						}
+						m.{{ $field.Name|go }}ID = {{ $field.Name }}.ID
+					}
+					
+				{{ end -}}
+			{{ end -}}
+
+			// TODO: support all kind of relations
 
 			{{- if .HasOrganizationID }}
 				m.OrganizationID = auth.OrganizationIDFromContext(ctx)
@@ -63,81 +90,111 @@
 			{{- if .HasUserID }}
 				m.UserID = auth.UserIDFromContext(ctx)
 			{{- end }}
-			if err := m.Insert(ctx, r.db, helpers.{{ .ModelName }}CreateInputToBoilerWhitelist(ctx{{ .BoilerWhiteList }})); err != nil {
+			if err := m.Insert(ctx, r.db, helpers.{{ .InputModel.Name }}ToBoilerWhitelist(ctx{{ .BoilerWhiteList }}, "input")); err != nil {
 				return nil, err
 			}
 
 			// resolve requested fields after creating
-			queryMods := helper.GetPreloadModsWithLevel(ctx, helpers.{{ .ModelName|go }}PreloadMap, helpers.{{ .ModelName|go }}PayloadPreloadLevels.{{ .ModelName|go }})
-			queryMods = append(queryMods, dm.{{ .ModelName|go }}Where.ID.EQ(m.ID))
+			queryMods := helper.GetPreloadModsWithLevel(ctx, helpers.{{ .Model.Name|go }}PreloadMap, helpers.{{ .Model.Name|go }}PayloadPreloadLevels.{{ .Model.Name|go }})
+			queryMods = append(queryMods, dm.{{ .Model.Name|go }}Where.ID.EQ(m.ID))
 			{{- if .HasOrganizationID }}
-				queryMods = append(queryMods, dm.{{ .ModelName }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
+				queryMods = append(queryMods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
 			{{- end }}
 			{{- if .HasUserOrganizationID }}
-				queryMods = append(queryMods, dm.{{ .ModelName }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
+				queryMods = append(queryMods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
 			{{- end }}
 			{{- if .HasUserID }}
-				queryMods = append(queryMods, dm.{{ .ModelName }}Where.UserID.EQ(auth.UserIDFromContext(ctx)))
+				queryMods = append(queryMods, dm.{{ .Model.Name }}Where.UserID.EQ(auth.UserIDFromContext(ctx)))
 			{{- end }}
-			m, err := dm.{{ .PluralModelName|go }}(queryMods...).One(ctx, r.db)
-			return &fm.{{ .ModelName|go }}Payload{
-				{{ .ModelName|go }}: helpers.{{ .ModelName|go }}ToGraphQL(m, nil),
+			m, err := dm.{{ .Model.PluralName|go }}(queryMods...).One(ctx, r.db)
+			return &fm.{{ .Model.Name }}Payload{
+				{{ .Model.Name|go }}: helpers.{{ .Model.Name|go }}ToGraphQL(m, nil),
 			}, err
 
 		{{- end -}}
 
 		{{- if .IsUpdate }}
-			dbID := helpers.{{ .ModelName }}ID(id)
-			if _, err := dm.{{ .PluralModelName }}(
-				dm.{{ .ModelName }}Where.ID.EQ(dbID),
+			m := helpers.{{ .InputModel.Name }}ToModelM(ctx, input, "input")
+
+			// Update one-to-one relationships
+			{{ $resolver := . -}}
+			{{ $model := .Model -}}
+			{{ range $field := .InputModel.Fields -}}
+				{{ if $field.IsRelation -}}
+					if input.{{ $field.Name|go }} != nil {
+						dbID := helpers.{{ $field.BoilerRelationShipName }}ID(id)
+						nestedM := helpers.{{ $field.BoilerRelationShipName }}UpdateInputToModelM(ctx, *input.{{ $field.Name|go }}, "input.{{ $field.Name }}")
+						if _, err := dm.{{ $field.PlularBoilerRelationShipName }}(
+							dm.{{ $field.BoilerRelationShipName }}Where.ID.EQ(dbID),
+							{{- if $resolver.HasOrganizationID }}
+								dm.{{ $field.BoilerRelationShipName }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
+							{{- end }}
+							{{- if $resolver.HasUserOrganizationID }}
+								dm.{{ $field.BoilerRelationShipName }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
+							{{- end }}
+							{{- if $resolver.HasUserID }}
+								dm.{{ $field.BoilerRelationShipName }}Where.UserID.EQ(auth.UserIDFromContext(ctx)),
+							{{- end }}
+						).UpdateAll(ctx, r.db, nestedM); err != nil {
+							return nil, err
+						}
+					}
+					
+				{{ end -}}
+			{{ end -}}
+
+			// TODO: support all kind of relations
+			dbID := helpers.{{ .Model.Name }}ID(id)
+			if _, err := dm.{{ .Model.PluralName }}(
+				dm.{{ .Model.Name }}Where.ID.EQ(dbID),
 				{{- if .HasOrganizationID }}
-					dm.{{ .ModelName }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
+					dm.{{ .Model.Name }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
 				{{- end }}
 				{{- if .HasUserOrganizationID }}
-					dm.{{ .ModelName }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
+					dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
 				{{- end }}
 				{{- if .HasUserID }}
-					dm.{{ .ModelName }}Where.UserID.EQ(auth.UserIDFromContext(ctx)),
+					dm.{{ .Model.Name }}Where.UserID.EQ(auth.UserIDFromContext(ctx)),
 				{{- end }}
-			).UpdateAll(ctx, r.db, helpers.{{ .ModelName }}UpdateInputToModelM(ctx, input)); err != nil {
+			).UpdateAll(ctx, r.db, m); err != nil {
 				return nil, err
 			}
 
 			// resolve requested fields after updating
-			queryMods := helper.GetPreloadModsWithLevel(ctx, helpers.{{ .ModelName|go }}PreloadMap, helpers.{{ .ModelName|go }}PayloadPreloadLevels.{{ .ModelName|go }})
-			queryMods = append(queryMods, dm.{{ .ModelName|go }}Where.ID.EQ(dbID))
+			queryMods := helper.GetPreloadModsWithLevel(ctx, helpers.{{ .Model.Name|go }}PreloadMap, helpers.{{ .Model.Name|go }}PayloadPreloadLevels.{{ .Model.Name|go }})
+			queryMods = append(queryMods, dm.{{ .Model.Name|go }}Where.ID.EQ(dbID))
 			{{- if .HasOrganizationID }}
-				queryMods = append(queryMods, dm.{{ .ModelName }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
+				queryMods = append(queryMods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
 			{{- end }}
 			{{- if .HasUserOrganizationID }}
-				queryMods = append(queryMods, dm.{{ .ModelName }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
+				queryMods = append(queryMods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
 			{{- end }}
 			{{- if .HasUserID }}
-				queryMods = append(queryMods, dm.{{ .ModelName }}Where.UserID.EQ(auth.UserIDFromContext(ctx)))
+				queryMods = append(queryMods, dm.{{ .Model.Name }}Where.UserID.EQ(auth.UserIDFromContext(ctx)))
 			{{- end }}
 
-			m, err := dm.{{ .PluralModelName|go }}(queryMods...).One(ctx, r.db)
-			return &fm.{{ .ModelName|go }}Payload{
-				{{ .ModelName|go }}: helpers.{{ .ModelName|go }}ToGraphQL(m, nil),
+			m, err := dm.{{ .Model.PluralName|go }}(queryMods...).One(ctx, r.db)
+			return &fm.{{ .Model.Name|go }}Payload{
+				{{ .Model.Name|go }}: helpers.{{ .Model.Name|go }}ToGraphQL(m, nil),
 			}, err
 
 		{{- end -}}
 
 		{{- if .IsDelete }}
 			queryMods := []qm.QueryMod{
-				dm.{{ .ModelName|go }}Where.ID.EQ(helpers.{{ .ModelName|go }}ID(id)),
+				dm.{{ .Model.Name|go }}Where.ID.EQ(helpers.{{ .Model.Name|go }}ID(id)),
 				{{- if .HasOrganizationID }}
-					dm.{{ .ModelName }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
+					dm.{{ .Model.Name }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
 				{{- end }}
 				{{- if .HasUserOrganizationID }}
-					dm.{{ .ModelName }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
+					dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
 				{{- end }}
 				{{- if .HasUserID }}
-					dm.{{ .ModelName }}Where.UserID.EQ(auth.UserIDFromContext(ctx)),
+					dm.{{ .Model.Name }}Where.UserID.EQ(auth.UserIDFromContext(ctx)),
 				{{- end }}
 			}
-			 _, err := dm.{{ .PluralModelName|go }}(queryMods...).DeleteAll(ctx, r.db)
-			return &fm.{{ .ModelName|go }}DeletePayload{
+			 _, err := dm.{{ .Model.PluralName|go }}(queryMods...).DeleteAll(ctx, r.db)
+			return &fm.{{ .Model.Name|go }}DeletePayload{
 				ID: id,
 			}, err
 
@@ -150,7 +207,7 @@
 		{{- end -}}
 
 		{{- if .IsBatchUpdate }}
-		// TODO: Implement batch update
+		// TODO: Implement input filters / search
 		return nil, nil
 
 		{{- end -}}

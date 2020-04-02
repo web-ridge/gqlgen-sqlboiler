@@ -29,12 +29,21 @@
 		func {{ .PluralName|go }}ToBoiler(am []*graphql_models.{{ .Name|go }})( []*models.{{ .BoilerName|go }}) {
 			ar := make([]*models.{{ .BoilerName|go }}, len(am))
 			for i,m := range am {
-				ar[i] = {{ .Name|go }}ToBoiler(m)
+				ar[i] = {{ .Name|go }}ToBoiler(
+					m,
+					{{ range $field := .Fields -}}
+						{{ if $field.IsRelation -}}
+							0, // TODO: resolved id e.g. {{ $field.Name }}Ids[i]
+						{{ end -}}
+					{{ end -}}
+				)
 			}
 			return ar
 		}
 		
-		func {{ .Name|go }}ToBoiler(m *graphql_models.{{ .Name|go }})( *models.{{ .BoilerName|go }}) {
+		func {{ .Name|go }}ToBoiler(
+				m *graphql_models.{{ .Name|go }},
+			)( *models.{{ .BoilerName|go }}) {
 			if m == nil {
 				return nil
 			}	
@@ -42,7 +51,7 @@
 			{{ range $field := .Fields -}}
 				{{ if $field.IsID }}
 					{{- $field.BoilerName|go }} : {{ $field.CustomGraphIDFunction|go }}(m.{{ $field.Name|go }}),
-				{{ else if $field.IsRelation }}
+				{{ else if and $field.IsRelation  -}}
 				{{ else if $field.IsCustomFunction }}
 					{{- $field.BoilerName|go }} : helper.{{ $field.CustomFromFunction }}(m.{{ $field.Name|go }}),
 				{{ else }}	
@@ -52,7 +61,21 @@
 			}
 			return r
 		}
-		func {{ .Name|go }}ToModelMWithInputKey(ctx context.Context, key string, m graphql_models.{{ .Name|go }}) models.M {
+
+		{{ range $field := .Fields -}}
+			{{ if and $field.IsRelation $field.IsNullableID -}}
+			func {{ $model.Name|go }}ModelMWithWith{{ .Name|go }}(modelM map[string]interface{}, id {{ $field.BoilerType }}) map[string]interface{} {
+				modelM[models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }}ID] = id
+				return modelM
+			}
+			{{ end -}}
+		{{ end -}}
+
+		func {{ .Name|go }}ToModelM(
+			ctx context.Context, 
+			m graphql_models.{{ .Name|go }},
+			key string, 
+		) models.M {
 			input := helper.GetInputFromContext(ctx, key)
 			modelM := models.M{}
 			for key, _ := range input {
@@ -61,7 +84,7 @@
 					case "{{ $field.CamelCaseName }}":
 						{{ if $field.IsID -}}
 							modelM[models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }}] = {{ $field.CustomGraphIDFunction|go }}(m.{{ $field.Name|go }})
-						{{ else if $field.IsRelation -}}
+						{{ else if $field.IsRelation  -}}
 						{{ else if $field.IsCustomFunction -}}
 							modelM[models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }}] = helper.{{ $field.CustomFromFunction }}(m.{{ $field.Name|go }})
 						{{ else -}}	
@@ -72,25 +95,24 @@
 			}
 			return modelM
 		}
-		func {{ .Name|go }}ToModelM(ctx context.Context, m graphql_models.{{ .Name|go }}) models.M {
-			return {{ .Name|go }}ToModelMWithInputKey(ctx, "input", m)
-		}
-		func {{ .Name|go }}ToBoilerWhitelistWithInputKey(ctx context.Context, key string, extraColumns ...string) boil.Columns {
+		func {{ .Name|go }}ToBoilerWhitelist(ctx context.Context, key string, extraColumns ...string) boil.Columns {
 			input := helper.GetInputFromContext(ctx, key)
 			columnsWhichAreSet := []string{}
 			for key, _ := range input {
 				switch key {
 					{{ range $field := .Fields -}}
-					case "{{ $field.CamelCaseName }}":
-						columnsWhichAreSet = append(columnsWhichAreSet, models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }})
+						{{  if $field.IsRelation -}}
+						case "{{ $field.CamelCaseName }}":
+							columnsWhichAreSet = append(columnsWhichAreSet, models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }}ID)
+						{{ else -}}
+						case "{{ $field.CamelCaseName }}":
+							columnsWhichAreSet = append(columnsWhichAreSet, models.{{ $model.BoilerName|go }}Columns.{{- $field.BoilerName|go }})
+						{{ end -}}
 					{{ end -}}
 				}
 			}
 			columnsWhichAreSet = append(columnsWhichAreSet, extraColumns...)
 			return boil.Whitelist(columnsWhichAreSet...)
-		}
-		func {{ .Name|go }}ToBoilerWhitelist(ctx context.Context, extraColumns ...string) boil.Columns {
-			return {{ .Name|go }}ToBoilerWhitelistWithInputKey(ctx, "input", extraColumns...)
 		}
 	{{- end }}
 {{- end }}

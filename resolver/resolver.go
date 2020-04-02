@@ -7,13 +7,15 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/web-ridge/gqlgen-sqlboiler/boiler"
+	"github.com/web-ridge/gqlgen-sqlboiler/convert"
+
 	"github.com/99designs/gqlgen/codegen"
 	"github.com/99designs/gqlgen/codegen/config"
 	"github.com/99designs/gqlgen/codegen/templates"
 	"github.com/99designs/gqlgen/plugin"
 	pluralize "github.com/gertd/go-pluralize"
 	"github.com/pkg/errors"
-	"github.com/web-ridge/gqlgen-sqlboiler/boiler"
 )
 
 var pathRegex *regexp.Regexp
@@ -49,23 +51,21 @@ func (m *Plugin) GenerateCode(data *codegen.Data) error {
 		return nil
 	}
 
+	// Get all models information
+	models := convert.GetModelsWithInformation(data.Config, m.backendModelsPath)
+
 	switch data.Config.Resolver.Layout {
 	case config.LayoutSingleFile:
-		return m.generateSingleFile(data)
+		return m.generateSingleFile(data, models)
 	case config.LayoutFollowSchema:
-		return m.generatePerSchema(data)
+		return m.generatePerSchema(data, models)
 	}
 
 	return nil
 }
 
-func (m *Plugin) generateSingleFile(data *codegen.Data) error {
+func (m *Plugin) generateSingleFile(data *codegen.Data, models []*convert.Model) error {
 	file := File{}
-
-	// if _, err := os.Stat(data.Config.Resolver.Filename); err == nil {
-	// 	// file already exists and we dont support updating resolvers with layout = single so just return
-	// 	return nil
-	// }
 	boilerTypeMap, _, _ := boiler.ParseBoilerFile(m.backendModelsPath)
 
 	file.imports = append(file.imports, Import{
@@ -94,7 +94,7 @@ func (m *Plugin) generateSingleFile(data *codegen.Data) error {
 				Field:          f,
 				Implementation: `panic("not implemented yet")`,
 			}
-			enhanceResolver(resolver, boilerTypeMap)
+			enhanceResolver(resolver, boilerTypeMap, models)
 			file.Resolvers = append(file.Resolvers, resolver)
 		}
 	}
@@ -115,7 +115,7 @@ func (m *Plugin) generateSingleFile(data *codegen.Data) error {
 	})
 }
 
-func (m *Plugin) generatePerSchema(data *codegen.Data) error {
+func (m *Plugin) generatePerSchema(data *codegen.Data, models []*convert.Model) error {
 	rewriter, err := NewRewriter(data.Config.Resolver.ImportPath())
 	if err != nil {
 		return err
@@ -233,23 +233,26 @@ func (f *File) Imports() string {
 }
 
 type Resolver struct {
-	Object                *codegen.Object
-	Field                 *codegen.Field
-	Implementation        string
-	IsSingle              bool
-	IsList                bool
-	IsCreate              bool
-	IsUpdate              bool
-	IsDelete              bool
-	IsBatchCreate         bool
-	IsBatchUpdate         bool
-	IsBatchDelete         bool
-	ModelName             string
-	PluralModelName       string
+	Object         *codegen.Object
+	Field          *codegen.Field
+	Implementation string
+	IsSingle       bool
+	IsList         bool
+	IsCreate       bool
+	IsUpdate       bool
+	IsDelete       bool
+	IsBatchCreate  bool
+	IsBatchUpdate  bool
+	IsBatchDelete  bool
+
+	// TODO move to model?
 	HasOrganizationID     bool
 	HasUserOrganizationID bool
 	HasUserID             bool
-	BoilerWhiteList       string
+
+	BoilerWhiteList string
+	Model           convert.Model
+	InputModel      convert.Model
 }
 
 func gqlToResolverName(base string, gqlname string) string {
@@ -267,22 +270,31 @@ func hasField(boilerTypeMap map[string]string, modelName, fieldName string) bool
 	return ok
 }
 
-func enhanceResolver(r *Resolver, boilerTypeMap map[string]string) {
+func enhanceResolver(r *Resolver, boilerTypeMap map[string]string, models []*convert.Model) {
 	nameOfResolver := r.Field.GoFieldName
 
-	r.ModelName = getModelName(nameOfResolver)
-	r.PluralModelName = getModelNamePlural(nameOfResolver)
-	if hasField(boilerTypeMap, r.ModelName, "OrganizationID") {
+	// get model names + model convert information
+	modelName, inputModelName := getModelNames(nameOfResolver, false)
+	// modelPluralName, _ := getModelNames(nameOfResolver, true)
+
+	model := findModel(models, modelName)
+	inputModel := findModel(models, inputModelName)
+
+	// save for later inside file
+	r.Model = model
+	r.InputModel = inputModel
+
+	if hasField(boilerTypeMap, r.Model.Name, "OrganizationID") {
 		r.HasOrganizationID = true
-		r.BoilerWhiteList += fmt.Sprintf(", dm.%vColumns.OrganizationID", r.ModelName)
+		r.BoilerWhiteList += fmt.Sprintf(", dm.%vColumns.OrganizationID", r.Model.Name)
 	}
-	if hasField(boilerTypeMap, r.ModelName, "UserOrganizationID") {
+	if hasField(boilerTypeMap, r.Model.Name, "UserOrganizationID") {
 		r.HasUserOrganizationID = true
-		r.BoilerWhiteList += fmt.Sprintf(", dm.%vColumns.UserOrganizationID", r.ModelName)
+		r.BoilerWhiteList += fmt.Sprintf(", dm.%vColumns.UserOrganizationID", r.Model.Name)
 	}
-	if hasField(boilerTypeMap, r.ModelName, "UserID") {
+	if hasField(boilerTypeMap, r.Model.Name, "UserID") {
 		r.HasUserID = true
-		r.BoilerWhiteList += fmt.Sprintf(", dm.%vColumns.UserID", r.ModelName)
+		r.BoilerWhiteList += fmt.Sprintf(", dm.%vColumns.UserID", r.Model.Name)
 	}
 
 	if r.Object.Name == "Mutation" {
@@ -301,20 +313,51 @@ func enhanceResolver(r *Resolver, boilerTypeMap map[string]string) {
 	}
 }
 
-var stripPrefixes = []string{"Create", "Update", "Delete"}
-
-func getModelName(v string) string {
-	for _, prefix := range stripPrefixes {
-		v = strings.TrimPrefix(v, prefix)
+func findModel(models []*convert.Model, modelName string) convert.Model {
+	if modelName == "" {
+		return convert.Model{}
 	}
-	return pluralizer.Singular(v)
+
+	for _, m := range models {
+		if m.Name == modelName {
+			fmt.Println("FOUND! model for: ", modelName)
+
+			return *m
+		}
+	}
+
+	fmt.Println("Did not find corresponding model for: ", modelName)
+
+	return convert.Model{
+		Name:       modelName,
+		BoilerName: modelName,
+	}
 }
 
-func getModelNamePlural(v string) string {
-	for _, prefix := range stripPrefixes {
-		v = strings.TrimPrefix(v, prefix)
+var InputTypes = []string{"Create", "Update", "Delete"}
+
+func getModelNames(v string, plural bool) (modelName, inputModelName string) {
+	var prefix string
+	var isInputType bool
+	for _, inputType := range InputTypes {
+		if strings.HasPrefix(v, inputType) {
+			isInputType = true
+			v = strings.TrimPrefix(v, inputType)
+			prefix = inputType
+		}
 	}
-	return pluralizer.Plural(v)
+	var s string
+	if plural {
+		s = pluralizer.Plural(v)
+	} else {
+		s = pluralizer.Singular(v)
+	}
+
+	if isInputType {
+		return s, s + prefix + "Input"
+	}
+
+	return s, ""
 }
 
 func containsPrefixAndPartAfterThatIsSingle(v string, prefix string) bool {

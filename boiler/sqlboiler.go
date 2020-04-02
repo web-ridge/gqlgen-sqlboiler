@@ -11,7 +11,26 @@ import (
 	"strings"
 )
 
-var ignoreFiles = []string{"boil_queries.go", "boil_table_names.go", "boil_types.go", "mysql_upsert.go"}
+type BoilerModel struct {
+	Name       string
+	PluralName string
+	Fields     []*BoilerField
+}
+
+type BoilerField struct {
+	Name         string
+	PluralName   string
+	Type         string
+	IsRequired   bool
+	IsArray      bool
+	IsRelation   bool
+	Relationship BoilerRelationShip
+}
+
+type BoilerRelationShip struct {
+	Name  string
+	Model BoilerModel
+}
 
 // will return StructName.key
 // e.g.

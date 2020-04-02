@@ -48,19 +48,21 @@ type Interface struct {
 }
 
 type Model struct {
-	Description   string
 	Name          string
-	BoilerName    string
 	PluralName    string
-	PureFields    []*ast.FieldDefinition
+	BoilerModel   boiler.BoilerModel
 	Fields        []*Field
-	Implements    []string
 	IsInput       bool
 	IsCreateInput bool
 	IsUpdateInput bool
 	IsNormalInput bool
 	IsPayload     bool
 	PreloadMap    map[string]ColumnSetting
+
+	// other stuff
+	Description string
+	PureFields  []*ast.FieldDefinition
+	Implements  []string
 }
 
 type ColumnSetting struct {
@@ -69,31 +71,22 @@ type ColumnSetting struct {
 }
 
 type Field struct {
-	Description                  string
-	Name                         string
-	CamelCaseName                string
-	PluralName                   string
-	BoilerName                   string
-	BoilerRelationShipName       string
-	PlularBoilerRelationShipName string
-	PluralBoilerName             string
-	BoilerType                   string
-	GraphType                    string
-	Type                         types.Type
-	Tag                          string
-	IsCustomFunction             bool
-	CustomFromFunction           string
-	CustomToFunction             string
-	CustomBoilerIDFunction       string
-	CustomGraphIDFunction        string
-	IsID                         bool
-	IsPrimaryID                  bool
-	IsNullableID                 bool
-	IsRelation                   bool
+	Name        string
+	PluralName  string
+	GraphType   string
+	IsID        bool
+	IsPrimaryID bool
+	IsRequired  bool
+	IsPlural    bool
 
-	IsPlural         bool
-	CustomGraphType  string
-	CustomBoilerType string
+	// relation stuff
+	IsRelation  bool
+	BoilerField boiler.BoilerField
+
+	// Some stuff
+	Description string
+	Type        types.Type
+	Tag         string
 }
 
 type Enum struct {
@@ -128,27 +121,17 @@ func copyConfig(cfg config.Config) *config.Config {
 }
 
 func getGoImportFromFile(dir string) string {
-	// graphql_models
-
 	longPath, err := filepath.Abs(dir)
 	if err != nil {
 		fmt.Println("error while trying to convert folder to gopath", err)
 	}
-	// src/Users/richardlindhout/go/src/gitlab.com/eyeontarget/app/backend/graphql_models
+	// src/Users/.../go/src/gitlab.com/.../app/backend/graphql_models
 	return strings.TrimPrefix(pathRegex.FindString(longPath), "src/")
-
 }
 
-func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
-	cfg := copyConfig(*ignoredConfig)
+func GetModelsWithInformation(cfg *config.Config, backendModelsPath string) []*Model {
 
-	b := &ModelBuild{
-		PackageName:        m.directory,
-		FrontendModelsPath: getGoImportFromFile(m.frontendModelsPath),
-		BackendModelsPath:  getGoImportFromFile(m.backendModelsPath),
-	}
-
-	boilerTypeMap, boilerStructMap, _ := boiler.ParseBoilerFile(m.backendModelsPath)
+	boilerTypeMap, boilerStructMap, _ := boiler.ParseBoilerFile(backendModelsPath)
 
 	// get models based on the schema and sqlboiler structs
 	models := getModelsFromSchema(cfg.Schema, boilerStructMap)
@@ -159,19 +142,28 @@ func (m *Plugin) MutateConfig(ignoredConfig *config.Config) error {
 	// Add preload maps
 	enhanceModelsWithPreloadMap(models)
 
-	// Add models to the build config
-	b.Models = models
+	// Sort in same order
+	sort.Slice(models, func(i, j int) bool { return models[i].Name < models[j].Name })
+	for _, m := range models {
+		cfg.Models.Add(m.Name, cfg.Model.ImportPath()+"."+templates.ToGo(m.Name))
+	}
+	return models
+}
+
+func (m *Plugin) MutateConfig(originalCfg *config.Config) error {
+	b := &ModelBuild{
+		PackageName:        m.directory,
+		FrontendModelsPath: getGoImportFromFile(m.frontendModelsPath),
+		BackendModelsPath:  getGoImportFromFile(m.backendModelsPath),
+	}
+
+	cfg := copyConfig(*originalCfg)
+	models := GetModelsWithInformation(originalCfg, m.backendModelsPath)
 	interfaces, enums, scalars := getExtrasFromSchema(cfg.Schema)
+	b.Models = models
 	b.Interfaces = interfaces
 	b.Enums = enums
 	b.Scalars = scalars
-
-	// Sort in same order
-	sort.Slice(b.Models, func(i, j int) bool { return b.Models[i].Name < b.Models[j].Name })
-	for _, m := range b.Models {
-		cfg.Models.Add(m.Name, cfg.Model.ImportPath()+"."+templates.ToGo(m.Name))
-	}
-
 	if len(b.Models) == 0 {
 		fmt.Println("return nil")
 		return nil
@@ -296,6 +288,7 @@ func getPlularBoilerRelationShipName(modelName string) string {
 	modelName = strings.TrimSuffix(modelName, "Slice")
 	return pluralizer.Plural(modelName)
 }
+
 func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*Model, boilerTypeMap map[string]string) {
 
 	binder := cfg.NewBinder()
@@ -381,7 +374,7 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 	}
 
 	// After we've added the fields we want to enhance some fields with extra information
-	// We want all existing models and fields because othwerwise we can not know the relationsships
+	// We want all existing models and fields because othwerwise we can not know the relationships
 	for _, model := range models {
 
 		for _, field := range model.Fields {
