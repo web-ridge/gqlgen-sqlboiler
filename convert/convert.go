@@ -728,17 +728,10 @@ func getConvertConfig(model *Model, field *Field) (cc ConvertConfig) {
 				cc.ToGraphQL = field.BoilerField.Relationship.Name + "IDToGraphQL(" + cc.ToGraphQL + ")"
 			}
 
-			cc.ToBoiler = fmt.Sprintf("helper.StringToIntID(%v)", cc.ToGraphQL)
+			cc.ToBoiler = fmt.Sprintf("helper.IDToBoiler(%v)", cc.ToBoiler)
 
-			// unpointer id type
-
-			// cc.ToBoiler = cc.ToGraphQL
-			// StringToIntID
-
-			// cc.ToGraphQL = model.Name + "ID" + "Unique"
-			// cc.ToBoiler = "StringToIntID"
 			cc.ToGraphQL = strings.Replace(cc.ToGraphQL, "VALUE", "m."+strcase.ToCamel(field.BoilerField.Name), -1)
-			cc.ToBoiler = strings.Replace(cc.ToGraphQL, "VALUE", "m."+strcase.ToCamel(field.Name), -1)
+			cc.ToBoiler = strings.Replace(cc.ToBoiler, "VALUE", "m."+strcase.ToCamel(getgqlFieldName(field.Name)), -1)
 
 		} else {
 			// Make these go-friendly for the helper/convert.go package

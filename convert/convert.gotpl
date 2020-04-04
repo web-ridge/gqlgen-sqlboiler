@@ -119,35 +119,12 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 
 		{{ range $field := .Fields }}
 			{{- if $field.IsPrimaryID }}
-				func {{ $model.Name|go }}IDNullable(v *{{$field.Type}})(null.{{$field.BoilerField.Type|go}}) {
-					if v == nil {
-						return null.{{$field.BoilerField.Type|go}}{
-							Valid: false,
-						}
-					}
-					s := helper.{{ $field.ConvertConfig.GraphTypeAsText }}To{{ $field.ConvertConfig.BoilerTypeAsText }}ID(*v)
-					return null.{{$field.BoilerField.Type|go}}{
-						Valid: s != 0,
-						{{$field.BoilerField.Type|go}}: s,
-					}
-				}
-				func {{ $model.Name|go }}IDValueOfNullable(v *{{$field.Type}})({{$field.BoilerField.Type}}) {
-					if v == nil {
-						return 0
-					}
-					return helper.{{ $field.ConvertConfig.GraphTypeAsText }}To{{ $field.ConvertConfig.BoilerTypeAsText }}ID(*v)
+				func {{ $model.Name|go }}ID(v string) uint {
+					return helper.IDToBoiler(v)
 				}
 
-				func {{ $model.Name|go }}ID(v {{$field.Type}})({{$field.BoilerField.Type}}) {
-					return helper.{{ $field.ConvertConfig.GraphTypeAsText }}To{{ $field.ConvertConfig.BoilerTypeAsText }}ID(v)
-				}
-
-				func {{ $model.Name|go }}IDsToUints(a []string) []uint {
-					return helper.IDsToUints(a)
-				}
-
-				func {{ $model.Name|go }}IDsToInts(a []string) []int {
-					return helper.IDsToInts(a)
+				func {{ $model.Name|go }}IDs(a []string) []uint {
+					return helper.IDsToBoiler(a)
 				}
 				
 			{{- end -}}
