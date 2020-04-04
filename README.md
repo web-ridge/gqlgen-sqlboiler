@@ -1,6 +1,6 @@
 This program generates code like this between your generated gqlgen and sqlboiler with support for Relay.dev (unique id's etc). We can automatically generate the implementation of queries and mutations like create, update, delete working based on your graphql scheme and your sqlboiler models.
 
-To make this program a success tight coupling (same naming) between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed. However everything is created with support for change so you could write some extra GrapQL resolvers if you'd like without a problem.  
+To make this program a success tight coupling (same naming) between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed. However everything is created with support for change so you could write some extra GrapQL resolvers if you'd like without a problem.
 
 ## Flow
 
@@ -18,13 +18,14 @@ DONE: Generate converts between input models and sqlboiler
 DONE: Fetch sqlboiler preloads from graphql context  
 DONE: Support for foreign keys named differently than their corresponding model  
 DONE: New plugin which generates CRUD resolvers based on mutations in graphql scheme  
+DONE: Support one-to-one relationships inside input types
 TODO: Generate code which implements the generated where and search filters  
 TODO: Batch create/update/delete generation in resolvers  
-TODO: Crud of adding/removing relationships from many-to-many  
-TODO: Support CRUD of relationships inside input types  
 TODO: Support gqlgen multiple .graphql files  
 TODO: Edges/connections  
-TODO: Do a three-way-diff merge for changes and let user choose parts of code which should not take over generated code  
+TODO: Crud of adding/removing relationships from many-to-many on edges
+TODO: Support more relationships inside input types  
+TODO: Do a three-way-diff merge for changes and let user choose parts of code which should not take over generated code
 
 ## Case
 
@@ -199,6 +200,7 @@ func main() {
 			convertHelpersDir,
 			sqlboilerDir,
 			gqlgenModelDir,
+			"github.com/yourauth/implementation" // leave empty if you don't have auth
 		)),
 	)
 	if err != nil {
