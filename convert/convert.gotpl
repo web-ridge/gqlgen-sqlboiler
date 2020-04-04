@@ -36,16 +36,14 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 	{{- if not .IsInput -}}
 	{{- if not .IsPayload -}}
 
-		func {{ .Name|go }}WithIntID(id int) *graphql_models.{{ .Name|go }} {
+		func {{ .Name|go }}WithUintID(id uint) *graphql_models.{{ .Name|go }} {
 			return &graphql_models.{{ .Name|go }}{
-				ID: helper.IntToStringIDUnique(id, models.TableNames.{{ $model.Name|go }}),
+				ID: {{ $model.Name|go }}IDToGraphQL(id),
 			}
 		}
 
-		func {{ .Name|go }}WithUintID(id uint) *graphql_models.{{ .Name|go }} {
-			return &graphql_models.{{ .Name|go }}{
-				ID: helper.UintToStringIDUnique(id, models.TableNames.{{ $model.Name|go }}),
-			}
+		func {{ .Name|go }}WithIntID(id int) *graphql_models.{{ .Name|go }} {
+			return {{ .Name|go }}WithUintID(uint(id))
 		}
 
 		func {{ .Name|go }}WithNullDotUintID(id null.Uint) *graphql_models.{{ .Name|go }} {
@@ -53,7 +51,7 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 		}
 
 		func {{ .Name|go }}WithNullDotIntID(id null.Int) *graphql_models.{{ .Name|go }} {
-			return {{ .Name|go }}WithIntID(id.Int)
+			return {{ .Name|go }}WithUintID(uint(id.Int))
 		}
 
 		func {{ .PluralName|go }}ToGraphQL(am []*models.{{ .Name|go }}, roots []interface{})( []*graphql_models.{{ .Name|go }}) {
@@ -63,20 +61,17 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 			}
 			return ar
 		}
-
 	
 		{{ range $field := .Fields }}
 			{{- if $field.IsPrimaryID -}}
-				func {{ $model.Name|go }}IDUnique(v {{$field.BoilerType}})({{$field.GraphType}}) {
-					return helper.{{ $field.CustomToFunction }}IDUnique(v, models.TableNames.{{ $model.Name|go }})
+				func {{ $model.Name|go }}IDToGraphQL(v uint) string {
+					return helper.IDToGraphQL(v, models.TableNames.{{ $model.Name|go }})
 				}
-				
 			{{- end -}}
 		{{- end }}
-	
 
 
-	func {{ .Name|go }}ToGraphQL(m *models.{{ .BoilerName|go }}, roots []interface{})( *graphql_models.{{ .Name|go }}) {
+	func {{ .Name|go }}ToGraphQL(m *models.{{ .BoilerModel.Name|go }}, roots []interface{})( *graphql_models.{{ .Name|go }}) {
 		if m == nil {
 			return nil
 		}
@@ -87,12 +82,12 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 					{{.|prefixLines "// "}}
 				{{- end}}
 				{{- if $field.IsID -}}
-					{{- $field.Name|go }}:  {{ $field.CustomBoilerIDFunction|go }}(m.{{ $field.BoilerName|go }}),
+					{{ $field.Name|go }}: {{ $field.ConvertConfig.ToGraphQL }},
 				{{- else if $field.IsRelation -}}
-				{{- else if $field.IsCustomFunction }}
-					{{ $field.Name|go }}: helper.{{ $field.CustomToFunction }}(m.{{ $field.BoilerName|go }}),
+				{{- else if $field.ConvertConfig.IsCustom }}
+					{{ $field.Name|go }}: {{ $field.ConvertConfig.ToGraphQL }}(m.{{ $field.BoilerField.Name|go }}),
 				{{- else }}	
-					{{ $field.Name|go }}: m.{{ $field.BoilerName|go }},
+					{{ $field.Name|go }}: m.{{ $field.BoilerField.Name|go }},
 				{{- end -}}
 			{{- end }}
 		}
@@ -102,17 +97,17 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 			{{- if $field.IsRelation }}
 				{{- if $field.IsPlural }}
 					if m.R != nil && m.R.{{ $field.Name|go }} != nil  {
-						r.{{ $field.Name|go }} = {{ $field.PlularBoilerRelationShipName|go }}ToGraphQL(m.R.{{ $field.Name|go }}, append(roots, m))
+						r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.PluralName|go }}ToGraphQL(m.R.{{ $field.Name|go }}, append(roots, m))
 					} 
 				{{- else }}	
 				
-				if helper.{{ $field.CustomBoilerType }}IsFilled(m.{{ $field.Name|go }}ID) {
+				if helper.{{ $field.ConvertConfig.BoilerTypeAsText }}IsFilled(m.{{ $field.Name|go }}ID) {
 					if m.R != nil && m.R.{{ $field.Name|go }} != nil  {
 						if !alreadyConverted(roots,  m.R.{{ $field.Name|go }}) {
-							r.{{ $field.Name|go }} ={{ $field.BoilerRelationShipName|go }}ToGraphQL(m.R.{{ $field.Name|go }}, append(roots, m))
+							r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }}, append(roots, m))
 						}
 					} else {
-						r.{{ $field.Name|go }} = {{ $field.BoilerRelationShipName|go }}With{{ $field.CustomBoilerType|go }}ID(m.{{ $field.Name|go }}ID)
+						r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.Name|go }}With{{ $field.ConvertConfig.BoilerTypeAsText|go }}ID(m.{{ $field.Name|go }}ID)
 					}
 				}
 				{{- end -}}
@@ -124,27 +119,27 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 
 		{{ range $field := .Fields }}
 			{{- if $field.IsPrimaryID }}
-				func {{ $model.Name|go }}IDNullable(v *{{$field.GraphType}})(null.{{$field.BoilerType|go}}) {
+				func {{ $model.Name|go }}IDNullable(v *{{$field.Type}})(null.{{$field.BoilerField.Type|go}}) {
 					if v == nil {
-						return null.{{$field.BoilerType|go}}{
+						return null.{{$field.BoilerField.Type|go}}{
 							Valid: false,
 						}
 					}
-					s := helper.{{ $field.CustomFromFunction }}ID(*v)
-					return null.{{$field.BoilerType|go}}{
+					s := helper.{{ $field.ConvertConfig.GraphTypeAsText }}To{{ $field.ConvertConfig.BoilerTypeAsText }}ID(*v)
+					return null.{{$field.BoilerField.Type|go}}{
 						Valid: s != 0,
-						{{$field.BoilerType|go}}: s,
+						{{$field.BoilerField.Type|go}}: s,
 					}
 				}
-				func {{ $model.Name|go }}IDValueOfNullable(v *{{$field.GraphType}})({{$field.BoilerType}}) {
+				func {{ $model.Name|go }}IDValueOfNullable(v *{{$field.Type}})({{$field.BoilerField.Type}}) {
 					if v == nil {
 						return 0
 					}
-					return helper.{{ $field.CustomFromFunction }}ID(*v)
+					return helper.{{ $field.ConvertConfig.GraphTypeAsText }}To{{ $field.ConvertConfig.BoilerTypeAsText }}ID(*v)
 				}
 
-				func {{ $model.Name|go }}ID(v {{$field.GraphType}})({{$field.BoilerType}}) {
-					return helper.{{ $field.CustomFromFunction }}ID(v)
+				func {{ $model.Name|go }}ID(v {{$field.Type}})({{$field.BoilerField.Type}}) {
+					return helper.{{ $field.ConvertConfig.GraphTypeAsText }}To{{ $field.ConvertConfig.BoilerTypeAsText }}ID(v)
 				}
 
 				func {{ $model.Name|go }}IDsToUints(a []string) []uint {

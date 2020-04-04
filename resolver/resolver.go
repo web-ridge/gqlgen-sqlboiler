@@ -30,14 +30,15 @@ func init() {
 	}
 }
 
-func New(convertHelpersDir, backendModelsPath, frontendModelsPath string) plugin.Plugin {
-	return &Plugin{convertHelpersDir: convertHelpersDir, backendModelsPath: backendModelsPath, frontendModelsPath: frontendModelsPath}
+func New(convertHelpersDir, backendModelsPath, frontendModelsPath string, authImport string) plugin.Plugin {
+	return &Plugin{convertHelpersDir: convertHelpersDir, backendModelsPath: backendModelsPath, frontendModelsPath: frontendModelsPath, authImport: authImport}
 }
 
 type Plugin struct {
 	convertHelpersDir  string
 	backendModelsPath  string
 	frontendModelsPath string
+	authImport         string
 }
 
 var _ plugin.CodeGenerator = &Plugin{}
@@ -52,26 +53,32 @@ func (m *Plugin) GenerateCode(data *codegen.Data) error {
 	}
 
 	// Get all models information
-	models := convert.GetModelsWithInformation(data.Config, m.backendModelsPath)
+	fmt.Println("[resolver] get boiler models")
+	boilerModels := boiler.GetBoilerModels(m.backendModelsPath)
 
+	fmt.Println("[resolver] get models with information")
+	models := convert.GetModelsWithInformation(data.Config, boilerModels)
+
+	fmt.Println("[resolver] generate file")
 	switch data.Config.Resolver.Layout {
 	case config.LayoutSingleFile:
-		return m.generateSingleFile(data, models)
+		return m.generateSingleFile(data, models, boilerModels)
 	case config.LayoutFollowSchema:
-		return m.generatePerSchema(data, models)
+		return m.generatePerSchema(data, models, boilerModels)
 	}
+	fmt.Println("[resolver] generated files")
 
 	return nil
 }
 
-func (m *Plugin) generateSingleFile(data *codegen.Data, models []*convert.Model) error {
+func (m *Plugin) generateSingleFile(data *codegen.Data, models []*convert.Model, boilerModels []*boiler.BoilerModel) error {
 	file := File{}
-	boilerTypeMap, _, _ := boiler.ParseBoilerFile(m.backendModelsPath)
 
 	file.imports = append(file.imports, Import{
-		Alias:      "helpers",
+		Alias:      ".",
 		ImportPath: getGoImportFromFile(m.convertHelpersDir),
 	})
+
 	file.imports = append(file.imports, Import{
 		Alias:      "dm",
 		ImportPath: getGoImportFromFile(m.backendModelsPath),
@@ -80,6 +87,13 @@ func (m *Plugin) generateSingleFile(data *codegen.Data, models []*convert.Model)
 		Alias:      "fm",
 		ImportPath: getGoImportFromFile(m.frontendModelsPath),
 	})
+
+	if m.authImport != "" {
+		file.imports = append(file.imports, Import{
+			Alias:      "auth",
+			ImportPath: m.authImport,
+		})
+	}
 
 	for _, o := range data.Objects {
 		if o.HasResolvers() {
@@ -94,7 +108,7 @@ func (m *Plugin) generateSingleFile(data *codegen.Data, models []*convert.Model)
 				Field:          f,
 				Implementation: `panic("not implemented yet")`,
 			}
-			enhanceResolver(resolver, boilerTypeMap, models)
+			enhanceResolver(resolver, models)
 			file.Resolvers = append(file.Resolvers, resolver)
 		}
 	}
@@ -115,7 +129,7 @@ func (m *Plugin) generateSingleFile(data *codegen.Data, models []*convert.Model)
 	})
 }
 
-func (m *Plugin) generatePerSchema(data *codegen.Data, models []*convert.Model) error {
+func (m *Plugin) generatePerSchema(data *codegen.Data, models []*convert.Model, boilerModels []*boiler.BoilerModel) error {
 	rewriter, err := NewRewriter(data.Config.Resolver.ImportPath())
 	if err != nil {
 		return err
@@ -233,44 +247,41 @@ func (f *File) Imports() string {
 }
 
 type Resolver struct {
-	Object         *codegen.Object
-	Field          *codegen.Field
-	Implementation string
-	IsSingle       bool
-	IsList         bool
-	IsCreate       bool
-	IsUpdate       bool
-	IsDelete       bool
-	IsBatchCreate  bool
-	IsBatchUpdate  bool
-	IsBatchDelete  bool
-
-	// TODO move to model?
-	HasOrganizationID     bool
-	HasUserOrganizationID bool
-	HasUserID             bool
-
-	BoilerWhiteList string
-	Model           convert.Model
-	InputModel      convert.Model
+	Object                    *codegen.Object
+	Field                     *codegen.Field
+	Implementation            string
+	IsSingle                  bool
+	IsList                    bool
+	IsCreate                  bool
+	IsUpdate                  bool
+	IsDelete                  bool
+	IsBatchCreate             bool
+	IsBatchUpdate             bool
+	IsBatchDelete             bool
+	BoilerWhiteList           string
+	ResolveOrganizationID     bool
+	ResolveUserOrganizationID bool
+	ResolveUserID             bool
+	Model                     convert.Model
+	InputModel                convert.Model
 }
 
 func gqlToResolverName(base string, gqlname string) string {
 	gqlname = filepath.Base(gqlname)
 	ext := filepath.Ext(gqlname)
-
 	return filepath.Join(base, strings.TrimSuffix(gqlname, ext)+".resolvers.go")
 }
 
-func hasField(boilerTypeMap map[string]string, modelName, fieldName string) bool {
-	k := modelName + "." + fieldName
-	// fmt.Println("try to get boiler type from map with key: ", k)
-	_, ok := boilerTypeMap[k]
-
-	return ok
+func hasBoilerField(boilerFields []*boiler.BoilerField, fieldName string) bool {
+	for _, boilerField := range boilerFields {
+		if boilerField.Name == fieldName {
+			return true
+		}
+	}
+	return false
 }
 
-func enhanceResolver(r *Resolver, boilerTypeMap map[string]string, models []*convert.Model) {
+func enhanceResolver(r *Resolver, models []*convert.Model) {
 	nameOfResolver := r.Field.GoFieldName
 
 	// get model names + model convert information
@@ -284,20 +295,8 @@ func enhanceResolver(r *Resolver, boilerTypeMap map[string]string, models []*con
 	r.Model = model
 	r.InputModel = inputModel
 
-	if hasField(boilerTypeMap, r.Model.Name, "OrganizationID") {
-		r.HasOrganizationID = true
-		r.BoilerWhiteList += fmt.Sprintf(", dm.%vColumns.OrganizationID", r.Model.Name)
-	}
-	if hasField(boilerTypeMap, r.Model.Name, "UserOrganizationID") {
-		r.HasUserOrganizationID = true
-		r.BoilerWhiteList += fmt.Sprintf(", dm.%vColumns.UserOrganizationID", r.Model.Name)
-	}
-	if hasField(boilerTypeMap, r.Model.Name, "UserID") {
-		r.HasUserID = true
-		r.BoilerWhiteList += fmt.Sprintf(", dm.%vColumns.UserID", r.Model.Name)
-	}
-
 	if r.Object.Name == "Mutation" {
+
 		r.IsCreate = containsPrefixAndPartAfterThatIsSingle(nameOfResolver, "Create")
 		r.IsUpdate = containsPrefixAndPartAfterThatIsSingle(nameOfResolver, "Update")
 		r.IsDelete = containsPrefixAndPartAfterThatIsSingle(nameOfResolver, "Delete")
@@ -306,6 +305,7 @@ func enhanceResolver(r *Resolver, boilerTypeMap map[string]string, models []*con
 		r.IsBatchUpdate = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Update")
 		r.IsBatchDelete = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Delete")
 	} else if r.Object.Name == "Query" {
+
 		r.IsList = pluralizer.IsPlural(nameOfResolver)
 		r.IsSingle = !r.IsList
 	} else {
@@ -320,17 +320,15 @@ func findModel(models []*convert.Model, modelName string) convert.Model {
 
 	for _, m := range models {
 		if m.Name == modelName {
-			fmt.Println("FOUND! model for: ", modelName)
-
 			return *m
 		}
 	}
 
-	fmt.Println("Did not find corresponding model for: ", modelName)
-
 	return convert.Model{
-		Name:       modelName,
-		BoilerName: modelName,
+		Name: modelName,
+		BoilerModel: boiler.BoilerModel{
+			Name: modelName,
+		},
 	}
 }
 

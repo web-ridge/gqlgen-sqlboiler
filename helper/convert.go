@@ -11,32 +11,15 @@ import (
 	"github.com/volatiletech/sqlboiler/types"
 )
 
-func IDsToInts(ids []string) []int {
-	ints := make([]int, len(ids))
-	for _, s := range ids {
-		ints = append(ints, StringToIntID(s))
-	}
-	return ints
-}
-
-func IDsToUints(ids []string) []uint {
+func IDsToBoiler(ids []string) []uint {
 	ints := make([]uint, len(ids))
 	for _, s := range ids {
-		ints = append(ints, StringToUintID(s))
+		ints = append(ints, IDToBoiler(s))
 	}
 	return ints
 }
 
-func StringToIntID(ID string) int {
-	splitted := strings.Split(ID, "-")
-	if len(splitted) > 1 {
-		i, _ := strconv.ParseInt(splitted[1], 10, 64)
-		return int(i)
-	}
-	return 0
-}
-
-func StringToUintID(ID string) uint {
+func IDToBoiler(ID string) uint {
 	splitted := strings.Split(ID, "-")
 	if len(splitted) > 1 {
 		i, _ := strconv.ParseUint(splitted[1], 10, 64)
@@ -45,11 +28,7 @@ func StringToUintID(ID string) uint {
 	return 0
 }
 
-func IntToStringIDUnique(id int, tableName string) string {
-	return strcase.ToLowerCamel(tableName) + "-" + strconv.Itoa(id)
-}
-
-func UintToStringIDUnique(id uint, tableName string) string {
+func IDToGraphQL(id uint, tableName string) string {
 	return strcase.ToLowerCamel(tableName) + "-" + strconv.Itoa(int(id))
 }
 
@@ -228,6 +207,14 @@ func PointerIntToNullDotBool(v *int) null.Bool {
 		Valid: v != nil,
 		Bool:  *v == 1,
 	}
+}
+
+func NullDotIntToUint(v null.Int) uint {
+	return uint(v.Int)
+}
+
+func NullDotUintToUint(v null.Uint) uint {
+	return v.Uint
 }
 
 func NullDotIntIsFilled(v null.Int) bool {
