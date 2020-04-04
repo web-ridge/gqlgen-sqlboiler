@@ -77,7 +77,7 @@ const inputKey = "input"
 		{{- if .IsCreate }}
 
 			m := {{ .InputModel.Name }}ToBoiler(&input)
-			{{- $model := .Model -}}
+			{{ $model := .Model -}}
 			{{ range $field := .InputModel.Fields -}}
 				{{ if $field.IsRelation -}}
 					if input.{{ $field.Name|go }} != nil {
@@ -167,6 +167,7 @@ const inputKey = "input"
 
 		{{- if .IsUpdate }}
 			m := {{ .InputModel.Name }}ToModelM(helper.GetInputFromContext(ctx, inputKey), input)
+
 			{{ $resolver := . -}}
 			{{ $model := .Model -}}
 			{{ range $field := .InputModel.Fields -}}
