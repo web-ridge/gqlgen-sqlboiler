@@ -349,7 +349,7 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 			}
 
 			// get golang friendly fieldName because we want to check if boiler name is available
-			golangName := getgqlFieldName(name)
+			golangName := getGoFieldName(name)
 
 			// generate some booleans because these checks will be used a lot
 			isRelation := fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject
@@ -474,13 +474,13 @@ func findBoilerField(fields []*boiler.BoilerField, golangGraphQLName string, isR
 	return boiler.BoilerField{}
 }
 
-func getgqlFieldName(name string) string {
-	gqlFieldName := strcase.ToCamel(name)
+func getGoFieldName(name string) string {
+	goFieldName := strcase.ToCamel(name)
 	// in golang Id = ID
-	gqlFieldName = strings.Replace(gqlFieldName, "Id", "ID", -1)
+	goFieldName = strings.Replace(goFieldName, "Id", "ID", -1)
 	// in golang Url = URL
-	gqlFieldName = strings.Replace(gqlFieldName, "Url", "URL", -1)
-	return gqlFieldName
+	goFieldName = strings.Replace(goFieldName, "Url", "URL", -1)
+	return goFieldName
 }
 
 func getExtrasFromSchema(schema *ast.Schema) (interfaces []*Interface, enums []*Enum, scalars []string) {
@@ -735,8 +735,8 @@ func getConvertConfig(model *Model, field *Field) (cc ConvertConfig) {
 
 			}
 
-			cc.ToGraphQL = strings.Replace(cc.ToGraphQL, "VALUE", "m."+strcase.ToCamel(field.BoilerField.Name), -1)
-			cc.ToBoiler = strings.Replace(cc.ToBoiler, "VALUE", "m."+strcase.ToCamel(getgqlFieldName(field.Name)), -1)
+			cc.ToGraphQL = strings.Replace(cc.ToGraphQL, "VALUE", "m."+strcase.ToCamel(getGoFieldName(field.BoilerField.Name)), -1)
+			cc.ToBoiler = strings.Replace(cc.ToBoiler, "VALUE", "m."+strcase.ToCamel(getGoFieldName(field.Name)), -1)
 
 		} else {
 			// Make these go-friendly for the helper/convert.go package
