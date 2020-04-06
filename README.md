@@ -27,6 +27,11 @@ TODO: Crud of adding/removing relationships from many-to-many on edges
 TODO: Support more relationships inside input types  
 TODO: Do a three-way-diff merge for changes and let user choose parts of code which should not take over generated code
 
+## Requirements
+
+- Use unsigned ints for foreign keys + ids. Otherwise converts will give compile errors.
+  Unsigned ints for id's is allso recommended since it gives you twice as big id's and id's should not be negative anyway ;)
+
 ## Case
 
 You have a personal project with a very big database and a 'Laravel API'. I want to be able to generate a new Golang GraphQL API for this project in no time.

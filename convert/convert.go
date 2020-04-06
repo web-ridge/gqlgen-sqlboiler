@@ -728,7 +728,12 @@ func getConvertConfig(model *Model, field *Field) (cc ConvertConfig) {
 				cc.ToGraphQL = field.BoilerField.Relationship.Name + "IDToGraphQL(" + cc.ToGraphQL + ")"
 			}
 
-			cc.ToBoiler = fmt.Sprintf("helper.IDToBoiler(%v)", cc.ToBoiler)
+			if strings.HasPrefix(boilType, "null") {
+				cc.ToBoiler = fmt.Sprintf("helper.IDToNullBoiler(%v)", cc.ToBoiler)
+			} else {
+				cc.ToBoiler = fmt.Sprintf("helper.IDToBoiler(%v)", cc.ToBoiler)
+
+			}
 
 			cc.ToGraphQL = strings.Replace(cc.ToGraphQL, "VALUE", "m."+strcase.ToCamel(field.BoilerField.Name), -1)
 			cc.ToBoiler = strings.Replace(cc.ToBoiler, "VALUE", "m."+strcase.ToCamel(getgqlFieldName(field.Name)), -1)

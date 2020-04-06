@@ -28,6 +28,17 @@ func IDToBoiler(ID string) uint {
 	return 0
 }
 
+func IDToNullBoiler(ID string) null.Uint {
+	uintID := IDToBoiler(ID)
+	if uintID == 0 {
+		return null.NewUint(0, false)
+	}
+	return null.Uint{
+		Uint:  uintID,
+		Valid: false,
+	}
+}
+
 func IDToGraphQL(id uint, tableName string) string {
 	return strcase.ToLowerCamel(tableName) + "-" + strconv.Itoa(int(id))
 }

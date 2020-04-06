@@ -44,11 +44,11 @@
 			}	
 			r := &models.{{ .BoilerModel.Name|go }}{
 			{{ range $field := .Fields -}}
-				{{ if $field.IsID }}
+				{{ if $field.IsID -}}
 					{{- $field.BoilerField.Name|go }} : {{ $field.ConvertConfig.ToBoiler }},
-				{{ else if $field.ConvertConfig.IsCustom }}
+				{{ else if $field.ConvertConfig.IsCustom -}}
 					{{- $field.BoilerField.Name|go }} : {{ $field.ConvertConfig.ToBoiler }}(m.{{ $field.Name|go }}),
-				{{ else }}	
+				{{ else -}}	
 					{{- $field.BoilerField.Name|go }}: m.{{ $field.Name|go }},
 				{{ end }}
 			{{- end -}}
@@ -76,7 +76,7 @@
 				switch key {
 					{{ range $field := .Fields -}}
 					case "{{ $field.Name }}":
-						{{ if $field.IsID }}
+						{{ if $field.IsID -}}
 							modelM[models.{{ $model.BoilerModel.Name|go }}Columns.{{- $field.BoilerField.Name|go }}] = {{ $field.ConvertConfig.ToBoiler }}
 						{{ else if $field.ConvertConfig.IsCustom -}}
 							modelM[models.{{ $model.BoilerModel.Name|go }}Columns.{{- $field.BoilerField.Name|go }}] = {{ $field.ConvertConfig.ToBoiler }}(m.{{ $field.Name|go }})
