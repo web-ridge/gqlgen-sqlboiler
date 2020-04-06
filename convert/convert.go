@@ -735,8 +735,8 @@ func getConvertConfig(model *Model, field *Field) (cc ConvertConfig) {
 
 			}
 
-			cc.ToGraphQL = strings.Replace(cc.ToGraphQL, "VALUE", "m."+strcase.ToCamel(getGoFieldName(field.BoilerField.Name)), -1)
-			cc.ToBoiler = strings.Replace(cc.ToBoiler, "VALUE", "m."+strcase.ToCamel(getGoFieldName(field.Name)), -1)
+			cc.ToGraphQL = strings.Replace(cc.ToGraphQL, "VALUE", "m."+getGoFieldName(field.BoilerField.Name), -1)
+			cc.ToBoiler = strings.Replace(cc.ToBoiler, "VALUE", "m."+getGoFieldName(field.Name), -1)
 
 		} else {
 			// Make these go-friendly for the helper/convert.go package
