@@ -52,11 +52,14 @@ type Model struct {
 	PluralName            string
 	BoilerModel           boiler.BoilerModel
 	Fields                []*Field
+	IsNormal              bool
 	IsInput               bool
 	IsCreateInput         bool
 	IsUpdateInput         bool
 	IsNormalInput         bool
 	IsPayload             bool
+	IsWhere               bool
+	IsFilter              bool
 	PreloadMap            map[string]ColumnSetting
 	HasOrganizationID     bool
 	HasUserOrganizationID bool
@@ -373,7 +376,7 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 			}
 
 			if boilerField.Name == "" {
-				if m.IsPayload {
+				if m.IsPayload || m.IsFilter || m.IsWhere {
 				} else {
 					fmt.Println("[WARN] boiler name not available for ", m.Name+"."+golangName)
 				}
@@ -393,6 +396,7 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 			}
 			field.ConvertConfig = getConvertConfig(m, field)
 			m.Fields = append(m.Fields, field)
+
 		}
 	}
 
@@ -542,21 +546,16 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*boiler.BoilerModel)
 				// We will try to find a corresponding boiler struct
 				boilerModel := boiler.FindBoilerModel(boilerModels, getBaseModelFromName(modelName))
 
+				isInput := strings.HasSuffix(modelName, "Input") && modelName != "Input"
+				isCreateInput := strings.HasSuffix(modelName, "CreateInput") && modelName != "CreateInput"
+				isUpdateInput := strings.HasSuffix(modelName, "UpdateInput") && modelName != "UpdateInput"
+				isFilter := strings.HasSuffix(modelName, "Filter") && modelName != "Filter"
+				isWhere := strings.HasSuffix(modelName, "Where") && modelName != "Where"
+				isPayload := strings.HasSuffix(modelName, "Payload") && modelName != "Payload"
+
 				// if no boiler model is found
 				if boilerModel.Name == "" {
-					if strings.HasSuffix(modelName, "Filter") && modelName != "Filter" {
-						// silent continue
-						continue
-					}
-					if strings.HasSuffix(modelName, "Payload") && modelName != "Payload" {
-						// silent continue
-						continue
-					}
-					if strings.HasSuffix(modelName, "Input") && modelName != "Input" {
-						// silent continue
-						continue
-					}
-					if strings.HasSuffix(modelName, "Where") && modelName != "Where" {
+					if isInput || isWhere || isFilter || isPayload {
 						// silent continue
 						continue
 					}
@@ -565,9 +564,6 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*boiler.BoilerModel)
 					continue
 				}
 
-				isInput := strings.HasSuffix(modelName, "Input")
-				isCreateInput := strings.HasSuffix(modelName, "CreateInput")
-				isUpdateInput := strings.HasSuffix(modelName, "UpdateInput")
 				isNormalInput := isInput && !isCreateInput && !isUpdateInput
 
 				m := &Model{
@@ -576,10 +572,13 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*boiler.BoilerModel)
 					PluralName:    pluralizer.Plural(modelName),
 					BoilerModel:   boilerModel,
 					IsInput:       isInput,
+					IsFilter:      isFilter,
+					IsWhere:       isWhere,
 					IsUpdateInput: isUpdateInput,
 					IsCreateInput: isCreateInput,
 					IsNormalInput: isNormalInput,
-					IsPayload:     strings.HasSuffix(modelName, "Payload"),
+					IsPayload:     isPayload,
+					IsNormal:      !isInput && !isWhere && !isFilter && !isPayload,
 				}
 
 				for _, implementor := range schema.GetImplements(schemaType) {
@@ -595,6 +594,7 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*boiler.BoilerModel)
 }
 
 func isPreloadableModel(m *Model) bool {
+	// nolint: gosimple -> keep it more readable
 	if m.IsInput {
 		return false
 	}
@@ -674,10 +674,21 @@ func enhancePreloadMapWithNestedRelations(preloadMap map[string]ColumnSetting, p
 // The relationship is defined in the normal model but not in the input, where etc structs
 // So just find the normal model and get the relationship type :)
 func getBaseModelFromName(v string) string {
-	v = strings.TrimSuffix(v, "CreateInput")
-	v = strings.TrimSuffix(v, "UpdateInput")
-	v = strings.TrimSuffix(v, "Input")
-	v = strings.TrimSuffix(v, "Payload")
+	v = safeTrim(v, "CreateInput")
+	v = safeTrim(v, "UpdateInput")
+	v = safeTrim(v, "Input")
+	v = safeTrim(v, "Payload")
+	v = safeTrim(v, "Where")
+	v = safeTrim(v, "Filter")
+	return v
+}
+
+func safeTrim(v string, trimSuffix string) string {
+	// let user still choose Payload as model names
+	// not recommended but could be done theoretically :-)
+	if v != trimSuffix {
+		v = strings.TrimSuffix(v, trimSuffix)
+	}
 	return v
 }
 

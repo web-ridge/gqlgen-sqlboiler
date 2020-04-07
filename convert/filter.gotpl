@@ -21,6 +21,29 @@
 {{ reserveImport  $.BackendModelsPath }}
 {{ reserveImport  $.FrontendModelsPath }}
 
-// TODO: generate filter structs
+
+{{ range $model := .Models }}
+	{{with .Description }} {{.|prefixLines "// "}} {{end}}
+	{{- if .IsFilter -}}
+		func {{ .Name|go }}SearchToBoilerMods(m *graphql_models.{{ .Name|go }}) []qm.QueryMod {
+			{{ range $field := .Fields }}
+				// TODO: search for {{ $field.Name|go }}
+			{{- end }}
+			return []qm.QueryMod{}
+		}
+		func {{ .Name|go }}ToBoilerMods(m *graphql_models.{{ .Name|go }}) []qm.QueryMod {
+			return []qm.QueryMod{}
+		}
+	{{ end }}
+	{{- if .IsWhere  -}}
+		func {{ .Name|go }}ToBoilerMods(m *graphql_models.{{ .Name|go }}) []qm.QueryMod {
+			{{ range $field := .Fields }}
+				// TODO: search for {{ $field.Name|go }}
+			{{- end }}
+			return []qm.QueryMod{}
+		}
+	{{ end }}
 
 
+
+{{- end }}

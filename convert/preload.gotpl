@@ -42,8 +42,7 @@
 	}
 	{{ end }}
 
-	{{- if not .IsInput -}}
-	{{- if not .IsPayload -}}
+	{{- if .IsNormal  -}}
 	var {{ $model.Name|go }}PreloadMap = map[string]helper.ColumnSetting{
 		{{ range $key, $value := $model.PreloadMap }}
 		 	"{{$key}}": helper.ColumnSetting{
@@ -52,7 +51,6 @@
 			 },
 		{{- end }}
 	}
-	{{ end }}
 	{{ end }}
 
 {{- end }}

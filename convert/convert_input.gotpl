@@ -46,6 +46,7 @@
 			{{ range $field := .Fields -}}
 				{{ if $field.IsID -}}
 					{{- $field.BoilerField.Name|go }} : {{ $field.ConvertConfig.ToBoiler }},
+				{{ else if $field.IsRelation -}}
 				{{ else if $field.ConvertConfig.IsCustom -}}
 					{{- $field.BoilerField.Name|go }} : {{ $field.ConvertConfig.ToBoiler }}(m.{{ $field.Name|go }}),
 				{{ else -}}	
@@ -55,17 +56,6 @@
 			}
 			return r
 		}
-
-		{{ range $field := .Fields -}}
-			{{ if  $field.IsRelation -}}
-				{{ if  not $field.IsRequired -}}
-					func {{ $model.Name|go }}ModelMWithWith{{ .Name|go }}(modelM map[string]interface{}, id {{ $field.BoilerField.Type }}) map[string]interface{} {
-						modelM[models.{{ $model.BoilerModel.Name|go }}Columns.{{- $field.BoilerField.Name|go }}ID] = id
-						return modelM
-					}
-				{{ end -}}
-			{{ end -}}
-		{{ end -}}
 
 		func {{ .Name|go }}ToModelM(
 			input map[string]interface{},
@@ -78,6 +68,7 @@
 					case "{{ $field.Name }}":
 						{{ if $field.IsID -}}
 							modelM[models.{{ $model.BoilerModel.Name|go }}Columns.{{- $field.BoilerField.Name|go }}] = {{ $field.ConvertConfig.ToBoiler }}
+						{{ else if $field.IsRelation -}}
 						{{ else if $field.ConvertConfig.IsCustom -}}
 							modelM[models.{{ $model.BoilerModel.Name|go }}Columns.{{- $field.BoilerField.Name|go }}] = {{ $field.ConvertConfig.ToBoiler }}(m.{{ $field.Name|go }})
 						{{ else -}}	

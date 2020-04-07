@@ -33,8 +33,7 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
-	{{- if not .IsInput -}}
-	{{- if not .IsPayload -}}
+	{{- if .IsNormal  -}}
 
 		func {{ .Name|go }}WithUintID(id uint) *graphql_models.{{ .Name|go }} {
 			return &graphql_models.{{ .Name|go }}{
@@ -129,6 +128,5 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 				
 			{{- end -}}
 		{{- end }}
-	{{- end }}
-	{{- end }}
+	{{ end }}
 {{- end }}
