@@ -19,7 +19,7 @@ DONE: Fetch sqlboiler preloads from graphql context
 DONE: Support for foreign keys named differently than their corresponding model  
 DONE: New plugin which generates CRUD resolvers based on mutations in graphql scheme  
 DONE: Support one-to-one relationships inside input types
-TODO: Generate code which implements the generated where and search filters  
+90%: Generate code which implements the generated where and search filters  
 TODO: Batch create/update/delete generation in resolvers  
 TODO: Support gqlgen multiple .graphql files  
 TODO: Edges/connections  
