@@ -24,13 +24,22 @@
 {{ reserveImport "github.com/volatiletech/sqlboiler/queries/qmhelper" }}
 
 
-const startsWithValue = "'?%'"
-const endsWithValue = "'%?'"
-const containsValue = "'%v%'"
-const isLike = " LIKE "
-const in = " IN (?)"
-const notIn = " NOT IN (?)"
+const regexSign = `'`
+const percentSign = `%`
 
+func startsWithValue(v string) string { return regexSign + v + percentSign + regexSign }
+func endsWithValue(v string) string   { return regexSign + percentSign + v + regexSign }
+func containsValue(v string) string   { return regexSign + percentSign + v + percentSign + regexSign }
+
+const isLike = " LIKE ?"
+const in = " IN ?"
+const notIn = " NOT IN ?"
+
+func appendSubQuery(queryMods []qm.QueryMod, q *queries.Query) []qm.QueryMod {
+	qs, args := queries.BuildQuery(q)
+	qsClean := strings.TrimSuffix(qs, ";")
+	return append(queryMods, qm.Where(fmt.Sprintf("EXISTS(%v)", qsClean), args...))
+}
 
 func IDFilterToMods(m *graphql_models.IDFilter, column string) []qm.QueryMod {
 	if m == nil {
@@ -38,10 +47,10 @@ func IDFilterToMods(m *graphql_models.IDFilter, column string) []qm.QueryMod {
 	}
 	var queryMods []qm.QueryMod
 	if m.EqualTo != nil {
-		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, *m.EqualTo))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, helper.IDToBoiler(*m.EqualTo)))
 	}
 	if m.NotEqualTo != nil {
-		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.NEQ, *m.NotEqualTo))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.NEQ, helper.IDToBoiler(*m.NotEqualTo)))
 	}
 	if len(m.In) > 0 {
 		queryMods = append(queryMods, qm.WhereIn(column + in, helper.IDsToBoilerInterfaces(m.In)...))
@@ -69,23 +78,23 @@ func StringFilterToMods(m *graphql_models.StringFilter, column string) []qm.Quer
 
 	lowerColumn := "LOWER("+column+")"
 	if m.StartWith != nil {
-		queryMods = append(queryMods, qm.Where(lowerColumn+isLike+startsWithValue, strings.ToLower(*m.StartWith)))
+		queryMods = append(queryMods, qm.Where(lowerColumn+isLike, startsWithValue(strings.ToLower(*m.StartWith))))
 	}
 	if m.EndWith != nil {
-		queryMods = append(queryMods, qm.Where(lowerColumn+isLike+endsWithValue, strings.ToLower(*m.EndWith)))
+		queryMods = append(queryMods, qm.Where(lowerColumn+isLike, endsWithValue(strings.ToLower(*m.EndWith))))
 	}
 	if m.Contain != nil {
-		queryMods = append(queryMods, qm.Where(lowerColumn+isLike+containsValue, strings.ToLower(*m.Contain)))
+		queryMods = append(queryMods, qm.Where(lowerColumn+isLike, containsValue(strings.ToLower(*m.Contain))))
 	}
 
 	if m.StartWithStrict != nil {
-		queryMods = append(queryMods, qm.Where(column+isLike+startsWithValue, *m.StartWithStrict))
+		queryMods = append(queryMods, qm.Where(column+isLike, startsWithValue(*m.StartWithStrict)))
 	}
 	if m.EndWithStrict != nil {
-		queryMods = append(queryMods, qm.Where(column+isLike+endsWithValue, *m.EndWithStrict))
+		queryMods = append(queryMods, qm.Where(column+isLike, endsWithValue(*m.EndWithStrict)))
 	}
 	if m.ContainStrict != nil {
-		queryMods = append(queryMods, qm.Where(column+isLike+containsValue, *m.ContainStrict))
+		queryMods = append(queryMods, qm.Where(column+isLike, containsValue(*m.ContainStrict)))
 	}
 
 	if len(m.In) > 0 {
@@ -169,14 +178,12 @@ func IntFilterToMods(m *graphql_models.IntFilter, column string) []qm.QueryMod {
 				queryMods = append(queryMods, IDFilterToMods(m.ID, foreignColumn)...)
 			}
 		
-			subQueryWhere := {{ .Name|go }}ToMods(m, !hasForeignKeyInRoot)
-			if len(subQueryWhere) > 0 {
-				subModsWithOne := append([]qm.QueryMod{qm.Select("1")}, subQueryWhere...)
-				subQuery := models.{{.BoilerModel.PluralName}}(subModsWithOne...)
-				qs, args := queries.BuildQuery(subQuery.Query)
-				queryMods = append(queryMods, qm.Where(fmt.Sprintf("EXIST(%v)", qs), args...))
+			subQueryMods := {{ .Name|go }}ToMods(m, !hasForeignKeyInRoot)
+			if len(subQueryMods) > 0 {
+				subQuery := models.{{.BoilerModel.PluralName}}(append(subQueryMods, qm.Select("1"))...)
+				queryMods = appendSubQuery(queryMods, subQuery.Query)
 			}
-			return nil
+			return queryMods
 		} 
 		
 		func {{ .Name|go }}ToMods(m *graphql_models.{{ .Name|go }}, withPrimaryID bool) []qm.QueryMod {
@@ -194,9 +201,13 @@ func IntFilterToMods(m *graphql_models.IntFilter, column string) []qm.QueryMod {
 						queryMods = append(queryMods, {{ $field.Type|go }}SubqueryToMods(m.{{ $field.Name|go }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)
 					{{- end }}
 				{{-  else if $field.IsOr  }}
-					queryMods = append(queryMods, qm.Or2(qm.Expr({{ $field.Type|go }}ToMods(m.Or, true)...)))
+					if m.Or != nil {
+						queryMods = append(queryMods, qm.Or2(qm.Expr({{ $field.Type|go }}ToMods(m.Or, true)...)))
+					}
 				{{-  else if $field.IsAnd  }}
-					queryMods = append(queryMods, qm.Expr({{ $field.Type|go }}ToMods(m.And, true)...))
+					if m.And != nil {
+						queryMods = append(queryMods, qm.Expr({{ $field.Type|go }}ToMods(m.And, true)...))
+					}
 				{{- else }}
 					{{- if  $field.IsPrimaryID }}
 					if withPrimaryID {
