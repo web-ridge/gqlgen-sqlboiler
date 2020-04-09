@@ -11,6 +11,18 @@ import (
 	"github.com/volatiletech/sqlboiler/types"
 )
 
+type RemovedID struct {
+	ID uint
+}
+
+func RemovedIDsToUint(removedIds []RemovedID) []uint {
+	uintIDs := make([]uint, len(removedIds))
+	for index, id := range removedIds {
+		uintIDs[index] = id.ID
+	}
+	return uintIDs
+}
+
 func IntsToInterfaces(ints []int) []interface{} {
 	interfaces := make([]interface{}, len(ints))
 	for index, number := range ints {
@@ -58,6 +70,14 @@ func IDToNullBoiler(ID string) null.Uint {
 
 func IDToGraphQL(id uint, tableName string) string {
 	return strcase.ToLowerCamel(tableName) + "-" + strconv.Itoa(int(id))
+}
+
+func IDsToGraphQL(ids []uint, tableName string) []string {
+	stringIDs := make([]string, len(ids))
+	for index, id := range ids {
+		stringIDs[index] = IDToGraphQL(id, tableName)
+	}
+	return stringIDs
 }
 
 func NullDotBoolToPointerBool(v null.Bool) *bool {

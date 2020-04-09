@@ -267,26 +267,26 @@ const inputKey = "input"
 		{{- end -}}
 
 		{{- if .IsBatchUpdate }}
-			var updateMods []qm.QueryMod
+			var mods []qm.QueryMod
 			{{- if .Model.BoilerModel.HasOrganizationID }}
-				updateMods = append(updateMods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
+				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
 					auth.OrganizationIDFromContext(ctx),
 				))
 			{{- end }}
 			{{- if .Model.BoilerModel.HasUserOrganizationID }}
-				updateMods = append(updateMods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(
+				mods = append(mods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(
 					auth.OrganizationIDFromContext(ctx),
 				))
 			{{- end }}
 			{{- if .Model.BoilerModel.HasUserID }}
-				updateMods = append(updateMods, dm.{{ .Model.Name }}Where.UserID.EQ(
+				mods = append(mods, dm.{{ .Model.Name }}Where.UserID.EQ(
 					auth.UserIDFromContext(ctx),
 				))
 			{{- end }}
-			updateMods = append(updateMods, {{.Model.Name}}FilterToMods(filter)...)
+			mods = append(mods, {{.Model.Name}}FilterToMods(filter)...)
 
 			m := {{ .InputModel.Name }}ToModelM(helper.GetInputFromContext(ctx, inputKey), input)
-			if _, err := dm.{{ .Model.PluralName }}(updateMods...).UpdateAll(ctx, r.db, m); err != nil {
+			if _, err := dm.{{ .Model.PluralName }}(mods...).UpdateAll(ctx, r.db, m); err != nil {
 				return nil, err
 			}
 
@@ -296,8 +296,39 @@ const inputKey = "input"
 		{{- end -}}
 
 		{{- if .IsBatchDelete }}
-		// TODO: Implement batch delete
-		return nil, nil
+			var mods []qm.QueryMod
+			{{- if .Model.BoilerModel.HasOrganizationID }}
+				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
+					auth.OrganizationIDFromContext(ctx),
+				))
+			{{- end }}
+			{{- if .Model.BoilerModel.HasUserOrganizationID }}
+				mods = append(mods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(
+					auth.OrganizationIDFromContext(ctx),
+				))
+			{{- end }}
+			{{- if .Model.BoilerModel.HasUserID }}
+				mods = append(mods, dm.{{ .Model.Name }}Where.UserID.EQ(
+					auth.UserIDFromContext(ctx),
+				))
+			{{- end }}
+			mods = append(mods, {{.Model.Name}}FilterToMods(filter)...)
+			mods = append(mods, qm.Select(dm.{{ .Model.Name }}Columns.ID))
+			mods = append(mods, qm.From(dm.TableNames.{{ .Model.Name }}))
+
+			var IDsToRemove []helper.RemovedID
+			if err := dm.{{ .Model.PluralName }}(mods...).Bind(ctx, r.db, IDsToRemove); err != nil {
+				return nil, err
+			}
+
+			boilerIDs := helper.RemovedIDsToUint(IDsToRemove)
+			if _, err := dm.{{ .Model.PluralName }}(dm.{{ .Model.Name }}Where.ID.IN(boilerIDs)).DeleteAll(ctx, r.db); err != nil {
+				return nil, err
+			}
+
+			return &fm.{{ .Model.PluralName }}DeletePayload{
+				Ids: helper.IDsToGraphQL(boilerIDs, dm.TableNames.{{ .Model.Name }}),
+			}, nil
 
 		{{- end }}
 	}

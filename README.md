@@ -19,7 +19,9 @@ DONE: Support for foreign keys named differently than their corresponding model
 DONE: New plugin which generates CRUD resolvers based on mutations in graphql scheme  
 DONE: Support one-to-one relationships inside input types
 DONE: Generate code which implements the generated where and search filters  
-TODO: Batch create/update/delete generation in resolvers  
+DONE: Batch update/delete generation in resolvers (Not tested yet)
+
+TODO: Batch create generation in resolvers  
 TODO: Support gqlgen multiple .graphql files  
 TODO: Edges/connections  
 TODO: Crud of adding/removing relationships from many-to-many on edges
