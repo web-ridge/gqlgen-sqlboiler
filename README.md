@@ -8,7 +8,7 @@ To make this program a success tight coupling (same naming) between your databas
    e.g. `sqlboiler mysql`
 2. (optional, but recommended) Generate GrapQL scheme from sqlboiler structs: https://github.com/web-ridge/sqlboiler-graphql-schema  
    e.g. `go run github.com/web-ridge/sqlboiler-graphql-schema --output=../schema.graphql`
-3. Install: https://github.com/99designs/gqlgen  
+3. Install: https://github.com/99designs/gqlgen
 4. Generate gqlgen structs + converts between gqlgen and sqlboiler with this program  
    e.g. `go run convert_plugin.go` for file contents of that program see bottom of this readme
 
@@ -18,7 +18,7 @@ DONE: Fetch sqlboiler preloads from graphql context
 DONE: Support for foreign keys named differently than their corresponding model  
 DONE: New plugin which generates CRUD resolvers based on mutations in graphql scheme  
 DONE: Support one-to-one relationships inside input types
-90%: Generate code which implements the generated where and search filters  
+DONE: Generate code which implements the generated where and search filters  
 TODO: Batch create/update/delete generation in resolvers  
 TODO: Support gqlgen multiple .graphql files  
 TODO: Edges/connections  
