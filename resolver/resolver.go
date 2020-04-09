@@ -109,7 +109,11 @@ func (m *Plugin) generateSingleFile(data *codegen.Data, models []*convert.Model,
 				Implementation: `panic("not implemented yet")`,
 			}
 			enhanceResolver(resolver, models)
-			file.Resolvers = append(file.Resolvers, resolver)
+			if resolver.Model.BoilerModel.Name != "" {
+				file.Resolvers = append(file.Resolvers, resolver)
+			} else {
+				fmt.Println("Skipping resolver since no model found: ", resolver.Object.Name, resolver.Field.GoFieldName)
+			}
 		}
 	}
 
@@ -324,12 +328,7 @@ func findModel(models []*convert.Model, modelName string) convert.Model {
 		}
 	}
 
-	return convert.Model{
-		Name: modelName,
-		BoilerModel: boiler.BoilerModel{
-			Name: modelName,
-		},
-	}
+	return convert.Model{}
 }
 
 var InputTypes = []string{"Create", "Update", "Delete"}

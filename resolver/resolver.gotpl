@@ -267,9 +267,32 @@ const inputKey = "input"
 		{{- end -}}
 
 		{{- if .IsBatchUpdate }}
-		// TODO: Implement input filters / search
-		return nil, nil
+			var updateMods []qm.QueryMod
+			{{- if .Model.BoilerModel.HasOrganizationID }}
+				updateMods = append(updateMods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
+					auth.OrganizationIDFromContext(ctx),
+				))
+			{{- end }}
+			{{- if .Model.BoilerModel.HasUserOrganizationID }}
+				updateMods = append(updateMods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(
+					auth.OrganizationIDFromContext(ctx),
+				))
+			{{- end }}
+			{{- if .Model.BoilerModel.HasUserID }}
+				updateMods = append(updateMods, dm.{{ .Model.Name }}Where.UserID.EQ(
+					auth.UserIDFromContext(ctx),
+				))
+			{{- end }}
+			updateMods = append(updateMods, {{.Model.Name}}FilterToMods(filter)...)
 
+			m := {{ .InputModel.Name }}ToModelM(helper.GetInputFromContext(ctx, inputKey), input)
+			if _, err := dm.{{ .Model.PluralName }}(updateMods...).UpdateAll(ctx, r.db, m); err != nil {
+				return nil, err
+			}
+
+			return &fm.{{ .Model.PluralName|go }}UpdatePayload{
+				Ok: true,
+			}, nil
 		{{- end -}}
 
 		{{- if .IsBatchDelete }}
