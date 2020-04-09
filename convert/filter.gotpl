@@ -24,12 +24,12 @@
 {{ reserveImport "github.com/volatiletech/sqlboiler/queries/qmhelper" }}
 
 
-const regexSign = `'`
+// const regexSign = `'`
 const percentSign = `%`
 
-func startsWithValue(v string) string { return regexSign + v + percentSign + regexSign }
-func endsWithValue(v string) string   { return regexSign + percentSign + v + regexSign }
-func containsValue(v string) string   { return regexSign + percentSign + v + percentSign + regexSign }
+func startsWithValue(v string) string { return   v + percentSign   }
+func endsWithValue(v string) string   { return   percentSign + v  }
+func containsValue(v string) string   { return   percentSign + v + percentSign   }
 
 const isLike = " LIKE ?"
 const in = " IN ?"
