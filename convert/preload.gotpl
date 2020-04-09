@@ -44,7 +44,7 @@
 
 	{{- if .IsNormal  -}}
 	var {{ $model.Name|go }}PreloadMap = map[string]helper.ColumnSetting{
-		{{ range $key, $value := $model.PreloadMap }}
+		{{- range $key, $value := $model.PreloadMap }}
 		 	"{{$key}}": helper.ColumnSetting{
 				 Name: {{$value.Name}},
 				 IDAvailable: {{$value.IDAvailable}},

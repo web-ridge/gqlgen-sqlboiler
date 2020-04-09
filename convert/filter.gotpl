@@ -17,30 +17,197 @@
 {{ reserveImport "github.com/99designs/gqlgen/graphql" }}
 {{ reserveImport "github.com/99designs/gqlgen/graphql/introspection" }}
 {{ reserveImport "github.com/volatiletech/sqlboiler/queries/qm" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/queries" }}
 {{ reserveImport "database/sql" }}
 {{ reserveImport  $.BackendModelsPath }}
 {{ reserveImport  $.FrontendModelsPath }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/queries/qmhelper" }}
 
+
+const startsWithValue = "'?%'"
+const endsWithValue = "'%?'"
+const containsValue = "'%v%'"
+const isLike = " LIKE "
+const in = " IN (?)"
+const notIn = " NOT IN (?)"
+
+
+func IDFilterToMods(m *graphql_models.IDFilter, column string) []qm.QueryMod {
+	if m == nil {
+		return nil
+	}
+	var queryMods []qm.QueryMod
+	if m.EqualTo != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, *m.EqualTo))
+	}
+	if m.NotEqualTo != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.NEQ, *m.NotEqualTo))
+	}
+	if len(m.In) > 0 {
+		queryMods = append(queryMods, qm.WhereIn(column + in, helper.IDsToBoilerInterfaces(m.In)...))
+	}
+	if len(m.NotIn) > 0 {
+		queryMods = append(queryMods, qm.WhereIn(column + notIn, helper.IDsToBoilerInterfaces(m.NotIn)...))
+	}
+	return queryMods
+}
+
+
+
+func StringFilterToMods(m *graphql_models.StringFilter, column string) []qm.QueryMod {
+	if m == nil {
+		return nil
+	}
+
+	var queryMods []qm.QueryMod
+	if m.EqualTo != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, *m.EqualTo))
+	}
+	if m.NotEqualTo != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.NEQ, *m.NotEqualTo))
+	}
+
+	lowerColumn := "LOWER("+column+")"
+	if m.StartWith != nil {
+		queryMods = append(queryMods, qm.Where(lowerColumn+isLike+startsWithValue, strings.ToLower(*m.StartWith)))
+	}
+	if m.EndWith != nil {
+		queryMods = append(queryMods, qm.Where(lowerColumn+isLike+endsWithValue, strings.ToLower(*m.EndWith)))
+	}
+	if m.Contain != nil {
+		queryMods = append(queryMods, qm.Where(lowerColumn+isLike+containsValue, strings.ToLower(*m.Contain)))
+	}
+
+	if m.StartWithStrict != nil {
+		queryMods = append(queryMods, qm.Where(column+isLike+startsWithValue, *m.StartWithStrict))
+	}
+	if m.EndWithStrict != nil {
+		queryMods = append(queryMods, qm.Where(column+isLike+endsWithValue, *m.EndWithStrict))
+	}
+	if m.ContainStrict != nil {
+		queryMods = append(queryMods, qm.Where(column+isLike+containsValue, *m.ContainStrict))
+	}
+
+	if len(m.In) > 0 {
+		queryMods = append(queryMods, qm.WhereIn(column + in, helper.IDsToBoilerInterfaces(m.In)...))
+	}
+	if len(m.NotIn) > 0 {
+		queryMods = append(queryMods, qm.WhereIn(column + notIn, helper.IDsToBoilerInterfaces(m.NotIn)...))
+	}
+	
+	return queryMods
+}
+
+
+func IntFilterToMods(m *graphql_models.IntFilter, column string) []qm.QueryMod {
+	if m == nil {
+		return nil
+	}
+	var queryMods []qm.QueryMod
+	if m.EqualTo != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, *m.EqualTo))
+	}
+	if m.NotEqualTo != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.NEQ, *m.NotEqualTo))
+	}
+	if m.LessThan != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.LT, *m.LessThan))
+	}
+	if m.MoreThan != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.GT, *m.MoreThan))
+	}
+	if m.LessThanOrEqualTo != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.LTE, *m.LessThanOrEqualTo))
+	}
+	if m.MoreThanOrEqualTo != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.GTE, *m.MoreThanOrEqualTo))
+	}
+	if len(m.In) > 0 {
+		queryMods = append(queryMods, qm.WhereIn(column + in, helper.IntsToInterfaces(m.In)...))
+	}
+	if len(m.NotIn) > 0 {
+		queryMods = append(queryMods, qm.WhereIn(column + notIn, helper.IntsToInterfaces(m.NotIn)...))
+	}
+	return queryMods
+}
 
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 	{{- if .IsFilter -}}
-		func {{ .Name|go }}SearchToBoilerMods(m *graphql_models.{{ .Name|go }}) []qm.QueryMod {
-			{{ range $field := .Fields }}
-				// TODO: search for {{ $field.Name|go }}
-			{{- end }}
-			return []qm.QueryMod{}
+		func {{ .Name|go }}ToMods(m *graphql_models.{{ .Name|go }}) []qm.QueryMod {
+			if m == nil {
+				return nil
+			}
+			if m.Search != nil || m.Where != nil {
+				var queryMods []qm.QueryMod
+				queryMods  = append(queryMods, {{ .BoilerModel.Name|go }}SearchToMods(m.Search)...)
+				queryMods  = append(queryMods, {{ .BoilerModel.Name|go }}WhereToMods(m.Where, true)...)
+				if len(queryMods) > 0 {
+					return []qm.QueryMod{
+						qm.Expr(queryMods...),
+					}
+				}
+			}
+			return nil
 		}
-		func {{ .Name|go }}ToBoilerMods(m *graphql_models.{{ .Name|go }}) []qm.QueryMod {
-			return []qm.QueryMod{}
+		func {{ .BoilerModel.Name|go }}SearchToMods(search *string) []qm.QueryMod {
+			// TODO: implement your own custom search here
+			return nil
 		}
 	{{ end }}
 	{{- if .IsWhere  -}}
-		func {{ .Name|go }}ToBoilerMods(m *graphql_models.{{ .Name|go }}) []qm.QueryMod {
+		func {{ .Name|go }}SubqueryToMods(m *graphql_models.{{ .Name|go }}, foreignColumn string) []qm.QueryMod {
+			if m == nil {
+				return nil
+			}
+			var queryMods []qm.QueryMod
+			queryMods = append(queryMods)
+
+			// if foreign key exist so we can filter on ID in the root table instead of subquery
+			hasForeignKeyInRoot := foreignColumn != ""
+			if hasForeignKeyInRoot {
+				queryMods = append(queryMods, IDFilterToMods(m.ID, foreignColumn)...)
+			}
+		
+			subQueryWhere := {{ .Name|go }}ToMods(m, !hasForeignKeyInRoot)
+			if len(subQueryWhere) > 0 {
+				subModsWithOne := append([]qm.QueryMod{qm.Select("1")}, subQueryWhere...)
+				subQuery := models.{{.BoilerModel.PluralName}}(subModsWithOne...)
+				qs, args := queries.BuildQuery(subQuery.Query)
+				queryMods = append(queryMods, qm.Where(fmt.Sprintf("EXIST(%v)", qs), args...))
+			}
+			return nil
+		} 
+		
+		func {{ .Name|go }}ToMods(m *graphql_models.{{ .Name|go }}, withPrimaryID bool) []qm.QueryMod {
+			if m == nil {
+				return nil
+			}
+			var queryMods []qm.QueryMod
+	
+			{{ $model := . }}
 			{{ range $field := .Fields }}
-				// TODO: search for {{ $field.Name|go }}
-			{{- end }}
-			return []qm.QueryMod{}
+				{{-  if and $field.IsRelation $field.BoilerField.IsRelation }}
+					{{- if  $field.IsPlural }}
+						queryMods = append(queryMods, {{ $field.Type|go }}SubqueryToMods(m.{{ $field.Name|go }}, "")...)
+					{{- else }}
+						queryMods = append(queryMods, {{ $field.Type|go }}SubqueryToMods(m.{{ $field.Name|go }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)
+					{{- end }}
+				{{-  else if $field.IsOr  }}
+					queryMods = append(queryMods, qm.Or2(qm.Expr({{ $field.Type|go }}ToMods(m.Or, true)...)))
+				{{-  else if $field.IsAnd  }}
+					queryMods = append(queryMods, qm.Expr({{ $field.Type|go }}ToMods(m.And, true)...))
+				{{- else }}
+					{{- if  $field.IsPrimaryID }}
+					if withPrimaryID {
+						queryMods = append(queryMods, {{ $field.Type|go }}ToMods(m.{{ $field.Name|go }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)
+					}
+					{{- else }}
+						queryMods = append(queryMods, {{ $field.Type|go }}ToMods(m.{{ $field.Name|go }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)					
+					{{- end }}
+				{{- end -}}
+			{{ end }}
+			return queryMods
 		}
 	{{ end }}
 

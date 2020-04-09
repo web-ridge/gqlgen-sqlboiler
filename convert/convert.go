@@ -91,6 +91,8 @@ type Field struct {
 	BoilerField boiler.BoilerField
 	// graphql relation ship can be found here
 	Relationship *Model
+	IsOr         bool
+	IsAnd        bool
 
 	// Some stuff
 	Description  string
@@ -370,6 +372,9 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 					// ignore
 				} else if pluralizer.IsPlural(name) {
 					// ignore
+				} else if (m.IsFilter || m.IsWhere) && (name == "and" || name == "or" || name == "search" ||
+					name == "where") {
+					// ignore
 				} else {
 					fmt.Println("[WARN] boiler type not available for ", name)
 				}
@@ -383,11 +388,13 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 			}
 			field := &Field{
 				Name:         name,
-				Type:         typ.String(),
+				Type:         getShortType(typ.String()),
 				BoilerField:  boilerField,
 				IsID:         isID,
 				IsPrimaryID:  isPrimaryID,
 				IsRelation:   isRelation,
+				IsOr:         name == "or",
+				IsAnd:        name == "and",
 				IsPlural:     pluralizer.IsPlural(name),
 				PluralName:   pluralizer.Plural(name),
 				OriginalType: typ,
@@ -408,6 +415,18 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 			f.Relationship = findModel(models, f.BoilerField.Relationship.Name)
 		}
 	}
+}
+
+func getShortType(longType string) string {
+	//*gitlab.com/decicify/app/backend/graphql_models.StringFilter
+
+	splittedBySlash := strings.Split(longType, "/")
+	lastPart := splittedBySlash[len(splittedBySlash)-1]
+	splitted := strings.Split(lastPart, ".")
+	if len(splitted) > 1 {
+		return splitted[1]
+	}
+	return longType
 }
 
 func findModel(models []*Model, search string) *Model {

@@ -69,6 +69,7 @@ const inputKey = "input"
 					auth.UserIDFromContext(ctx),
 				))
 			{{- end }}
+			mods = append(mods, {{.Model.Name}}FilterToMods(filter)...)
 			a, err := dm.{{ .Model.PluralName|go }}(mods...).All(ctx, r.db)
 			return {{ .Model.PluralName|go }}ToGraphQL(a, nil), err
 

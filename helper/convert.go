@@ -11,10 +11,26 @@ import (
 	"github.com/volatiletech/sqlboiler/types"
 )
 
+func IntsToInterfaces(ints []int) []interface{} {
+	interfaces := make([]interface{}, len(ints))
+	for index, number := range ints {
+		interfaces[index] = number
+	}
+	return interfaces
+}
+
+func IDsToBoilerInterfaces(ids []string) []interface{} {
+	interfaces := make([]interface{}, len(ids))
+	for index, id := range ids {
+		interfaces[index] = IDToBoiler(id)
+	}
+	return interfaces
+}
+
 func IDsToBoiler(ids []string) []uint {
 	ints := make([]uint, len(ids))
-	for _, s := range ids {
-		ints = append(ints, IDToBoiler(s))
+	for index, stringID := range ids {
+		ints[index] = IDToBoiler(stringID)
 	}
 	return ints
 }
@@ -22,6 +38,7 @@ func IDsToBoiler(ids []string) []uint {
 func IDToBoiler(ID string) uint {
 	splitted := strings.Split(ID, "-")
 	if len(splitted) > 1 {
+		// nolint: errcheck
 		i, _ := strconv.ParseUint(splitted[1], 10, 64)
 		return uint(i)
 	}
