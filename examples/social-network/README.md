@@ -7,18 +7,20 @@ This is an example social media backend: see how this is generated from scratch.
 - helpers/\*
 - resolver.go
 
+TODO: make Youtube video for this example
+
 ## Steps to make this project
 
-1. Start MariaDB container with social network.sql
+1. Start MariaDB container with social network.sql  
    `docker-compose up -d`
 
-2. Generate /models/\* files
+2. Generate /models/\* files  
    `sqlboiler mysql -d`
 
-3. Generate graphql schema based on sqlboiler files
+3. Generate graphql schema based on sqlboiler files  
    `go run github.com/web-ridge/sqlboiler-graphql-schema --output=schema.graphql --skip-input-fields=userId --directives=isAuthenticated`
-4. Generate /graphql_models/\* + resolver.go
+4. Generate /graphql_models/\* + resolver.go  
    `go run convert_plugin.go`
 
-5. ...Let's go!
+5. ...Let's go!  
    `go run server.go resolver.go`
