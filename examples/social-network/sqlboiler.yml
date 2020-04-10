@@ -1,0 +1,7 @@
+mysql:
+  dbname: socialnetwork
+  host: localhost
+  port: 3307
+  user: root
+  pass: root
+  sslmode: "false"

@@ -181,7 +181,7 @@ func (m *Plugin) MutateConfig(originalCfg *config.Config) error {
 	b.Enums = enums
 	b.Scalars = scalars
 	if len(b.Models) == 0 {
-		fmt.Println("return nil")
+		fmt.Println("No models found in graphql so skipping generation")
 		return nil
 	}
 
@@ -418,7 +418,7 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 }
 
 func getShortType(longType string) string {
-	//*gitlab.com/decicify/app/backend/graphql_models.StringFilter
+	//*github.com/web-ridge/gqlgen-sqlboiler/examples/social-network/graphql_models.StringFilter
 
 	splittedBySlash := strings.Split(longType, "/")
 	lastPart := splittedBySlash[len(splittedBySlash)-1]

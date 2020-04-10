@@ -1,0 +1,12 @@
+version: "3"
+
+services:
+  db:
+    image: mariadb
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    volumes:
+      - ./socialnetwork.sql:/docker-entrypoint-initdb.d/social-network.sql
+    ports:
+      - "3307:3306"
