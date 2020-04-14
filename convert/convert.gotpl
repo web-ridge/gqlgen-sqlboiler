@@ -96,14 +96,14 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 			{{- if $field.IsRelation }}
 				{{- if $field.IsPlural }}
 					if m.R != nil && m.R.{{ $field.Name|go }} != nil  {
-						r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.PluralName|go }}ToGraphQL(m.R.{{ $field.Name|go }}, append(roots, m))
+						r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.PluralName|go }}ToGraphQL(m.R.{{ $field.Name|go }}, append(roots, m.R.{{ $field.Name|go }}))
 					} 
 				{{- else }}	
 				
 				if helper.{{ $field.ConvertConfig.BoilerTypeAsText }}IsFilled(m.{{ $field.Name|go }}ID) {
 					if m.R != nil && m.R.{{ $field.Name|go }} != nil  {
 						if !alreadyConverted(roots,  m.R.{{ $field.Name|go }}) {
-							r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }}, append(roots, m))
+							r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }}, append(roots, m.R.{{ $field.Name|go }}))
 						}
 					} else {
 						r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.Name|go }}With{{ $field.ConvertConfig.BoilerTypeAsText|go }}ID(m.{{ $field.Name|go }}ID)
