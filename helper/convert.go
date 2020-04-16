@@ -181,6 +181,13 @@ func PointerStringToTypesNullDecimal(v *string) types.NullDecimal {
 	return types.NewNullDecimal(d)
 }
 
+func PointerIntToInt(v *int) int {
+	if v == nil {
+		return 0
+	}
+	return *v
+}
+
 func PointerIntToNullDotInt(v *int) null.Int {
 	return null.IntFromPtr((v))
 }
