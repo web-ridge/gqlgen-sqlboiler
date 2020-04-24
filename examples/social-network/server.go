@@ -24,7 +24,7 @@ import (
 	"github.com/volatiletech/sqlboiler/boil"
 	"github.com/web-ridge/gqlgen-sqlboiler/examples/social-network/auth"
 	"github.com/web-ridge/gqlgen-sqlboiler/examples/social-network/graphql_models"
-	"gitlab.com/webridge-git/api"
+	"github.com/web-ridge/utils-go/api"
 )
 
 func initLogger() {

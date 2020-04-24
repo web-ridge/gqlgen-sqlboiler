@@ -8,7 +8,7 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	"github.com/web-ridge/gqlgen-sqlboiler/examples/social-network/models"
-	"gitlab.com/webridge-git/api"
+	"github.com/web-ridge/utils-go/api"
 	"golang.org/x/crypto/bcrypt"
 )
 
