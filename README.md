@@ -21,7 +21,7 @@ DONE: Support one-to-one relationships inside input types
 DONE: Generate code which implements the generated where and search filters  
 DONE: Batch update/delete generation in resolvers (Not tested yet)
 
-TODO: Batch create generation in resolvers  
+TODO: Batch create generation in resolvers  (have working version here for PostgreSQL https://github.com/web-ridge/contact-tracing, need maybe different implementation for different ORM's)
 TODO: Support gqlgen multiple .graphql files  
 TODO: Edges/connections  
 TODO: Crud of adding/removing relationships from many-to-many on edges
