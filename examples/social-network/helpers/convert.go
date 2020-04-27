@@ -62,7 +62,7 @@ func CommentToGraphQL(m *models.Comment, roots []interface{}) *graphql_models.Co
 	if helper.UintIsFilled(m.PostID) {
 		if m.R != nil && m.R.Post != nil {
 			if !alreadyConverted(roots, m.R.Post) {
-				r.Post = PostToGraphQL(m.R.Post, append(roots, m))
+				r.Post = PostToGraphQL(m.R.Post, append(roots, m.R.Post))
 			}
 		} else {
 			r.Post = PostWithUintID(m.PostID)
@@ -72,25 +72,25 @@ func CommentToGraphQL(m *models.Comment, roots []interface{}) *graphql_models.Co
 	if helper.UintIsFilled(m.UserID) {
 		if m.R != nil && m.R.User != nil {
 			if !alreadyConverted(roots, m.R.User) {
-				r.User = UserToGraphQL(m.R.User, append(roots, m))
+				r.User = UserToGraphQL(m.R.User, append(roots, m.R.User))
 			}
 		} else {
 			r.User = UserWithUintID(m.UserID)
 		}
 	}
 	if m.R != nil && m.R.CommentLikes != nil {
-		r.CommentLikes = CommentLikesToGraphQL(m.R.CommentLikes, append(roots, m))
+		r.CommentLikes = CommentLikesToGraphQL(m.R.CommentLikes, append(roots, m.R.CommentLikes))
 	}
 
 	return r
 }
 
 func CommentID(v string) uint {
-	return helper.IDToBoiler(v)
+	return helper.IDToBoilerUint(v)
 }
 
 func CommentIDs(a []string) []uint {
-	return helper.IDsToBoiler(a)
+	return helper.IDsToBoilerUint(a)
 }
 
 func CommentLikeWithUintID(id uint) *graphql_models.CommentLike {
@@ -137,7 +137,7 @@ func CommentLikeToGraphQL(m *models.CommentLike, roots []interface{}) *graphql_m
 	if helper.UintIsFilled(m.CommentID) {
 		if m.R != nil && m.R.Comment != nil {
 			if !alreadyConverted(roots, m.R.Comment) {
-				r.Comment = CommentToGraphQL(m.R.Comment, append(roots, m))
+				r.Comment = CommentToGraphQL(m.R.Comment, append(roots, m.R.Comment))
 			}
 		} else {
 			r.Comment = CommentWithUintID(m.CommentID)
@@ -147,7 +147,7 @@ func CommentLikeToGraphQL(m *models.CommentLike, roots []interface{}) *graphql_m
 	if helper.UintIsFilled(m.UserID) {
 		if m.R != nil && m.R.User != nil {
 			if !alreadyConverted(roots, m.R.User) {
-				r.User = UserToGraphQL(m.R.User, append(roots, m))
+				r.User = UserToGraphQL(m.R.User, append(roots, m.R.User))
 			}
 		} else {
 			r.User = UserWithUintID(m.UserID)
@@ -158,11 +158,11 @@ func CommentLikeToGraphQL(m *models.CommentLike, roots []interface{}) *graphql_m
 }
 
 func CommentLikeID(v string) uint {
-	return helper.IDToBoiler(v)
+	return helper.IDToBoilerUint(v)
 }
 
 func CommentLikeIDs(a []string) []uint {
-	return helper.IDsToBoiler(a)
+	return helper.IDsToBoilerUint(a)
 }
 
 func FriendshipWithUintID(id uint) *graphql_models.Friendship {
@@ -206,18 +206,18 @@ func FriendshipToGraphQL(m *models.Friendship, roots []interface{}) *graphql_mod
 	}
 
 	if m.R != nil && m.R.Users != nil {
-		r.Users = UsersToGraphQL(m.R.Users, append(roots, m))
+		r.Users = UsersToGraphQL(m.R.Users, append(roots, m.R.Users))
 	}
 
 	return r
 }
 
 func FriendshipID(v string) uint {
-	return helper.IDToBoiler(v)
+	return helper.IDToBoilerUint(v)
 }
 
 func FriendshipIDs(a []string) []uint {
-	return helper.IDsToBoiler(a)
+	return helper.IDsToBoilerUint(a)
 }
 
 func ImageWithUintID(id uint) *graphql_models.Image {
@@ -264,25 +264,25 @@ func ImageToGraphQL(m *models.Image, roots []interface{}) *graphql_models.Image 
 	if helper.UintIsFilled(m.PostID) {
 		if m.R != nil && m.R.Post != nil {
 			if !alreadyConverted(roots, m.R.Post) {
-				r.Post = PostToGraphQL(m.R.Post, append(roots, m))
+				r.Post = PostToGraphQL(m.R.Post, append(roots, m.R.Post))
 			}
 		} else {
 			r.Post = PostWithUintID(m.PostID)
 		}
 	}
 	if m.R != nil && m.R.ImageVariations != nil {
-		r.ImageVariations = ImageVariationsToGraphQL(m.R.ImageVariations, append(roots, m))
+		r.ImageVariations = ImageVariationsToGraphQL(m.R.ImageVariations, append(roots, m.R.ImageVariations))
 	}
 
 	return r
 }
 
 func ImageID(v string) uint {
-	return helper.IDToBoiler(v)
+	return helper.IDToBoilerUint(v)
 }
 
 func ImageIDs(a []string) []uint {
-	return helper.IDsToBoiler(a)
+	return helper.IDsToBoilerUint(a)
 }
 
 func ImageVariationWithUintID(id uint) *graphql_models.ImageVariation {
@@ -327,7 +327,7 @@ func ImageVariationToGraphQL(m *models.ImageVariation, roots []interface{}) *gra
 	if helper.UintIsFilled(m.ImageID) {
 		if m.R != nil && m.R.Image != nil {
 			if !alreadyConverted(roots, m.R.Image) {
-				r.Image = ImageToGraphQL(m.R.Image, append(roots, m))
+				r.Image = ImageToGraphQL(m.R.Image, append(roots, m.R.Image))
 			}
 		} else {
 			r.Image = ImageWithUintID(m.ImageID)
@@ -338,11 +338,11 @@ func ImageVariationToGraphQL(m *models.ImageVariation, roots []interface{}) *gra
 }
 
 func ImageVariationID(v string) uint {
-	return helper.IDToBoiler(v)
+	return helper.IDToBoilerUint(v)
 }
 
 func ImageVariationIDs(a []string) []uint {
-	return helper.IDsToBoiler(a)
+	return helper.IDsToBoilerUint(a)
 }
 
 func LikeWithUintID(id uint) *graphql_models.Like {
@@ -389,7 +389,7 @@ func LikeToGraphQL(m *models.Like, roots []interface{}) *graphql_models.Like {
 	if helper.UintIsFilled(m.PostID) {
 		if m.R != nil && m.R.Post != nil {
 			if !alreadyConverted(roots, m.R.Post) {
-				r.Post = PostToGraphQL(m.R.Post, append(roots, m))
+				r.Post = PostToGraphQL(m.R.Post, append(roots, m.R.Post))
 			}
 		} else {
 			r.Post = PostWithUintID(m.PostID)
@@ -399,7 +399,7 @@ func LikeToGraphQL(m *models.Like, roots []interface{}) *graphql_models.Like {
 	if helper.UintIsFilled(m.UserID) {
 		if m.R != nil && m.R.User != nil {
 			if !alreadyConverted(roots, m.R.User) {
-				r.User = UserToGraphQL(m.R.User, append(roots, m))
+				r.User = UserToGraphQL(m.R.User, append(roots, m.R.User))
 			}
 		} else {
 			r.User = UserWithUintID(m.UserID)
@@ -410,11 +410,11 @@ func LikeToGraphQL(m *models.Like, roots []interface{}) *graphql_models.Like {
 }
 
 func LikeID(v string) uint {
-	return helper.IDToBoiler(v)
+	return helper.IDToBoilerUint(v)
 }
 
 func LikeIDs(a []string) []uint {
-	return helper.IDsToBoiler(a)
+	return helper.IDsToBoilerUint(a)
 }
 
 func PostWithUintID(id uint) *graphql_models.Post {
@@ -460,31 +460,31 @@ func PostToGraphQL(m *models.Post, roots []interface{}) *graphql_models.Post {
 	if helper.UintIsFilled(m.UserID) {
 		if m.R != nil && m.R.User != nil {
 			if !alreadyConverted(roots, m.R.User) {
-				r.User = UserToGraphQL(m.R.User, append(roots, m))
+				r.User = UserToGraphQL(m.R.User, append(roots, m.R.User))
 			}
 		} else {
 			r.User = UserWithUintID(m.UserID)
 		}
 	}
 	if m.R != nil && m.R.Comments != nil {
-		r.Comments = CommentsToGraphQL(m.R.Comments, append(roots, m))
+		r.Comments = CommentsToGraphQL(m.R.Comments, append(roots, m.R.Comments))
 	}
 	if m.R != nil && m.R.Images != nil {
-		r.Images = ImagesToGraphQL(m.R.Images, append(roots, m))
+		r.Images = ImagesToGraphQL(m.R.Images, append(roots, m.R.Images))
 	}
 	if m.R != nil && m.R.Likes != nil {
-		r.Likes = LikesToGraphQL(m.R.Likes, append(roots, m))
+		r.Likes = LikesToGraphQL(m.R.Likes, append(roots, m.R.Likes))
 	}
 
 	return r
 }
 
 func PostID(v string) uint {
-	return helper.IDToBoiler(v)
+	return helper.IDToBoilerUint(v)
 }
 
 func PostIDs(a []string) []uint {
-	return helper.IDsToBoiler(a)
+	return helper.IDsToBoilerUint(a)
 }
 
 func UserWithUintID(id uint) *graphql_models.User {
@@ -530,28 +530,28 @@ func UserToGraphQL(m *models.User, roots []interface{}) *graphql_models.User {
 	}
 
 	if m.R != nil && m.R.Comments != nil {
-		r.Comments = CommentsToGraphQL(m.R.Comments, append(roots, m))
+		r.Comments = CommentsToGraphQL(m.R.Comments, append(roots, m.R.Comments))
 	}
 	if m.R != nil && m.R.CommentLikes != nil {
-		r.CommentLikes = CommentLikesToGraphQL(m.R.CommentLikes, append(roots, m))
+		r.CommentLikes = CommentLikesToGraphQL(m.R.CommentLikes, append(roots, m.R.CommentLikes))
 	}
 	if m.R != nil && m.R.Likes != nil {
-		r.Likes = LikesToGraphQL(m.R.Likes, append(roots, m))
+		r.Likes = LikesToGraphQL(m.R.Likes, append(roots, m.R.Likes))
 	}
 	if m.R != nil && m.R.Posts != nil {
-		r.Posts = PostsToGraphQL(m.R.Posts, append(roots, m))
+		r.Posts = PostsToGraphQL(m.R.Posts, append(roots, m.R.Posts))
 	}
 	if m.R != nil && m.R.Friendships != nil {
-		r.Friendships = FriendshipsToGraphQL(m.R.Friendships, append(roots, m))
+		r.Friendships = FriendshipsToGraphQL(m.R.Friendships, append(roots, m.R.Friendships))
 	}
 
 	return r
 }
 
 func UserID(v string) uint {
-	return helper.IDToBoiler(v)
+	return helper.IDToBoilerUint(v)
 }
 
 func UserIDs(a []string) []uint {
-	return helper.IDsToBoiler(a)
+	return helper.IDsToBoilerUint(a)
 }

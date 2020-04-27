@@ -16,8 +16,84 @@ var CommentPreloadMap = map[string]helper.ColumnSetting{
 		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment,
 		IDAvailable: false,
 	},
+	"commentLikes.comment.commentLikes": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment + "." + models.CommentRels.CommentLikes,
+		IDAvailable: false,
+	},
+	"commentLikes.comment.commentLikes.comment": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment + "." + models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment,
+		IDAvailable: false,
+	},
+	"commentLikes.comment.commentLikes.user": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment + "." + models.CommentRels.CommentLikes + "." + models.CommentLikeRels.User,
+		IDAvailable: false,
+	},
+	"commentLikes.comment.post": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment + "." + models.CommentRels.Post,
+		IDAvailable: false,
+	},
+	"commentLikes.comment.post.comments": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment + "." + models.CommentRels.Post + "." + models.PostRels.Comments,
+		IDAvailable: false,
+	},
+	"commentLikes.comment.post.images": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment + "." + models.CommentRels.Post + "." + models.PostRels.Images,
+		IDAvailable: false,
+	},
+	"commentLikes.comment.post.likes": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment + "." + models.CommentRels.Post + "." + models.PostRels.Likes,
+		IDAvailable: false,
+	},
+	"commentLikes.comment.post.user": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment + "." + models.CommentRels.Post + "." + models.PostRels.User,
+		IDAvailable: false,
+	},
+	"commentLikes.comment.user": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment + "." + models.CommentRels.User,
+		IDAvailable: false,
+	},
+	"commentLikes.comment.user.commentLikes": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment + "." + models.CommentRels.User + "." + models.UserRels.CommentLikes,
+		IDAvailable: false,
+	},
+	"commentLikes.comment.user.comments": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment + "." + models.CommentRels.User + "." + models.UserRels.Comments,
+		IDAvailable: false,
+	},
+	"commentLikes.comment.user.friendships": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment + "." + models.CommentRels.User + "." + models.UserRels.Friendships,
+		IDAvailable: false,
+	},
+	"commentLikes.comment.user.likes": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment + "." + models.CommentRels.User + "." + models.UserRels.Likes,
+		IDAvailable: false,
+	},
+	"commentLikes.comment.user.posts": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment + "." + models.CommentRels.User + "." + models.UserRels.Posts,
+		IDAvailable: false,
+	},
 	"commentLikes.user": helper.ColumnSetting{
 		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.User,
+		IDAvailable: false,
+	},
+	"commentLikes.user.commentLikes": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.User + "." + models.UserRels.CommentLikes,
+		IDAvailable: false,
+	},
+	"commentLikes.user.comments": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.User + "." + models.UserRels.Comments,
+		IDAvailable: false,
+	},
+	"commentLikes.user.friendships": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.User + "." + models.UserRels.Friendships,
+		IDAvailable: false,
+	},
+	"commentLikes.user.likes": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.User + "." + models.UserRels.Likes,
+		IDAvailable: false,
+	},
+	"commentLikes.user.posts": helper.ColumnSetting{
+		Name:        models.CommentRels.CommentLikes + "." + models.CommentLikeRels.User + "." + models.UserRels.Posts,
 		IDAvailable: false,
 	},
 	"post": helper.ColumnSetting{
@@ -28,64 +104,16 @@ var CommentPreloadMap = map[string]helper.ColumnSetting{
 		Name:        models.CommentRels.Post + "." + models.PostRels.Comments,
 		IDAvailable: false,
 	},
-	"post.comments.commentLikes": helper.ColumnSetting{
-		Name:        models.CommentRels.Post + "." + models.PostRels.Comments + "." + models.CommentRels.CommentLikes,
-		IDAvailable: false,
-	},
-	"post.comments.post": helper.ColumnSetting{
-		Name:        models.CommentRels.Post + "." + models.PostRels.Comments + "." + models.CommentRels.Post,
-		IDAvailable: false,
-	},
-	"post.comments.user": helper.ColumnSetting{
-		Name:        models.CommentRels.Post + "." + models.PostRels.Comments + "." + models.CommentRels.User,
-		IDAvailable: false,
-	},
 	"post.images": helper.ColumnSetting{
 		Name:        models.CommentRels.Post + "." + models.PostRels.Images,
-		IDAvailable: false,
-	},
-	"post.images.imageVariations": helper.ColumnSetting{
-		Name:        models.CommentRels.Post + "." + models.PostRels.Images + "." + models.ImageRels.ImageVariations,
-		IDAvailable: false,
-	},
-	"post.images.post": helper.ColumnSetting{
-		Name:        models.CommentRels.Post + "." + models.PostRels.Images + "." + models.ImageRels.Post,
 		IDAvailable: false,
 	},
 	"post.likes": helper.ColumnSetting{
 		Name:        models.CommentRels.Post + "." + models.PostRels.Likes,
 		IDAvailable: false,
 	},
-	"post.likes.post": helper.ColumnSetting{
-		Name:        models.CommentRels.Post + "." + models.PostRels.Likes + "." + models.LikeRels.Post,
-		IDAvailable: false,
-	},
-	"post.likes.user": helper.ColumnSetting{
-		Name:        models.CommentRels.Post + "." + models.PostRels.Likes + "." + models.LikeRels.User,
-		IDAvailable: false,
-	},
 	"post.user": helper.ColumnSetting{
 		Name:        models.CommentRels.Post + "." + models.PostRels.User,
-		IDAvailable: false,
-	},
-	"post.user.commentLikes": helper.ColumnSetting{
-		Name:        models.CommentRels.Post + "." + models.PostRels.User + "." + models.UserRels.CommentLikes,
-		IDAvailable: false,
-	},
-	"post.user.comments": helper.ColumnSetting{
-		Name:        models.CommentRels.Post + "." + models.PostRels.User + "." + models.UserRels.Comments,
-		IDAvailable: false,
-	},
-	"post.user.friendships": helper.ColumnSetting{
-		Name:        models.CommentRels.Post + "." + models.PostRels.User + "." + models.UserRels.Friendships,
-		IDAvailable: false,
-	},
-	"post.user.likes": helper.ColumnSetting{
-		Name:        models.CommentRels.Post + "." + models.PostRels.User + "." + models.UserRels.Likes,
-		IDAvailable: false,
-	},
-	"post.user.posts": helper.ColumnSetting{
-		Name:        models.CommentRels.Post + "." + models.PostRels.User + "." + models.UserRels.Posts,
 		IDAvailable: false,
 	},
 	"user": helper.ColumnSetting{
@@ -123,16 +151,24 @@ var CommentLikePreloadMap = map[string]helper.ColumnSetting{
 		Name:        models.CommentLikeRels.Comment + "." + models.CommentRels.CommentLikes,
 		IDAvailable: false,
 	},
-	"comment.commentLikes.comment": helper.ColumnSetting{
-		Name:        models.CommentLikeRels.Comment + "." + models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment,
-		IDAvailable: false,
-	},
-	"comment.commentLikes.user": helper.ColumnSetting{
-		Name:        models.CommentLikeRels.Comment + "." + models.CommentRels.CommentLikes + "." + models.CommentLikeRels.User,
-		IDAvailable: false,
-	},
 	"comment.post": helper.ColumnSetting{
 		Name:        models.CommentLikeRels.Comment + "." + models.CommentRels.Post,
+		IDAvailable: false,
+	},
+	"comment.post.comments": helper.ColumnSetting{
+		Name:        models.CommentLikeRels.Comment + "." + models.CommentRels.Post + "." + models.PostRels.Comments,
+		IDAvailable: false,
+	},
+	"comment.post.images": helper.ColumnSetting{
+		Name:        models.CommentLikeRels.Comment + "." + models.CommentRels.Post + "." + models.PostRels.Images,
+		IDAvailable: false,
+	},
+	"comment.post.likes": helper.ColumnSetting{
+		Name:        models.CommentLikeRels.Comment + "." + models.CommentRels.Post + "." + models.PostRels.Likes,
+		IDAvailable: false,
+	},
+	"comment.post.user": helper.ColumnSetting{
+		Name:        models.CommentLikeRels.Comment + "." + models.CommentRels.Post + "." + models.PostRels.User,
 		IDAvailable: false,
 	},
 	"comment.user": helper.ColumnSetting{
@@ -206,24 +242,28 @@ var FriendshipPreloadMap = map[string]helper.ColumnSetting{
 		Name:        models.FriendshipRels.Users + "." + models.UserRels.Comments + "." + models.CommentRels.Post,
 		IDAvailable: false,
 	},
-	"users.comments.post.comments": helper.ColumnSetting{
-		Name:        models.FriendshipRels.Users + "." + models.UserRels.Comments + "." + models.CommentRels.Post + "." + models.PostRels.Comments,
-		IDAvailable: false,
-	},
-	"users.comments.post.images": helper.ColumnSetting{
-		Name:        models.FriendshipRels.Users + "." + models.UserRels.Comments + "." + models.CommentRels.Post + "." + models.PostRels.Images,
-		IDAvailable: false,
-	},
-	"users.comments.post.likes": helper.ColumnSetting{
-		Name:        models.FriendshipRels.Users + "." + models.UserRels.Comments + "." + models.CommentRels.Post + "." + models.PostRels.Likes,
-		IDAvailable: false,
-	},
-	"users.comments.post.user": helper.ColumnSetting{
-		Name:        models.FriendshipRels.Users + "." + models.UserRels.Comments + "." + models.CommentRels.Post + "." + models.PostRels.User,
-		IDAvailable: false,
-	},
 	"users.comments.user": helper.ColumnSetting{
 		Name:        models.FriendshipRels.Users + "." + models.UserRels.Comments + "." + models.CommentRels.User,
+		IDAvailable: false,
+	},
+	"users.comments.user.commentLikes": helper.ColumnSetting{
+		Name:        models.FriendshipRels.Users + "." + models.UserRels.Comments + "." + models.CommentRels.User + "." + models.UserRels.CommentLikes,
+		IDAvailable: false,
+	},
+	"users.comments.user.comments": helper.ColumnSetting{
+		Name:        models.FriendshipRels.Users + "." + models.UserRels.Comments + "." + models.CommentRels.User + "." + models.UserRels.Comments,
+		IDAvailable: false,
+	},
+	"users.comments.user.friendships": helper.ColumnSetting{
+		Name:        models.FriendshipRels.Users + "." + models.UserRels.Comments + "." + models.CommentRels.User + "." + models.UserRels.Friendships,
+		IDAvailable: false,
+	},
+	"users.comments.user.likes": helper.ColumnSetting{
+		Name:        models.FriendshipRels.Users + "." + models.UserRels.Comments + "." + models.CommentRels.User + "." + models.UserRels.Likes,
+		IDAvailable: false,
+	},
+	"users.comments.user.posts": helper.ColumnSetting{
+		Name:        models.FriendshipRels.Users + "." + models.UserRels.Comments + "." + models.CommentRels.User + "." + models.UserRels.Posts,
 		IDAvailable: false,
 	},
 	"users.friendships": helper.ColumnSetting{
@@ -283,14 +323,6 @@ var ImagePreloadMap = map[string]helper.ColumnSetting{
 		Name:        models.ImageRels.ImageVariations + "." + models.ImageVariationRels.Image,
 		IDAvailable: false,
 	},
-	"imageVariations.image.imageVariations": helper.ColumnSetting{
-		Name:        models.ImageRels.ImageVariations + "." + models.ImageVariationRels.Image + "." + models.ImageRels.ImageVariations,
-		IDAvailable: false,
-	},
-	"imageVariations.image.post": helper.ColumnSetting{
-		Name:        models.ImageRels.ImageVariations + "." + models.ImageVariationRels.Image + "." + models.ImageRels.Post,
-		IDAvailable: false,
-	},
 	"post": helper.ColumnSetting{
 		Name:        models.ImageRels.Post,
 		IDAvailable: true,
@@ -299,64 +331,16 @@ var ImagePreloadMap = map[string]helper.ColumnSetting{
 		Name:        models.ImageRels.Post + "." + models.PostRels.Comments,
 		IDAvailable: false,
 	},
-	"post.comments.commentLikes": helper.ColumnSetting{
-		Name:        models.ImageRels.Post + "." + models.PostRels.Comments + "." + models.CommentRels.CommentLikes,
-		IDAvailable: false,
-	},
-	"post.comments.post": helper.ColumnSetting{
-		Name:        models.ImageRels.Post + "." + models.PostRels.Comments + "." + models.CommentRels.Post,
-		IDAvailable: false,
-	},
-	"post.comments.user": helper.ColumnSetting{
-		Name:        models.ImageRels.Post + "." + models.PostRels.Comments + "." + models.CommentRels.User,
-		IDAvailable: false,
-	},
 	"post.images": helper.ColumnSetting{
 		Name:        models.ImageRels.Post + "." + models.PostRels.Images,
-		IDAvailable: false,
-	},
-	"post.images.imageVariations": helper.ColumnSetting{
-		Name:        models.ImageRels.Post + "." + models.PostRels.Images + "." + models.ImageRels.ImageVariations,
-		IDAvailable: false,
-	},
-	"post.images.post": helper.ColumnSetting{
-		Name:        models.ImageRels.Post + "." + models.PostRels.Images + "." + models.ImageRels.Post,
 		IDAvailable: false,
 	},
 	"post.likes": helper.ColumnSetting{
 		Name:        models.ImageRels.Post + "." + models.PostRels.Likes,
 		IDAvailable: false,
 	},
-	"post.likes.post": helper.ColumnSetting{
-		Name:        models.ImageRels.Post + "." + models.PostRels.Likes + "." + models.LikeRels.Post,
-		IDAvailable: false,
-	},
-	"post.likes.user": helper.ColumnSetting{
-		Name:        models.ImageRels.Post + "." + models.PostRels.Likes + "." + models.LikeRels.User,
-		IDAvailable: false,
-	},
 	"post.user": helper.ColumnSetting{
 		Name:        models.ImageRels.Post + "." + models.PostRels.User,
-		IDAvailable: false,
-	},
-	"post.user.commentLikes": helper.ColumnSetting{
-		Name:        models.ImageRels.Post + "." + models.PostRels.User + "." + models.UserRels.CommentLikes,
-		IDAvailable: false,
-	},
-	"post.user.comments": helper.ColumnSetting{
-		Name:        models.ImageRels.Post + "." + models.PostRels.User + "." + models.UserRels.Comments,
-		IDAvailable: false,
-	},
-	"post.user.friendships": helper.ColumnSetting{
-		Name:        models.ImageRels.Post + "." + models.PostRels.User + "." + models.UserRels.Friendships,
-		IDAvailable: false,
-	},
-	"post.user.likes": helper.ColumnSetting{
-		Name:        models.ImageRels.Post + "." + models.PostRels.User + "." + models.UserRels.Likes,
-		IDAvailable: false,
-	},
-	"post.user.posts": helper.ColumnSetting{
-		Name:        models.ImageRels.Post + "." + models.PostRels.User + "." + models.UserRels.Posts,
 		IDAvailable: false,
 	},
 }
@@ -388,6 +372,18 @@ var ImageVariationPreloadMap = map[string]helper.ColumnSetting{
 		Name:        models.ImageVariationRels.Image + "." + models.ImageRels.Post + "." + models.PostRels.Comments,
 		IDAvailable: false,
 	},
+	"image.post.comments.commentLikes": helper.ColumnSetting{
+		Name:        models.ImageVariationRels.Image + "." + models.ImageRels.Post + "." + models.PostRels.Comments + "." + models.CommentRels.CommentLikes,
+		IDAvailable: false,
+	},
+	"image.post.comments.post": helper.ColumnSetting{
+		Name:        models.ImageVariationRels.Image + "." + models.ImageRels.Post + "." + models.PostRels.Comments + "." + models.CommentRels.Post,
+		IDAvailable: false,
+	},
+	"image.post.comments.user": helper.ColumnSetting{
+		Name:        models.ImageVariationRels.Image + "." + models.ImageRels.Post + "." + models.PostRels.Comments + "." + models.CommentRels.User,
+		IDAvailable: false,
+	},
 	"image.post.images": helper.ColumnSetting{
 		Name:        models.ImageVariationRels.Image + "." + models.ImageRels.Post + "." + models.PostRels.Images,
 		IDAvailable: false,
@@ -398,6 +394,26 @@ var ImageVariationPreloadMap = map[string]helper.ColumnSetting{
 	},
 	"image.post.user": helper.ColumnSetting{
 		Name:        models.ImageVariationRels.Image + "." + models.ImageRels.Post + "." + models.PostRels.User,
+		IDAvailable: false,
+	},
+	"image.post.user.commentLikes": helper.ColumnSetting{
+		Name:        models.ImageVariationRels.Image + "." + models.ImageRels.Post + "." + models.PostRels.User + "." + models.UserRels.CommentLikes,
+		IDAvailable: false,
+	},
+	"image.post.user.comments": helper.ColumnSetting{
+		Name:        models.ImageVariationRels.Image + "." + models.ImageRels.Post + "." + models.PostRels.User + "." + models.UserRels.Comments,
+		IDAvailable: false,
+	},
+	"image.post.user.friendships": helper.ColumnSetting{
+		Name:        models.ImageVariationRels.Image + "." + models.ImageRels.Post + "." + models.PostRels.User + "." + models.UserRels.Friendships,
+		IDAvailable: false,
+	},
+	"image.post.user.likes": helper.ColumnSetting{
+		Name:        models.ImageVariationRels.Image + "." + models.ImageRels.Post + "." + models.PostRels.User + "." + models.UserRels.Likes,
+		IDAvailable: false,
+	},
+	"image.post.user.posts": helper.ColumnSetting{
+		Name:        models.ImageVariationRels.Image + "." + models.ImageRels.Post + "." + models.PostRels.User + "." + models.UserRels.Posts,
 		IDAvailable: false,
 	},
 }
@@ -417,40 +433,12 @@ var LikePreloadMap = map[string]helper.ColumnSetting{
 		Name:        models.LikeRels.Post + "." + models.PostRels.Comments,
 		IDAvailable: false,
 	},
-	"post.comments.commentLikes": helper.ColumnSetting{
-		Name:        models.LikeRels.Post + "." + models.PostRels.Comments + "." + models.CommentRels.CommentLikes,
-		IDAvailable: false,
-	},
-	"post.comments.post": helper.ColumnSetting{
-		Name:        models.LikeRels.Post + "." + models.PostRels.Comments + "." + models.CommentRels.Post,
-		IDAvailable: false,
-	},
-	"post.comments.user": helper.ColumnSetting{
-		Name:        models.LikeRels.Post + "." + models.PostRels.Comments + "." + models.CommentRels.User,
-		IDAvailable: false,
-	},
 	"post.images": helper.ColumnSetting{
 		Name:        models.LikeRels.Post + "." + models.PostRels.Images,
 		IDAvailable: false,
 	},
-	"post.images.imageVariations": helper.ColumnSetting{
-		Name:        models.LikeRels.Post + "." + models.PostRels.Images + "." + models.ImageRels.ImageVariations,
-		IDAvailable: false,
-	},
-	"post.images.post": helper.ColumnSetting{
-		Name:        models.LikeRels.Post + "." + models.PostRels.Images + "." + models.ImageRels.Post,
-		IDAvailable: false,
-	},
 	"post.likes": helper.ColumnSetting{
 		Name:        models.LikeRels.Post + "." + models.PostRels.Likes,
-		IDAvailable: false,
-	},
-	"post.likes.post": helper.ColumnSetting{
-		Name:        models.LikeRels.Post + "." + models.PostRels.Likes + "." + models.LikeRels.Post,
-		IDAvailable: false,
-	},
-	"post.likes.user": helper.ColumnSetting{
-		Name:        models.LikeRels.Post + "." + models.PostRels.Likes + "." + models.LikeRels.User,
 		IDAvailable: false,
 	},
 	"post.user": helper.ColumnSetting{
@@ -489,18 +477,6 @@ var LikePreloadMap = map[string]helper.ColumnSetting{
 		Name:        models.LikeRels.User + "." + models.UserRels.Comments,
 		IDAvailable: false,
 	},
-	"user.comments.commentLikes": helper.ColumnSetting{
-		Name:        models.LikeRels.User + "." + models.UserRels.Comments + "." + models.CommentRels.CommentLikes,
-		IDAvailable: false,
-	},
-	"user.comments.post": helper.ColumnSetting{
-		Name:        models.LikeRels.User + "." + models.UserRels.Comments + "." + models.CommentRels.Post,
-		IDAvailable: false,
-	},
-	"user.comments.user": helper.ColumnSetting{
-		Name:        models.LikeRels.User + "." + models.UserRels.Comments + "." + models.CommentRels.User,
-		IDAvailable: false,
-	},
 	"user.friendships": helper.ColumnSetting{
 		Name:        models.LikeRels.User + "." + models.UserRels.Friendships,
 		IDAvailable: false,
@@ -530,12 +506,56 @@ var PostPreloadMap = map[string]helper.ColumnSetting{
 		Name:        models.PostRels.Comments + "." + models.CommentRels.CommentLikes,
 		IDAvailable: false,
 	},
+	"comments.commentLikes.comment": helper.ColumnSetting{
+		Name:        models.PostRels.Comments + "." + models.CommentRels.CommentLikes + "." + models.CommentLikeRels.Comment,
+		IDAvailable: false,
+	},
+	"comments.commentLikes.user": helper.ColumnSetting{
+		Name:        models.PostRels.Comments + "." + models.CommentRels.CommentLikes + "." + models.CommentLikeRels.User,
+		IDAvailable: false,
+	},
 	"comments.post": helper.ColumnSetting{
 		Name:        models.PostRels.Comments + "." + models.CommentRels.Post,
 		IDAvailable: false,
 	},
+	"comments.post.comments": helper.ColumnSetting{
+		Name:        models.PostRels.Comments + "." + models.CommentRels.Post + "." + models.PostRels.Comments,
+		IDAvailable: false,
+	},
+	"comments.post.images": helper.ColumnSetting{
+		Name:        models.PostRels.Comments + "." + models.CommentRels.Post + "." + models.PostRels.Images,
+		IDAvailable: false,
+	},
+	"comments.post.likes": helper.ColumnSetting{
+		Name:        models.PostRels.Comments + "." + models.CommentRels.Post + "." + models.PostRels.Likes,
+		IDAvailable: false,
+	},
+	"comments.post.user": helper.ColumnSetting{
+		Name:        models.PostRels.Comments + "." + models.CommentRels.Post + "." + models.PostRels.User,
+		IDAvailable: false,
+	},
 	"comments.user": helper.ColumnSetting{
 		Name:        models.PostRels.Comments + "." + models.CommentRels.User,
+		IDAvailable: false,
+	},
+	"comments.user.commentLikes": helper.ColumnSetting{
+		Name:        models.PostRels.Comments + "." + models.CommentRels.User + "." + models.UserRels.CommentLikes,
+		IDAvailable: false,
+	},
+	"comments.user.comments": helper.ColumnSetting{
+		Name:        models.PostRels.Comments + "." + models.CommentRels.User + "." + models.UserRels.Comments,
+		IDAvailable: false,
+	},
+	"comments.user.friendships": helper.ColumnSetting{
+		Name:        models.PostRels.Comments + "." + models.CommentRels.User + "." + models.UserRels.Friendships,
+		IDAvailable: false,
+	},
+	"comments.user.likes": helper.ColumnSetting{
+		Name:        models.PostRels.Comments + "." + models.CommentRels.User + "." + models.UserRels.Likes,
+		IDAvailable: false,
+	},
+	"comments.user.posts": helper.ColumnSetting{
+		Name:        models.PostRels.Comments + "." + models.CommentRels.User + "." + models.UserRels.Posts,
 		IDAvailable: false,
 	},
 	"images": helper.ColumnSetting{
@@ -548,6 +568,22 @@ var PostPreloadMap = map[string]helper.ColumnSetting{
 	},
 	"images.post": helper.ColumnSetting{
 		Name:        models.PostRels.Images + "." + models.ImageRels.Post,
+		IDAvailable: false,
+	},
+	"images.post.comments": helper.ColumnSetting{
+		Name:        models.PostRels.Images + "." + models.ImageRels.Post + "." + models.PostRels.Comments,
+		IDAvailable: false,
+	},
+	"images.post.images": helper.ColumnSetting{
+		Name:        models.PostRels.Images + "." + models.ImageRels.Post + "." + models.PostRels.Images,
+		IDAvailable: false,
+	},
+	"images.post.likes": helper.ColumnSetting{
+		Name:        models.PostRels.Images + "." + models.ImageRels.Post + "." + models.PostRels.Likes,
+		IDAvailable: false,
+	},
+	"images.post.user": helper.ColumnSetting{
+		Name:        models.PostRels.Images + "." + models.ImageRels.Post + "." + models.PostRels.User,
 		IDAvailable: false,
 	},
 	"likes": helper.ColumnSetting{
@@ -570,28 +606,8 @@ var PostPreloadMap = map[string]helper.ColumnSetting{
 		Name:        models.PostRels.User + "." + models.UserRels.CommentLikes,
 		IDAvailable: false,
 	},
-	"user.commentLikes.comment": helper.ColumnSetting{
-		Name:        models.PostRels.User + "." + models.UserRels.CommentLikes + "." + models.CommentLikeRels.Comment,
-		IDAvailable: false,
-	},
-	"user.commentLikes.user": helper.ColumnSetting{
-		Name:        models.PostRels.User + "." + models.UserRels.CommentLikes + "." + models.CommentLikeRels.User,
-		IDAvailable: false,
-	},
 	"user.comments": helper.ColumnSetting{
 		Name:        models.PostRels.User + "." + models.UserRels.Comments,
-		IDAvailable: false,
-	},
-	"user.comments.commentLikes": helper.ColumnSetting{
-		Name:        models.PostRels.User + "." + models.UserRels.Comments + "." + models.CommentRels.CommentLikes,
-		IDAvailable: false,
-	},
-	"user.comments.post": helper.ColumnSetting{
-		Name:        models.PostRels.User + "." + models.UserRels.Comments + "." + models.CommentRels.Post,
-		IDAvailable: false,
-	},
-	"user.comments.user": helper.ColumnSetting{
-		Name:        models.PostRels.User + "." + models.UserRels.Comments + "." + models.CommentRels.User,
 		IDAvailable: false,
 	},
 	"user.friendships": helper.ColumnSetting{
@@ -600,14 +616,6 @@ var PostPreloadMap = map[string]helper.ColumnSetting{
 	},
 	"user.likes": helper.ColumnSetting{
 		Name:        models.PostRels.User + "." + models.UserRels.Likes,
-		IDAvailable: false,
-	},
-	"user.likes.post": helper.ColumnSetting{
-		Name:        models.PostRels.User + "." + models.UserRels.Likes + "." + models.LikeRels.Post,
-		IDAvailable: false,
-	},
-	"user.likes.user": helper.ColumnSetting{
-		Name:        models.PostRels.User + "." + models.UserRels.Likes + "." + models.LikeRels.User,
 		IDAvailable: false,
 	},
 	"user.posts": helper.ColumnSetting{

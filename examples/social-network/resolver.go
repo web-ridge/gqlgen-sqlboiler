@@ -90,8 +90,9 @@ func (r *mutationResolver) UpdateComments(ctx context.Context, filter *fm.Commen
 }
 
 func (r *mutationResolver) DeleteComment(ctx context.Context, id string) (*fm.CommentDeletePayload, error) {
+	dbID := CommentID(id)
 	mods := []qm.QueryMod{
-		dm.CommentWhere.ID.EQ(CommentID(id)),
+		dm.CommentWhere.ID.EQ(dbID),
 		dm.CommentWhere.UserID.EQ(auth.UserIDFromContext(ctx)),
 	}
 	_, err := dm.Comments(mods...).DeleteAll(ctx, r.db)
@@ -114,7 +115,7 @@ func (r *mutationResolver) DeleteComments(ctx context.Context, filter *fm.Commen
 		return nil, err
 	}
 
-	boilerIDs := helper.RemovedIDsToUint(IDsToRemove)
+	boilerIDs := helper.RemovedIDsToBoilerUint(IDsToRemove)
 	if _, err := dm.Comments(dm.CommentWhere.ID.IN(boilerIDs)).DeleteAll(ctx, r.db); err != nil {
 		return nil, err
 	}
@@ -195,8 +196,9 @@ func (r *mutationResolver) UpdateCommentLikes(ctx context.Context, filter *fm.Co
 }
 
 func (r *mutationResolver) DeleteCommentLike(ctx context.Context, id string) (*fm.CommentLikeDeletePayload, error) {
+	dbID := CommentLikeID(id)
 	mods := []qm.QueryMod{
-		dm.CommentLikeWhere.ID.EQ(CommentLikeID(id)),
+		dm.CommentLikeWhere.ID.EQ(dbID),
 		dm.CommentLikeWhere.UserID.EQ(auth.UserIDFromContext(ctx)),
 	}
 	_, err := dm.CommentLikes(mods...).DeleteAll(ctx, r.db)
@@ -219,7 +221,7 @@ func (r *mutationResolver) DeleteCommentLikes(ctx context.Context, filter *fm.Co
 		return nil, err
 	}
 
-	boilerIDs := helper.RemovedIDsToUint(IDsToRemove)
+	boilerIDs := helper.RemovedIDsToBoilerUint(IDsToRemove)
 	if _, err := dm.CommentLikes(dm.CommentLikeWhere.ID.IN(boilerIDs)).DeleteAll(ctx, r.db); err != nil {
 		return nil, err
 	}
@@ -289,8 +291,9 @@ func (r *mutationResolver) UpdateFriendships(ctx context.Context, filter *fm.Fri
 }
 
 func (r *mutationResolver) DeleteFriendship(ctx context.Context, id string) (*fm.FriendshipDeletePayload, error) {
+	dbID := FriendshipID(id)
 	mods := []qm.QueryMod{
-		dm.FriendshipWhere.ID.EQ(FriendshipID(id)),
+		dm.FriendshipWhere.ID.EQ(dbID),
 	}
 	_, err := dm.Friendships(mods...).DeleteAll(ctx, r.db)
 	return &fm.FriendshipDeletePayload{
@@ -309,7 +312,7 @@ func (r *mutationResolver) DeleteFriendships(ctx context.Context, filter *fm.Fri
 		return nil, err
 	}
 
-	boilerIDs := helper.RemovedIDsToUint(IDsToRemove)
+	boilerIDs := helper.RemovedIDsToBoilerUint(IDsToRemove)
 	if _, err := dm.Friendships(dm.FriendshipWhere.ID.IN(boilerIDs)).DeleteAll(ctx, r.db); err != nil {
 		return nil, err
 	}
@@ -379,8 +382,9 @@ func (r *mutationResolver) UpdateImages(ctx context.Context, filter *fm.ImageFil
 }
 
 func (r *mutationResolver) DeleteImage(ctx context.Context, id string) (*fm.ImageDeletePayload, error) {
+	dbID := ImageID(id)
 	mods := []qm.QueryMod{
-		dm.ImageWhere.ID.EQ(ImageID(id)),
+		dm.ImageWhere.ID.EQ(dbID),
 	}
 	_, err := dm.Images(mods...).DeleteAll(ctx, r.db)
 	return &fm.ImageDeletePayload{
@@ -399,7 +403,7 @@ func (r *mutationResolver) DeleteImages(ctx context.Context, filter *fm.ImageFil
 		return nil, err
 	}
 
-	boilerIDs := helper.RemovedIDsToUint(IDsToRemove)
+	boilerIDs := helper.RemovedIDsToBoilerUint(IDsToRemove)
 	if _, err := dm.Images(dm.ImageWhere.ID.IN(boilerIDs)).DeleteAll(ctx, r.db); err != nil {
 		return nil, err
 	}
@@ -469,8 +473,9 @@ func (r *mutationResolver) UpdateImageVariations(ctx context.Context, filter *fm
 }
 
 func (r *mutationResolver) DeleteImageVariation(ctx context.Context, id string) (*fm.ImageVariationDeletePayload, error) {
+	dbID := ImageVariationID(id)
 	mods := []qm.QueryMod{
-		dm.ImageVariationWhere.ID.EQ(ImageVariationID(id)),
+		dm.ImageVariationWhere.ID.EQ(dbID),
 	}
 	_, err := dm.ImageVariations(mods...).DeleteAll(ctx, r.db)
 	return &fm.ImageVariationDeletePayload{
@@ -489,7 +494,7 @@ func (r *mutationResolver) DeleteImageVariations(ctx context.Context, filter *fm
 		return nil, err
 	}
 
-	boilerIDs := helper.RemovedIDsToUint(IDsToRemove)
+	boilerIDs := helper.RemovedIDsToBoilerUint(IDsToRemove)
 	if _, err := dm.ImageVariations(dm.ImageVariationWhere.ID.IN(boilerIDs)).DeleteAll(ctx, r.db); err != nil {
 		return nil, err
 	}
@@ -570,8 +575,9 @@ func (r *mutationResolver) UpdateLikes(ctx context.Context, filter *fm.LikeFilte
 }
 
 func (r *mutationResolver) DeleteLike(ctx context.Context, id string) (*fm.LikeDeletePayload, error) {
+	dbID := LikeID(id)
 	mods := []qm.QueryMod{
-		dm.LikeWhere.ID.EQ(LikeID(id)),
+		dm.LikeWhere.ID.EQ(dbID),
 		dm.LikeWhere.UserID.EQ(auth.UserIDFromContext(ctx)),
 	}
 	_, err := dm.Likes(mods...).DeleteAll(ctx, r.db)
@@ -594,7 +600,7 @@ func (r *mutationResolver) DeleteLikes(ctx context.Context, filter *fm.LikeFilte
 		return nil, err
 	}
 
-	boilerIDs := helper.RemovedIDsToUint(IDsToRemove)
+	boilerIDs := helper.RemovedIDsToBoilerUint(IDsToRemove)
 	if _, err := dm.Likes(dm.LikeWhere.ID.IN(boilerIDs)).DeleteAll(ctx, r.db); err != nil {
 		return nil, err
 	}
@@ -675,8 +681,9 @@ func (r *mutationResolver) UpdatePosts(ctx context.Context, filter *fm.PostFilte
 }
 
 func (r *mutationResolver) DeletePost(ctx context.Context, id string) (*fm.PostDeletePayload, error) {
+	dbID := PostID(id)
 	mods := []qm.QueryMod{
-		dm.PostWhere.ID.EQ(PostID(id)),
+		dm.PostWhere.ID.EQ(dbID),
 		dm.PostWhere.UserID.EQ(auth.UserIDFromContext(ctx)),
 	}
 	_, err := dm.Posts(mods...).DeleteAll(ctx, r.db)
@@ -699,7 +706,7 @@ func (r *mutationResolver) DeletePosts(ctx context.Context, filter *fm.PostFilte
 		return nil, err
 	}
 
-	boilerIDs := helper.RemovedIDsToUint(IDsToRemove)
+	boilerIDs := helper.RemovedIDsToBoilerUint(IDsToRemove)
 	if _, err := dm.Posts(dm.PostWhere.ID.IN(boilerIDs)).DeleteAll(ctx, r.db); err != nil {
 		return nil, err
 	}
@@ -769,8 +776,9 @@ func (r *mutationResolver) UpdateUsers(ctx context.Context, filter *fm.UserFilte
 }
 
 func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (*fm.UserDeletePayload, error) {
+	dbID := UserID(id)
 	mods := []qm.QueryMod{
-		dm.UserWhere.ID.EQ(UserID(id)),
+		dm.UserWhere.ID.EQ(dbID),
 	}
 	_, err := dm.Users(mods...).DeleteAll(ctx, r.db)
 	return &fm.UserDeletePayload{
@@ -789,7 +797,7 @@ func (r *mutationResolver) DeleteUsers(ctx context.Context, filter *fm.UserFilte
 		return nil, err
 	}
 
-	boilerIDs := helper.RemovedIDsToUint(IDsToRemove)
+	boilerIDs := helper.RemovedIDsToBoilerUint(IDsToRemove)
 	if _, err := dm.Users(dm.UserWhere.ID.IN(boilerIDs)).DeleteAll(ctx, r.db); err != nil {
 		return nil, err
 	}
