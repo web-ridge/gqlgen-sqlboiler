@@ -18,7 +18,7 @@ TODO: make Youtube video for this example
    `sqlboiler mysql -d`
 
 3. Generate graphql schema based on sqlboiler files  
-   `go run github.com/web-ridge/sqlboiler-graphql-schema --output=schema.graphql --skip-input-fields=userId --directives=isAuthenticated`
+   `go run github.com/web-ridge/sqlboiler-graphql-schema --output=schema.graphql --skip-input-fields=userId --directives=isAuthenticated --pagination=no`
 4. Generate /graphql_models/\* + resolver.go  
    `go run convert_plugin.go`
 
