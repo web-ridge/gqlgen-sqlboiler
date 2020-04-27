@@ -32,6 +32,13 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 }
 
 {{ range $enum := .Enums }}
+	func Pointer{{ .Name|go }}ToGraphQL(v *string) graphql_models.{{ .Name|go }} {
+		if v == nil {
+			return ""
+		}
+		return {{ .Name|go }}ToGraphQL(*v)
+	}
+
 	func {{ .Name|go }}ToGraphQL(v string) graphql_models.{{ .Name|go }} {
 		{{- range $value := .Values }}
 			if v == "{{ .NameLower }}" {
@@ -48,6 +55,13 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 			}
 		{{- end }}
 		return ""
+	}
+	
+	func Pointer{{ .Name|go }}ToBoiler(v *graphql_models.{{ .Name|go }}) string {
+		if v == nil {
+			return ""
+		}
+		return {{ .Name|go }}ToBoiler(*v)
 	}
 {{- end }}
 

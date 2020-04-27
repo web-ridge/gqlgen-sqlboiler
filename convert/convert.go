@@ -430,6 +430,7 @@ func getShortType(longType string) string {
 	lastPart := splittedBySlash[len(splittedBySlash)-1]
 	splitted := strings.Split(lastPart, ".")
 	if len(splitted) > 1 {
+
 		return splitted[1]
 	}
 	return longType
@@ -757,8 +758,14 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 	enum := findEnum(enums, graphType)
 	if enum != nil {
 		cc.IsCustom = true
-		cc.ToGraphQL = enum.Name + "ToGraphQL"
-		cc.ToBoiler = enum.Name + "ToBoiler"
+		if strings.HasPrefix(field.OriginalType.String(), "*") {
+			cc.ToGraphQL = enum.Name + "ToGraphQL" + "Pointer"
+			cc.ToBoiler = "Pointer" + enum.Name + "ToBoiler"
+		} else {
+			cc.ToGraphQL = enum.Name + "ToGraphQL"
+			cc.ToBoiler = enum.Name + "ToBoiler"
+		}
+
 	} else if graphType != boilType {
 		cc.IsCustom = true
 
