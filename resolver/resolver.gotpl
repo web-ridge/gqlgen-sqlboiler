@@ -328,7 +328,7 @@ const inputKey = "input"
 			}
 
 			return &fm.{{ .Model.PluralName }}DeletePayload{
-				Ids: helper.IDsToGraphQL(boilerIDs, dm.TableNames.{{ .Model.Name }}),
+				Ids: helper.{{.Model.PrimaryKeyType|go}}IDsToGraphQL(boilerIDs, dm.TableNames.{{ .Model.Name }}),
 			}, nil
 
 		{{- end }}

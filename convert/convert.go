@@ -551,7 +551,7 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*boiler.BoilerModel)
 
 		switch schemaType.Kind {
 
-		case ast.Object, ast.InputObject:
+		case ast.Object, ast.InputObject, ast.Enum:
 			{
 				if schemaType == schema.Query ||
 					schemaType == schema.Mutation ||

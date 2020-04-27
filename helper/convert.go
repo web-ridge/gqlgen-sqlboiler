@@ -111,10 +111,26 @@ func IDToGraphQL(id uint, tableName string) string {
 	return strcase.ToLowerCamel(tableName) + "-" + strconv.Itoa(int(id))
 }
 
+func IntIDToGraphQL(id int, tableName string) string {
+	return strcase.ToLowerCamel(tableName) + "-" + strconv.Itoa(id)
+}
+
 func IDsToGraphQL(ids []uint, tableName string) []string {
 	stringIDs := make([]string, len(ids))
 	for index, id := range ids {
 		stringIDs[index] = IDToGraphQL(id, tableName)
+	}
+	return stringIDs
+}
+
+func UintIDsToGraphQL(ids []uint, tableName string) []string {
+	return IDsToGraphQL(ids, tableName)
+}
+
+func IntIDsToGraphQL(ids []int, tableName string) []string {
+	stringIDs := make([]string, len(ids))
+	for index, id := range ids {
+		stringIDs[index] = IntIDToGraphQL(id, tableName)
 	}
 	return stringIDs
 }
