@@ -57,7 +57,7 @@ func (m *Plugin) GenerateCode(data *codegen.Data) error {
 	boilerModels := boiler.GetBoilerModels(m.backendModelsPath)
 
 	fmt.Println("[resolver] get models with information")
-	models := convert.GetModelsWithInformation(data.Config, boilerModels)
+	models := convert.GetModelsWithInformation(nil, data.Config, boilerModels)
 
 	fmt.Println("[resolver] generate file")
 	switch data.Config.Resolver.Layout {

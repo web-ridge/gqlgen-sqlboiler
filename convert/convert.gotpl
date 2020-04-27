@@ -31,6 +31,26 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 	return matched > 2
 }
 
+{{ range $enum := .Enums }}
+	func {{ .Name|go }}ToGraphQL(v string) graphql_models.{{ .Name|go }} {
+		{{- range $value := .Values }}
+			if v == "{{ .NameLower }}" {
+				return graphql_models.{{$enum.Name|go}}{{ .Name|go }}
+			}
+		{{- end }}
+		return ""
+	}
+
+	func {{ .Name|go }}ToBoiler(v graphql_models.{{ .Name|go }}) string {
+		{{- range $value := .Values }}
+			if v == "{{ .Name }}" {
+				return "{{ .NameLower }}"
+			}
+		{{- end }}
+		return ""
+	}
+{{- end }}
+
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 	{{- if .IsNormal  -}}

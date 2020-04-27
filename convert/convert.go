@@ -104,12 +104,14 @@ type Field struct {
 type Enum struct {
 	Description string
 	Name        string
-	Values      []*EnumValue
+
+	Values []*EnumValue
 }
 
 type EnumValue struct {
 	Description string
 	Name        string
+	NameLower   string
 }
 
 func New(directory, backendModelsPath, frontendModelsPath string) plugin.Plugin {
@@ -141,13 +143,13 @@ func getGoImportFromFile(dir string) string {
 	return strings.TrimPrefix(pathRegex.FindString(longPath), "src/")
 }
 
-func GetModelsWithInformation(cfg *config.Config, boilerModels []*boiler.BoilerModel) []*Model {
+func GetModelsWithInformation(enums []*Enum, cfg *config.Config, boilerModels []*boiler.BoilerModel) []*Model {
 
 	// get models based on the schema and sqlboiler structs
 	models := getModelsFromSchema(cfg.Schema, boilerModels)
 
 	// Now we have all model's let enhance them with fields
-	enhanceModelsWithFields(cfg.Schema, cfg, models)
+	enhanceModelsWithFields(enums, cfg.Schema, cfg, models)
 
 	// Add preload maps
 	enhanceModelsWithPreloadMap(models)
@@ -172,11 +174,12 @@ func (m *Plugin) MutateConfig(originalCfg *config.Config) error {
 	fmt.Println("[convert] get boiler models")
 	boilerModels := boiler.GetBoilerModels(m.backendModelsPath)
 
-	fmt.Println("[convert] get model with information")
-	models := GetModelsWithInformation(originalCfg, boilerModels)
-
 	fmt.Println("[convert] get extra's from schema")
 	interfaces, enums, scalars := getExtrasFromSchema(cfg.Schema)
+
+	fmt.Println("[convert] get model with information")
+	models := GetModelsWithInformation(enums, originalCfg, boilerModels)
+
 	b.Models = models
 	b.Interfaces = interfaces
 	b.Enums = enums
@@ -319,7 +322,7 @@ func getPlularBoilerRelationShipName(modelName string) string {
 	return pluralizer.Plural(modelName)
 }
 
-func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*Model) {
+func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Config, models []*Model) {
 
 	binder := cfg.NewBinder()
 
@@ -404,7 +407,7 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 				Description:  field.Description,
 				Tag:          `json:"` + field.Name + `"`,
 			}
-			field.ConvertConfig = getConvertConfig(m, field)
+			field.ConvertConfig = getConvertConfig(enums, m, field)
 			m.Fields = append(m.Fields, field)
 
 		}
@@ -519,14 +522,19 @@ func getExtrasFromSchema(schema *ast.Schema) (interfaces []*Interface, enums []*
 			})
 		case ast.Enum:
 			it := &Enum{
-				Name:        schemaType.Name,
+				Name: schemaType.Name,
+
 				Description: schemaType.Description,
 			}
 			for _, v := range schemaType.EnumValues {
 				it.Values = append(it.Values, &EnumValue{
 					Name:        v.Name,
+					NameLower:   strcase.ToLowerCamel(strings.ToLower(v.Name)),
 					Description: v.Description,
 				})
+			}
+			if strings.HasPrefix(it.Name, "_") {
+				continue
 			}
 			enums = append(enums, it)
 		case ast.Scalar:
@@ -551,7 +559,7 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*boiler.BoilerModel)
 
 		switch schemaType.Kind {
 
-		case ast.Object, ast.InputObject, ast.Enum:
+		case ast.Object, ast.InputObject:
 			{
 				if schemaType == schema.Query ||
 					schemaType == schema.Mutation ||
@@ -731,13 +739,27 @@ type ConvertConfig struct {
 	BoilerTypeAsText string
 }
 
-func getConvertConfig(model *Model, field *Field) (cc ConvertConfig) {
+func findEnum(enums []*Enum, graphType string) *Enum {
+	for _, enum := range enums {
+		if enum.Name == graphType {
+			return enum
+		}
+	}
+	return nil
+}
+
+func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConfig) {
 	graphType := field.Type
 	boilType := field.BoilerField.Type
 
 	// fmt.Println("boilType for", field.Name, ":", boilType)
 
-	if graphType != boilType {
+	enum := findEnum(enums, graphType)
+	if enum != nil {
+		cc.IsCustom = true
+		cc.ToGraphQL = enum.Name + "ToGraphQL"
+		cc.ToBoiler = enum.Name + "ToBoiler"
+	} else if graphType != boilType {
 		cc.IsCustom = true
 
 		if field.IsPrimaryID || field.IsID {
