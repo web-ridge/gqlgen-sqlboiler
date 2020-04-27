@@ -41,6 +41,11 @@ func appendSubQuery(queryMods []qm.QueryMod, q *queries.Query) []qm.QueryMod {
 	return append(queryMods, qm.Where(fmt.Sprintf("EXISTS(%v)", qsClean), args...))
 }
 
+func BooleanFilterToMods(m *graphql_models.BooleanFilter, column string) []qm.QueryMod {
+	// TODO: implement this
+	return nil
+}
+
 func IDFilterToMods(m *graphql_models.IDFilter, column string) []qm.QueryMod {
 	if m == nil {
 		return nil

@@ -241,8 +241,9 @@ const inputKey = "input"
 		{{- end -}}
 
 		{{- if .IsDelete }}
+			dbID := {{ .Model.Name|go }}ID(id)
 			mods := []qm.QueryMod{
-				dm.{{ .Model.Name|go }}Where.ID.EQ({{ .Model.Name|go }}ID(id)),
+				dm.{{ .Model.Name|go }}Where.ID.EQ(dbID),
 				{{- if .Model.BoilerModel.HasOrganizationID  }}
 					dm.{{ .Model.Name }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
 				{{- end }}
@@ -321,7 +322,7 @@ const inputKey = "input"
 				return nil, err
 			}
 
-			boilerIDs := helper.RemovedIDsToUint(IDsToRemove)
+			boilerIDs := helper.RemovedIDsToBoiler{{.Model.PrimaryKeyType|go}}(IDsToRemove)
 			if _, err := dm.{{ .Model.PluralName }}(dm.{{ .Model.Name }}Where.ID.IN(boilerIDs)).DeleteAll(ctx, r.db); err != nil {
 				return nil, err
 			}

@@ -15,10 +15,22 @@ type RemovedID struct {
 	ID uint
 }
 
-func RemovedIDsToUint(removedIds []RemovedID) []uint {
+func RemovedIDsToBoiler(removedIds []RemovedID) []uint {
 	uintIDs := make([]uint, len(removedIds))
 	for index, id := range removedIds {
 		uintIDs[index] = id.ID
+	}
+	return uintIDs
+}
+
+func RemovedIDsToBoilerUint(removedIds []RemovedID) []uint {
+	return RemovedIDsToBoiler(removedIds)
+}
+
+func RemovedIDsToBoilerInt(removedIds []RemovedID) []int {
+	uintIDs := make([]int, len(removedIds))
+	for index, id := range removedIds {
+		uintIDs[index] = int(id.ID)
 	}
 	return uintIDs
 }
@@ -57,6 +69,26 @@ func IDToBoiler(ID string) uint {
 	return 0
 }
 
+func IDsToBoilerUint(ids []string) []uint {
+	return IDsToBoiler(ids)
+}
+
+func IDToBoilerUint(ID string) uint {
+	return IDToBoiler(ID)
+}
+
+func IDToBoilerInt(ID string) int {
+	return int(IDToBoiler(ID))
+}
+
+func IDsToBoilerInt(ids []string) []int {
+	ints := make([]int, len(ids))
+	for index, stringID := range ids {
+		ints[index] = IDToBoilerInt(stringID)
+	}
+	return ints
+}
+
 func IDToNullBoiler(ID string) null.Uint {
 	uintID := IDToBoiler(ID)
 	if uintID == 0 {
@@ -65,6 +97,13 @@ func IDToNullBoiler(ID string) null.Uint {
 	return null.Uint{
 		Uint:  uintID,
 		Valid: false,
+	}
+}
+
+func NullUintToNullInt(u null.Uint) null.Int {
+	return null.Int{
+		Int:   int(u.Uint),
+		Valid: u.Valid,
 	}
 }
 
@@ -82,6 +121,13 @@ func IDsToGraphQL(ids []uint, tableName string) []string {
 
 func NullDotBoolToPointerBool(v null.Bool) *bool {
 	return v.Ptr()
+}
+
+func PointerBoolToBool(v *bool) bool {
+	if v == nil {
+		return false
+	}
+	return *v
 }
 
 func NullDotStringToPointerString(v null.String) *string {

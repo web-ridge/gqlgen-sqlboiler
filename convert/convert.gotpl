@@ -118,12 +118,12 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 
 		{{ range $field := .Fields }}
 			{{- if $field.IsPrimaryID }}
-				func {{ $model.Name|go }}ID(v string) uint {
-					return helper.IDToBoiler(v)
+				func {{ $model.Name|go }}ID(v string) {{ $field.BoilerField.Type }} {
+					return helper.IDToBoiler{{ $field.BoilerField.Type|go }}(v)
 				}
 
-				func {{ $model.Name|go }}IDs(a []string) []uint {
-					return helper.IDsToBoiler(a)
+				func {{ $model.Name|go }}IDs(a []string) []{{ $field.BoilerField.Type }} {
+					return helper.IDsToBoiler{{ $field.BoilerField.Type|go }}(a)
 				}
 				
 			{{- end -}}

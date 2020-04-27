@@ -51,6 +51,7 @@ type Model struct {
 	Name                  string
 	PluralName            string
 	BoilerModel           boiler.BoilerModel
+	PrimaryKeyType        string
 	Fields                []*Field
 	IsNormal              bool
 	IsInput               bool
@@ -364,7 +365,9 @@ func enhanceModelsWithFields(schema *ast.Schema, cfg *config.Config, models []*M
 
 			// get sqlboiler information of the field
 			boilerField := findBoilerField(m.BoilerModel.Fields, golangName, isRelation)
-
+			if isPrimaryID {
+				m.PrimaryKeyType = boilerField.Type
+			}
 			// log some warnings when fields could not be converted
 			if boilerField.Type == "" {
 				// TODO: add filter + where here
@@ -748,7 +751,9 @@ func getConvertConfig(model *Model, field *Field) (cc ConvertConfig) {
 			}
 
 			goToUint := getBoilerTypeAsText(boilType) + "ToUint"
-			if goToUint != "UintToUint" {
+			if goToUint == "IntToUint" {
+				cc.ToGraphQL = "uint(VALUE)"
+			} else if goToUint != "UintToUint" {
 				cc.ToGraphQL = "helper." + goToUint + "(VALUE)"
 			}
 
@@ -758,11 +763,18 @@ func getConvertConfig(model *Model, field *Field) (cc ConvertConfig) {
 				cc.ToGraphQL = field.BoilerField.Relationship.Name + "IDToGraphQL(" + cc.ToGraphQL + ")"
 			}
 
+			isInt := strings.HasPrefix(strings.ToLower(boilType), "int") && !strings.HasPrefix(strings.ToLower(boilType), "uint")
+
 			if strings.HasPrefix(boilType, "null") {
 				cc.ToBoiler = fmt.Sprintf("helper.IDToNullBoiler(%v)", cc.ToBoiler)
+				if isInt {
+					cc.ToBoiler = fmt.Sprintf("helper.NullUintToNullInt(%v)", cc.ToBoiler)
+				}
 			} else {
 				cc.ToBoiler = fmt.Sprintf("helper.IDToBoiler(%v)", cc.ToBoiler)
-
+				if isInt {
+					cc.ToBoiler = fmt.Sprintf("int(%v)", cc.ToBoiler)
+				}
 			}
 
 			cc.ToGraphQL = strings.Replace(cc.ToGraphQL, "VALUE", "m."+getGoFieldName(field.BoilerField.Name), -1)
