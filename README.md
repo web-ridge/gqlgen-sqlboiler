@@ -12,22 +12,23 @@ To make this program a success tight coupling (same naming) between your databas
 4. Generate gqlgen structs + converts between gqlgen and sqlboiler with this program  
    e.g. `go run convert_plugin.go` for file contents of that program see bottom of this readme
 
-DONE: Generate converts between sqlboiler structs and graphql (with relations included)  
-DONE: Generate converts between input models and sqlboiler  
-DONE: Fetch sqlboiler preloads from graphql context  
-DONE: Support for foreign keys named differently than their corresponding model  
-DONE: New plugin which generates CRUD resolvers based on mutations in graphql scheme  
-DONE: Support one-to-one relationships inside input types
-DONE: Generate code which implements the generated where and search filters  
-DONE: Batch update/delete generation in resolvers (Not tested yet)
-DONE: Enum support
+DONE: Generate converts between sqlboiler structs and graphql (with relations included)     
+DONE: Generate converts between input models and sqlboiler      
+DONE: Fetch sqlboiler preloads from graphql context      
+DONE: Support for foreign keys named differently than their corresponding model      
+DONE: New plugin which generates CRUD resolvers based on mutations in graphql scheme.     
+DONE: Support one-to-one relationships inside input types.   
+DONE: Generate code which implements the generated where and search filters        
+DONE: Batch update/delete generation in resolvers (Not tested yet).   
+DONE: Enum support.   
 
-TODO: Batch create generation in resolvers (have working version here for PostgreSQL https://github.com/web-ridge/contact-tracing, need maybe different implementation for different ORM's)
-TODO: Support gqlgen multiple .graphql files  
-TODO: Edges/connections  
-TODO: Crud of adding/removing relationships from many-to-many on edges
-TODO: Support more relationships inside input types  
-TODO: Do a three-way-diff merge for changes and let user choose parts of code which should not take over generated code
+TODO: public errors in resolvers + optional logging via zerolog
+TODO: Batch create generation in resolvers (have working version here for PostgreSQL https://github.com/web-ridge/contact-tracing, need maybe different implementation for different ORM's).    
+TODO: Support gqlgen multiple .graphql files       
+TODO: Edges/connections       
+TODO: Crud of adding/removing relationships from many-to-many on edges.   
+TODO: Support more relationships inside input types       
+TODO: Do a three-way-diff merge for changes and let user choose parts of code which should not take over generated code.   
 
 ## Requirements
 
