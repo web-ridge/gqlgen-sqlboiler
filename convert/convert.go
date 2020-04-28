@@ -390,7 +390,9 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 				if m.IsPayload || m.IsFilter || m.IsWhere {
 				} else {
 					fmt.Println("[WARN] boiler name not available for ", m.Name+"."+golangName)
+					continue
 				}
+
 			}
 			field := &Field{
 				Name:         name,
