@@ -113,6 +113,38 @@ func StringFilterToMods(m *graphql_models.StringFilter, column string) []qm.Quer
 }
 
 
+func FloatFilterToMods(m *graphql_models.FloatFilter, column string) []qm.QueryMod {
+	if m == nil {
+		return nil
+	}
+	var queryMods []qm.QueryMod
+	if m.EqualTo != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, *m.EqualTo))
+	}
+	if m.NotEqualTo != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.NEQ, *m.NotEqualTo))
+	}
+	if m.LessThan != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.LT, *m.LessThan))
+	}
+	if m.MoreThan != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.GT, *m.MoreThan))
+	}
+	if m.LessThanOrEqualTo != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.LTE, *m.LessThanOrEqualTo))
+	}
+	if m.MoreThanOrEqualTo != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.GTE, *m.MoreThanOrEqualTo))
+	}
+	if len(m.In) > 0 {
+		queryMods = append(queryMods, qm.WhereIn(column + in, helper.FloatsToInterfaces(m.In)...))
+	}
+	if len(m.NotIn) > 0 {
+		queryMods = append(queryMods, qm.WhereIn(column + notIn, helper.FloatsToInterfaces(m.NotIn)...))
+	}
+	return queryMods
+}
+
 func IntFilterToMods(m *graphql_models.IntFilter, column string) []qm.QueryMod {
 	if m == nil {
 		return nil

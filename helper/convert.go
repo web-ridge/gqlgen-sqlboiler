@@ -43,6 +43,14 @@ func IntsToInterfaces(ints []int) []interface{} {
 	return interfaces
 }
 
+func FloatsToInterfaces(fs []float64) []interface{} {
+	interfaces := make([]interface{}, len(fs))
+	for index, number := range fs {
+		interfaces[index] = number
+	}
+	return interfaces
+}
+
 func IDsToBoilerInterfaces(ids []string) []interface{} {
 	interfaces := make([]interface{}, len(ids))
 	for index, id := range ids {
