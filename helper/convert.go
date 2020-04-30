@@ -104,7 +104,7 @@ func IDToNullBoiler(ID string) null.Uint {
 	}
 	return null.Uint{
 		Uint:  uintID,
-		Valid: false,
+		Valid: true,
 	}
 }
 
