@@ -228,6 +228,15 @@ func Float64ToTypesDecimal(v float64) types.Decimal {
 	return types.NewDecimal(d)
 }
 
+func PointerFloat64ToTypesDecimal(v *float64) types.Decimal {
+	if v == nil {
+		return types.NewDecimal(decimal.New(0, 0))
+	}
+	d := new(decimal.Big)
+	d.SetFloat64(*v)
+	return types.NewDecimal(d)
+}
+
 func TypesNullDecimalToPointerString(v types.NullDecimal) *string {
 	s := v.String()
 	if s == "" {
