@@ -56,6 +56,21 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 		return ""
 	}
 
+	func StringToPointer{{ .Name|go }}(v string) *graphql_models.{{ .Name|go }} {
+		s := StringTo{{ .Name|go }}(v)
+		if s == "" {
+			return nil
+		}
+		return &s
+	}
+
+	func Pointer{{ .Name|go }}ToString(v *graphql_models.{{ .Name|go }}) string {
+		if v == nil {
+			return ""
+		}
+		return {{ .Name|go }}ToString(*v)
+	}
+
 	func Pointer{{ .Name|go }}ToNullDotString(v *graphql_models.{{ .Name|go }}) null.String {
 		if v == nil {
 			return null.NewString("", false)
