@@ -211,6 +211,11 @@ func TypesNullDecimalToFloat64(v types.NullDecimal) float64 {
 	return f
 }
 
+func TypesDecimalToFloat64(v types.Decimal) float64 {
+	f, _ := v.Float64()
+	return f
+}
+
 func Float64ToTypesNullDecimal(v float64) types.NullDecimal {
 	d := new(decimal.Big)
 	d.SetFloat64(v)
