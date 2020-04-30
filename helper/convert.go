@@ -211,15 +211,21 @@ func TypesNullDecimalToFloat64(v types.NullDecimal) float64 {
 	return f
 }
 
+func Float64ToTypesNullDecimal(v float64) types.NullDecimal {
+	d := new(decimal.Big)
+	d.SetFloat64(v)
+	return types.NewNullDecimal(d)
+}
+
 func TypesDecimalToFloat64(v types.Decimal) float64 {
 	f, _ := v.Float64()
 	return f
 }
 
-func Float64ToTypesNullDecimal(v float64) types.NullDecimal {
+func Float64ToTypesDecimal(v float64) types.Decimal {
 	d := new(decimal.Big)
 	d.SetFloat64(v)
-	return types.NewNullDecimal(d)
+	return types.NewDecimal(d)
 }
 
 func TypesNullDecimalToPointerString(v types.NullDecimal) *string {
