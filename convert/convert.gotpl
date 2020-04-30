@@ -32,14 +32,22 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 }
 
 {{ range $enum := .Enums }}
-	func Pointer{{ .Name|go }}ToGraphQL(v *string) graphql_models.{{ .Name|go }} {
-		if v == nil {
-			return ""
+	func NullDotStringToPointer{{ .Name|go }}(v null.String) *graphql_models.{{ .Name|go }} {
+		s := StringTo{{ .Name|go }}(v.String)
+		if s == "" {
+			return nil
 		}
-		return {{ .Name|go }}ToGraphQL(*v)
+		return &s
 	}
 
-	func {{ .Name|go }}ToGraphQL(v string) graphql_models.{{ .Name|go }} {
+	func NullDotStringTo{{ .Name|go }}(v null.String) graphql_models.{{ .Name|go }} {
+		if !v.Valid {
+			return ""
+		}
+		return StringTo{{ .Name|go }}(v.String)
+	}
+
+	func StringTo{{ .Name|go }}(v string) graphql_models.{{ .Name|go }} {
 		{{- range $value := .Values }}
 			if v == "{{ .NameLower }}" {
 				return graphql_models.{{$enum.Name|go}}{{ .Name|go }}
@@ -48,7 +56,19 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 		return ""
 	}
 
-	func {{ .Name|go }}ToBoiler(v graphql_models.{{ .Name|go }}) string {
+	func Pointer{{ .Name|go }}ToNullDotString(v *graphql_models.{{ .Name|go }}) null.String {
+		if v == nil {
+			return null.NewString("", false)
+		}
+		return {{ .Name|go }}ToNullDotString(*v)
+	}
+
+	func {{ .Name|go }}ToNullDotString(v graphql_models.{{ .Name|go }}) null.String {
+		s := {{ .Name|go }}ToString(v)
+		return null.NewString(s, s != "")
+	}
+
+	func {{ .Name|go }}ToString(v graphql_models.{{ .Name|go }}) string {
 		{{- range $value := .Values }}
 			if v == "{{ .Name }}" {
 				return "{{ .NameLower }}"
@@ -56,14 +76,7 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 		{{- end }}
 		return ""
 	}
-	
-	func Pointer{{ .Name|go }}ToBoiler(v *graphql_models.{{ .Name|go }}) string {
-		if v == nil {
-			return ""
-		}
-		return {{ .Name|go }}ToBoiler(*v)
-	}
-{{- end }}
+{{ end }}
 
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}

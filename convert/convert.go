@@ -760,13 +760,9 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 	enum := findEnum(enums, graphType)
 	if enum != nil {
 		cc.IsCustom = true
-		if strings.HasPrefix(field.OriginalType.String(), "*") {
-			cc.ToGraphQL = enum.Name + "ToGraphQL" + "Pointer"
-			cc.ToBoiler = "Pointer" + enum.Name + "ToBoiler"
-		} else {
-			cc.ToGraphQL = enum.Name + "ToGraphQL"
-			cc.ToBoiler = enum.Name + "ToBoiler"
-		}
+		longType := field.OriginalType.String()
+		cc.ToBoiler = strings.TrimPrefix(getToBoiler(getBoilerTypeAsText(boilType), getEnumTypeAsText(graphType, longType)), "helper.")
+		cc.ToGraphQL = strings.TrimPrefix(getToGraphQL(getBoilerTypeAsText(boilType), getEnumTypeAsText(graphType, longType)), "helper.")
 
 	} else if graphType != boilType {
 		cc.IsCustom = true
@@ -850,6 +846,16 @@ func getBoilerTypeAsText(boilType string) string {
 
 func getGraphTypeAsText(graphType string) string {
 	if strings.HasPrefix(graphType, "*") {
+		graphType = strings.TrimPrefix(graphType, "*")
+		graphType = strcase.ToCamel(graphType)
+		graphType = "Pointer" + graphType
+	}
+	return strcase.ToCamel(graphType)
+}
+
+func getEnumTypeAsText(graphType string, longType string) string {
+
+	if strings.HasPrefix(longType, "*") {
 		graphType = strings.TrimPrefix(graphType, "*")
 		graphType = strcase.ToCamel(graphType)
 		graphType = "Pointer" + graphType
