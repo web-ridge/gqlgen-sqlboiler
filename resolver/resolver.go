@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/iancoleman/strcase"
 	"github.com/web-ridge/gqlgen-sqlboiler/boiler"
 	"github.com/web-ridge/gqlgen-sqlboiler/convert"
 
@@ -268,6 +269,9 @@ type Resolver struct {
 	ResolveUserID             bool
 	Model                     convert.Model
 	InputModel                convert.Model
+
+	PublicErrorKey     string
+	PublicErrorMessage string
 }
 
 func gqlToResolverName(base string, gqlname string) string {
@@ -300,7 +304,6 @@ func enhanceResolver(r *Resolver, models []*convert.Model) {
 	r.InputModel = inputModel
 
 	if r.Object.Name == "Mutation" {
-
 		r.IsCreate = containsPrefixAndPartAfterThatIsSingle(nameOfResolver, "Create")
 		r.IsUpdate = containsPrefixAndPartAfterThatIsSingle(nameOfResolver, "Update")
 		r.IsDelete = containsPrefixAndPartAfterThatIsSingle(nameOfResolver, "Delete")
@@ -309,12 +312,41 @@ func enhanceResolver(r *Resolver, models []*convert.Model) {
 		r.IsBatchUpdate = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Update")
 		r.IsBatchDelete = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Delete")
 	} else if r.Object.Name == "Query" {
-
 		r.IsList = pluralizer.IsPlural(nameOfResolver)
 		r.IsSingle = !r.IsList
 	} else {
 		fmt.Println("[WARN] Only Query and Mutation are handled we don't recognize the following: ", r.Object.Name)
 	}
+
+	lmName := strcase.ToLowerCamel(model.Name)
+	lmpName := strcase.ToLowerCamel(model.PluralName)
+	r.PublicErrorKey = "public" + model.Name
+	if r.IsSingle {
+		r.PublicErrorKey += "Single"
+		r.PublicErrorMessage = "Could not get " + lmName
+	} else if r.IsList {
+		r.PublicErrorKey += "List"
+		r.PublicErrorMessage = "Could not list " + lmpName
+	} else if r.IsCreate {
+		r.PublicErrorKey += "Create"
+		r.PublicErrorMessage = "Could not create " + lmName
+	} else if r.IsUpdate {
+		r.PublicErrorKey += "Update"
+		r.PublicErrorMessage = "Could not update " + lmName
+	} else if r.IsDelete {
+		r.PublicErrorKey += "Delete"
+		r.PublicErrorMessage = "Could not delete " + lmName
+	} else if r.IsBatchCreate {
+		r.PublicErrorKey += "BatchCreate"
+		r.PublicErrorMessage = "Could not create " + lmpName
+	} else if r.IsBatchUpdate {
+		r.PublicErrorKey += "BatchUpdate"
+		r.PublicErrorMessage = "Could not update " + lmpName
+	} else if r.IsBatchDelete {
+		r.PublicErrorKey += "BatchDelete"
+		r.PublicErrorMessage = "Could not delete " + lmpName
+	}
+	r.PublicErrorKey += "Error"
 }
 
 func findModel(models []*convert.Model, modelName string) convert.Model {
