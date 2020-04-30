@@ -85,7 +85,7 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 
 	func {{ .Name|go }}ToString(v graphql_models.{{ .Name|go }}) string {
 		{{- range $value := .Values }}
-			if v == "{{ .Name }}" {
+			if v == graphql_models.{{$enum.Name|go}}{{ .Name|go }} {
 				return "{{ .NameLower }}"
 			}
 		{{- end }}
