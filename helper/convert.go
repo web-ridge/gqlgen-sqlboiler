@@ -159,11 +159,10 @@ func NullDotStringToPointerString(v null.String) *string {
 }
 
 func NullDotTimeToPointerInt(v null.Time) *int {
-	pv := v.Ptr()
-	if pv == nil {
+	if !v.Valid {
 		return nil
 	}
-	u := int(pv.Unix())
+	u := int(v.Time.Unix())
 	return &u
 }
 
@@ -176,18 +175,18 @@ func IntToTimeTime(v int) time.Time {
 }
 
 func NullDotStringToString(v null.String) string {
-	if v.Ptr() == nil {
+	if !v.Valid {
 		return ""
 	}
-	return *v.Ptr()
+
+	return v.String
 }
 
 func NullDotUintToPointerInt(v null.Uint) *int {
-	pv := v.Ptr()
-	if pv == nil {
+	if !v.Valid {
 		return nil
 	}
-	u := int(*pv)
+	u := int(v.Uint)
 	return &u
 }
 
@@ -330,11 +329,11 @@ func IntToBool(v int) bool {
 }
 
 func NullDotBoolToPointerInt(v null.Bool) *int {
-	pv := v.Ptr()
-	if pv == nil {
+	if !v.Valid {
 		return nil
 	}
-	if *pv {
+
+	if v.Bool {
 		i := 1
 		return &i
 	}

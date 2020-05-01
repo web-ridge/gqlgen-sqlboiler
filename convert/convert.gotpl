@@ -21,14 +21,14 @@
 {{ reserveImport  $.BackendModelsPath }}
 {{ reserveImport  $.FrontendModelsPath }}
 
+// alreadyConverted prevents endless converts between self-referencing tables
 func alreadyConverted(roots []interface{}, check interface{}) bool {
-	var matched int
 	for _, root := range roots {
 		if root == check {
-			matched++
+			return true
 		}
 	}
-	return matched > 2
+	return false
 }
 
 {{ range $enum := .Enums }}

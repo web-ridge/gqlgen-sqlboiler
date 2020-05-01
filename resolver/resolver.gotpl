@@ -189,7 +189,7 @@ const inputKey = "input"
 			{{ range $field := .InputModel.Fields -}}
 				{{ if $field.IsRelation -}}
 					if input.{{ $field.Name|go }} != nil {
-						dbID := {{ $field.BoilerField.Relationship.Name }}ID(id)
+						dbID := {{ $field.BoilerField.Relationship.Name }}ID(input.{{ $field.Name|go }}ID)
 						nestedM := {{ $field.BoilerField.Relationship.Name }}UpdateInputToModelM(
 							helper.GetInputFromContext(ctx, "input.{{ $field.Name }}"), 
 							*input.{{ $field.Name|go }},
