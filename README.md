@@ -41,10 +41,6 @@ To make this program a success tight coupling (same naming) between your databas
 - Use unsigned ints for foreign keys + ids. Otherwise converts will give compile errors.
   Unsigned ints for id's is allso recommended since it gives you twice as big id's and id's should not be negative anyway ;)
 
-## Case
-
-You have a personal project with a very big database and a 'Laravel API'. I want to be able to generate a new Golang GraphQL API for this project in no time.
-
 ## Examples
 
 More examples are welcome. Send a PR ;-)
