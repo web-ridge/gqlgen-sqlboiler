@@ -2,12 +2,12 @@ This program generates code like this between your generated gqlgen and sqlboile
 
 To make this program a success tight coupling (same naming) between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed. However everything is created with support for change so you could write some extra GrapQL resolvers if you'd like without a problem.
 
-## Flow
+## Usage
 
-1. Generate database structs with: https://github.com/volatiletech/sqlboiler  
-   e.g. `sqlboiler mysql`
+1. Generate database structs with: https://github.com/volatiletech/sqlboiler (--no-back-referencing is IMPORTANT!)
+   e.g. `sqlboiler mysql --no-back-referencing`
 2. (optional, but recommended) Generate GrapQL scheme from sqlboiler structs: https://github.com/web-ridge/sqlboiler-graphql-schema  
-   e.g. `go run github.com/web-ridge/sqlboiler-graphql-schema --output=../schema.graphql`
+   e.g. `go run github.com/web-ridge/sqlboiler-graphql-schema --output=schema.graphql --skip-input-fields=userId --directives=isAuthenticated --pagination=no`
 3. Install: https://github.com/99designs/gqlgen
 4. Generate gqlgen structs + converts between gqlgen and sqlboiler with this program  
    e.g. `go run convert_plugin.go` for file contents of that program see bottom of this readme

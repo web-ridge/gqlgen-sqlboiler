@@ -5,6 +5,9 @@
 A few breaking changes, after this we will try to keep everything stable.
 We needed this since the go modules did not work well with the current approach.
 
+**Important NOTE**
+You MUST run sqlboiler with the --no-back-referencing tag since we removed safety in converts for endless recursive converts in favor of the --no-back-referencing configuration.
+
 - Remove self-referencing fixes for converts (https://github.com/volatiletech/sqlboiler/issues/522)
 - Upgrading to sqlboiler v4.0.0 (https://github.com/volatiletech/sqlboiler/releases)
 - Move examples to https://github.com/web-ridge/gqlgen-sqlboiler-examples
