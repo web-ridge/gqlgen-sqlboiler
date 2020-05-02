@@ -45,12 +45,12 @@ To make this program a success tight coupling (same naming) between your databas
 
 You have a personal project with a very big database and a 'Laravel API'. I want to be able to generate a new Golang GraphQL API for this project in no time.
 
-## Examples can be found here
+## Examples
 
 More examples are welcome. Send a PR ;-)
 https://github.com/web-ridge/gqlgen-sqlboiler-examples
 
-## Example result of this plugin
+### Example result of this plugin
 
 https://github.com/web-ridge/gqlgen-sqlboiler-examples/tree/master/social-network/helpers
 
