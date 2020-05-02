@@ -7,7 +7,7 @@ We needed this since the go modules did not work well with the current approach.
 
 - Remove self-referencing fixes for converts (https://github.com/volatiletech/sqlboiler/issues/522)
 - Upgrading to sqlboiler v4.0.0 (https://github.com/volatiletech/sqlboiler/releases)
-- Move examples to https://github.com/web-ridge/gqlgen-sqlboiler/v2-examples
+- Move examples to https://github.com/web-ridge/gqlgen-sqlboiler-examples
 - Move convert utils to https://github.com/web-ridge/utils-go
 - Going to one go modules for the repository
 
