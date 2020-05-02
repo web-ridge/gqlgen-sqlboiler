@@ -6,8 +6,17 @@
 {{ reserveImport "sync"  }}
 {{ reserveImport "errors"  }}
 {{ reserveImport "bytes"  }}
-{{ reserveImport "github.com/volatiletech/sqlboiler/queries/qm" }}
+
+{{ reserveImport "github.com/ericlagergren/decimal" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/boil" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/queries" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/queries/qm" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/queries/qmhelper" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/types" }}
+{{ reserveImport "github.com/volatiletech/null/v8" }}
+
 {{ reserveImport "github.com/web-ridge/utils-go/boilergql" }}
+
 {{ reserveImport "database/sql" }}
 {{ reserveImport "github.com/vektah/gqlparser/v2" }}
 {{ reserveImport "github.com/vektah/gqlparser/v2/ast" }}
