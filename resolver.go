@@ -1,4 +1,4 @@
-package main
+package gqlgen_sqlboiler
 
 import (
 	"fmt"

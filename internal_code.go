@@ -1,5 +1,5 @@
 /*
-All code copied from to prevent not allowed error
+All code below copied from to prevent not allowed error
 https://github.com/99designs/gqlgen/internal/code
 
 Made issue to make these helper public
@@ -8,7 +8,7 @@ https://github.com/99designs/gqlgen/issues/1058
 
 */
 
-package main
+package gqlgen_sqlboiler
 
 import (
 	"bytes"
