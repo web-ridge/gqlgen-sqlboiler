@@ -12,6 +12,8 @@ To make this program a success tight coupling (same naming) between your databas
 4. Generate gqlgen structs + converts between gqlgen and sqlboiler with this program  
    e.g. `go run convert_plugin.go` for file contents of that program see bottom of this readme
 
+## Done
+
 - [x] Generate converts between sqlboiler structs and graphql (with relations included)
 - [x] Generate converts between input models and sqlboiler
 - [x] Fetch sqlboiler preloads from graphql context
@@ -22,6 +24,8 @@ To make this program a success tight coupling (same naming) between your databas
 - [x] Batch update/delete generation in resolvers (Not tested yet).
 - [x] Enum support.
 - [x] public errors in resolvers + optional logging via zerolog. (feel free for PR for configurable logging!)
+
+## Roadmap
 
 - [ ] Batch create generation in resolvers (have working version here for.PostgreSQL https://github.com/web-ridge/contact-tracing, need maybe different implementation for different ORM's?).
 - [ ] Support gqlgen multiple .graphql files
