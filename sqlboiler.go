@@ -10,16 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	pluralize "github.com/gertd/go-pluralize"
-
 	"github.com/iancoleman/strcase"
 )
-
-var pluralizer *pluralize.Client
-
-func init() {
-	pluralizer = pluralize.NewClient()
-}
 
 type BoilerModel struct {
 	Name                  string
