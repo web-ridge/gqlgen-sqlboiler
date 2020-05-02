@@ -43,8 +43,9 @@ To make this program a success tight coupling (same naming) between your databas
 
 ## Examples
 
-More examples are welcome. Send a PR ;-)
 https://github.com/web-ridge/gqlgen-sqlboiler-examples
+
+More examples are welcome. Send a PR ;-)
 
 ### Example result of this plugin
 
