@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/iancoleman/strcase"
@@ -13,21 +12,8 @@ import (
 	"github.com/99designs/gqlgen/codegen/config"
 	"github.com/99designs/gqlgen/codegen/templates"
 	"github.com/99designs/gqlgen/plugin"
-	pluralize "github.com/gertd/go-pluralize"
 	"github.com/pkg/errors"
 )
-
-var pathRegex *regexp.Regexp
-var pluralizer *pluralize.Client
-
-func init() {
-	var initError error
-	pluralizer = pluralize.NewClient()
-	pathRegex, initError = regexp.Compile(`src\/(.*)`)
-	if initError != nil {
-		fmt.Println("could not compile the path regex")
-	}
-}
 
 func NewResolverPlugin(convertHelpersDir, backendModelsPath, frontendModelsPath string, authImport string) plugin.Plugin {
 	return &ResolverPlugin{convertHelpersDir: convertHelpersDir, backendModelsPath: backendModelsPath, frontendModelsPath: frontendModelsPath, authImport: authImport}
@@ -294,8 +280,8 @@ func enhanceResolver(r *Resolver, models []*Model) {
 	modelName, inputModelName := getModelNames(nameOfResolver, false)
 	// modelPluralName, _ := getModelNames(nameOfResolver, true)
 
-	model := findModel(models, modelName)
-	inputModel := findModel(models, inputModelName)
+	model := findModelOrEmpty(models, modelName)
+	inputModel := findModelOrEmpty(models, inputModelName)
 
 	// save for later inside file
 	r.Model = model
@@ -347,7 +333,7 @@ func enhanceResolver(r *Resolver, models []*Model) {
 	r.PublicErrorKey += "Error"
 }
 
-func findModel(models []*Model, modelName string) Model {
+func findModelOrEmpty(models []*Model, modelName string) Model {
 	if modelName == "" {
 		return Model{}
 	}
@@ -395,13 +381,4 @@ func containsPrefixAndPartAfterThatIsSingle(v string, prefix string) bool {
 func containsPrefixAndPartAfterThatIsPlural(v string, prefix string) bool {
 	partAfterThat := strings.TrimPrefix(v, prefix)
 	return strings.HasPrefix(v, prefix) && pluralizer.IsPlural(partAfterThat)
-}
-
-func getGoImportFromFile(dir string) string {
-	longPath, err := filepath.Abs(dir)
-	if err != nil {
-		fmt.Println("error while trying to convert folder to gopath", err)
-	}
-	// src/Users/richardlindhout/go/src/gitlab.com/eyeontarget/app/backend/graphql_models
-	return strings.TrimPrefix(pathRegex.FindString(longPath), "src/")
 }
