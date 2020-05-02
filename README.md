@@ -41,8 +41,38 @@ You have a personal project with a very big database and a 'Laravel API'. I want
 
 ## Example result of this plugin
 
-```golang
+https://github.com/web-ridge/gqlgen-sqlboiler-examples/tree/master/social-network/helpers
 
+```golang
+func PostToGraphQL(m *models.Post) *graphql_models.Post {
+	if m == nil {
+		return nil
+	}
+
+	r := &graphql_models.Post{
+		ID:      PostIDToGraphQL(m.ID),
+		Content: m.Content,
+	}
+
+	if boilergql.UintIsFilled(m.UserID) {
+		if m.R != nil && m.R.User != nil {
+			r.User = UserToGraphQL(m.R.User)
+		} else {
+			r.User = UserWithUintID(m.UserID)
+		}
+	}
+	if m.R != nil && m.R.Comments != nil {
+		r.Comments = CommentsToGraphQL(m.R.Comments)
+	}
+	if m.R != nil && m.R.Images != nil {
+		r.Images = ImagesToGraphQL(m.R.Images)
+	}
+	if m.R != nil && m.R.Likes != nil {
+		r.Likes = LikesToGraphQL(m.R.Likes)
+	}
+
+	return r
+}
 ```
 
 sqlboiler.yml
