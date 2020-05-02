@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/iancoleman/strcase"
-	"github.com/web-ridge/gqlgen-sqlboiler/boiler"
-	"github.com/web-ridge/gqlgen-sqlboiler/convert"
+	"github.com/web-ridge/gqlgen-sqlboiler/v2/boiler"
+	"github.com/web-ridge/gqlgen-sqlboiler/v2/convert"
 
 	"github.com/99designs/gqlgen/codegen"
 	"github.com/99designs/gqlgen/codegen/config"

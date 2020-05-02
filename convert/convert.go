@@ -17,7 +17,7 @@ import (
 	pluralize "github.com/gertd/go-pluralize"
 	"github.com/iancoleman/strcase"
 	"github.com/vektah/gqlparser/v2/ast"
-	"github.com/web-ridge/gqlgen-sqlboiler/boiler"
+	"github.com/web-ridge/gqlgen-sqlboiler/v2/boiler"
 )
 
 var pathRegex *regexp.Regexp
@@ -426,7 +426,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 }
 
 func getShortType(longType string) string {
-	//*github.com/web-ridge/gqlgen-sqlboiler/examples/social-network/graphql_models.StringFilter
+	//*github.com/web-ridge/gqlgen-sqlboiler/v2/examples/social-network/graphql_models.StringFilter
 
 	splittedBySlash := strings.Split(longType, "/")
 	lastPart := splittedBySlash[len(splittedBySlash)-1]

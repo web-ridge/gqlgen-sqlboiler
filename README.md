@@ -96,8 +96,8 @@ import (
 
 	"github.com/99designs/gqlgen/api"
 	"github.com/99designs/gqlgen/codegen/config"
-	cm "github.com/web-ridge/gqlgen-sqlboiler/convert"
-	rm "github.com/web-ridge/gqlgen-sqlboiler/resolver"
+	cm "github.com/web-ridge/gqlgen-sqlboiler/v2/convert"
+	rm "github.com/web-ridge/gqlgen-sqlboiler/v2/resolver"
 )
 
 func main() {
