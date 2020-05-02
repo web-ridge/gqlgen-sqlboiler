@@ -7,7 +7,7 @@
 {{ reserveImport "errors"  }}
 {{ reserveImport "bytes"  }}
 {{ reserveImport "github.com/volatiletech/sqlboiler/queries/qm" }}
-{{ reserveImport "github.com/web-ridge/gqlgen-sqlboiler/helper" }}
+{{ reserveImport "github.com/web-ridge/utils-go/boilergql" }}
 {{ reserveImport "database/sql" }}
 {{ reserveImport "github.com/vektah/gqlparser/v2" }}
 {{ reserveImport "github.com/vektah/gqlparser/v2/ast" }}
@@ -31,7 +31,7 @@ const inputKey = "input"
 
 		{{- if .IsSingle }}
 			dbID := {{ .Model.Name }}ID(id)
-			mods := helper.GetPreloadMods(ctx, {{ .Model.Name|go }}PreloadMap)
+			mods := boilergql.GetPreloadMods(ctx, {{ .Model.Name|go }}PreloadMap)
 			mods = append(mods, dm.{{ .Model.Name|go }}Where.ID.EQ(dbID))
 			{{- if .Model.BoilerModel.HasOrganizationID }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
@@ -58,7 +58,7 @@ const inputKey = "input"
 		{{- end -}}
 
 		{{- if .IsList }}
-			mods := helper.GetPreloadMods(ctx, {{ .Model.Name|go }}PreloadMap)
+			mods := boilergql.GetPreloadMods(ctx, {{ .Model.Name|go }}PreloadMap)
 			{{- if .Model.BoilerModel.HasOrganizationID }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
 					auth.OrganizationIDFromContext(ctx),
@@ -103,7 +103,7 @@ const inputKey = "input"
 						{{- end }}
 
 						{{ $field.Name }}Input := {{ $field.BoilerField.Relationship.Name }}CreateInputToBoilerWhitelist(
-							helper.GetInputFromContext(ctx, "input.{{ $field.Name }}"),
+							boilergql.GetInputFromContext(ctx, "input.{{ $field.Name }}"),
 							{{- if $model.BoilerModel.HasOrganizationID  }}
 								dm.{{ $field.BoilerField.Relationship.Name }}Columns.OrganizationID,
 							{{- end }}
@@ -136,7 +136,7 @@ const inputKey = "input"
 			{{- end }}
 
 			whiteList := {{ .InputModel.Name }}ToBoilerWhitelist(
-				helper.GetInputFromContext(ctx, inputKey),
+				boilergql.GetInputFromContext(ctx, inputKey),
 				{{- if .Model.BoilerModel.HasOrganizationID  }}
 					dm.{{ .Model.Name }}Columns.OrganizationID,
 				{{- end }}
@@ -153,7 +153,7 @@ const inputKey = "input"
 			}
 
 			// resolve requested fields after creating
-			mods := helper.GetPreloadModsWithLevel(ctx, {{ .Model.Name|go }}PreloadMap, {{ .Model.Name|go }}PayloadPreloadLevels.{{ .Model.Name|go }})
+			mods := boilergql.GetPreloadModsWithLevel(ctx, {{ .Model.Name|go }}PreloadMap, {{ .Model.Name|go }}PayloadPreloadLevels.{{ .Model.Name|go }})
 			mods = append(mods, dm.{{ .Model.Name|go }}Where.ID.EQ(m.ID))
 			{{- if .Model.BoilerModel.HasOrganizationID  }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
@@ -182,7 +182,7 @@ const inputKey = "input"
 		{{- end -}}
 
 		{{- if .IsUpdate }}
-			m := {{ .InputModel.Name }}ToModelM(helper.GetInputFromContext(ctx, inputKey), input)
+			m := {{ .InputModel.Name }}ToModelM(boilergql.GetInputFromContext(ctx, inputKey), input)
 
 			{{ $resolver := . -}}
 			{{ $model := .Model -}}
@@ -191,7 +191,7 @@ const inputKey = "input"
 					if input.{{ $field.Name|go }} != nil && input.{{ $field.Name|go }}ID != nil {
 						dbID := {{ $field.BoilerField.Relationship.Name }}ID(*input.{{ $field.Name|go }}ID)
 						nestedM := {{ $field.BoilerField.Relationship.Name }}UpdateInputToModelM(
-							helper.GetInputFromContext(ctx, "input.{{ $field.Name }}"), 
+							boilergql.GetInputFromContext(ctx, "input.{{ $field.Name }}"), 
 							*input.{{ $field.Name|go }},
 						)
 						if _, err := dm.{{ $field.BoilerField.Relationship.PluralName }}(
@@ -238,7 +238,7 @@ const inputKey = "input"
 			}
 
 			// resolve requested fields after updating
-			mods := helper.GetPreloadModsWithLevel(ctx, {{ .Model.Name|go }}PreloadMap, {{ .Model.Name|go }}PayloadPreloadLevels.{{ .Model.Name|go }})
+			mods := boilergql.GetPreloadModsWithLevel(ctx, {{ .Model.Name|go }}PreloadMap, {{ .Model.Name|go }}PayloadPreloadLevels.{{ .Model.Name|go }})
 			mods = append(mods, dm.{{ .Model.Name|go }}Where.ID.EQ(dbID))
 			{{- if .Model.BoilerModel.HasOrganizationID  }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
@@ -311,7 +311,7 @@ const inputKey = "input"
 			{{- end }}
 			mods = append(mods, {{.Model.Name}}FilterToMods(filter)...)
 
-			m := {{ .InputModel.Name }}ToModelM(helper.GetInputFromContext(ctx, inputKey), input)
+			m := {{ .InputModel.Name }}ToModelM(boilergql.GetInputFromContext(ctx, inputKey), input)
 			if _, err := dm.{{ .Model.PluralName }}(mods...).UpdateAll(ctx, r.db, m); err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
@@ -343,20 +343,20 @@ const inputKey = "input"
 			mods = append(mods, qm.Select(dm.{{ .Model.Name }}Columns.ID))
 			mods = append(mods, qm.From(dm.TableNames.{{ .Model.Name }}))
 
-			var IDsToRemove []helper.RemovedID
+			var IDsToRemove []boilergql.RemovedID
 			if err := dm.{{ .Model.PluralName }}(mods...).Bind(ctx, r.db, IDsToRemove); err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
 
-			boilerIDs := helper.RemovedIDsToBoiler{{.Model.PrimaryKeyType|go}}(IDsToRemove)
+			boilerIDs := boilergql.RemovedIDsToBoiler{{.Model.PrimaryKeyType|go}}(IDsToRemove)
 			if _, err := dm.{{ .Model.PluralName }}(dm.{{ .Model.Name }}Where.ID.IN(boilerIDs)).DeleteAll(ctx, r.db); err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
 
 			return &fm.{{ .Model.PluralName }}DeletePayload{
-				Ids: helper.{{.Model.PrimaryKeyType|go}}IDsToGraphQL(boilerIDs, dm.TableNames.{{ .Model.Name }}),
+				Ids: boilergql.{{.Model.PrimaryKeyType|go}}IDsToGraphQL(boilerIDs, dm.TableNames.{{ .Model.Name }}),
 			}, nil
 
 		{{- end }}

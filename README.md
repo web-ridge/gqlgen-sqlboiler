@@ -12,23 +12,23 @@ To make this program a success tight coupling (same naming) between your databas
 4. Generate gqlgen structs + converts between gqlgen and sqlboiler with this program  
    e.g. `go run convert_plugin.go` for file contents of that program see bottom of this readme
 
-DONE: Generate converts between sqlboiler structs and graphql (with relations included)     
-DONE: Generate converts between input models and sqlboiler      
-DONE: Fetch sqlboiler preloads from graphql context      
-DONE: Support for foreign keys named differently than their corresponding model      
-DONE: New plugin which generates CRUD resolvers based on mutations in graphql scheme.     
-DONE: Support one-to-one relationships inside input types.   
-DONE: Generate code which implements the generated where and search filters        
-DONE: Batch update/delete generation in resolvers (Not tested yet).   
-DONE: Enum support.   
-DONE: public errors in resolvers + optional logging via zerolog.  (feel free for PR for configurable logging!)   
+DONE: Generate converts between sqlboiler structs and graphql (with relations included)  
+DONE: Generate converts between input models and sqlboiler  
+DONE: Fetch sqlboiler preloads from graphql context  
+DONE: Support for foreign keys named differently than their corresponding model  
+DONE: New plugin which generates CRUD resolvers based on mutations in graphql scheme.  
+DONE: Support one-to-one relationships inside input types.  
+DONE: Generate code which implements the generated where and search filters  
+DONE: Batch update/delete generation in resolvers (Not tested yet).  
+DONE: Enum support.  
+DONE: public errors in resolvers + optional logging via zerolog. (feel free for PR for configurable logging!)
 
-TODO: Batch create generation in resolvers (have working version here for.PostgreSQL https://github.com/web-ridge/contact-tracing, need maybe different implementation for different ORM's?).        
-TODO: Support gqlgen multiple .graphql files        
-TODO: Edges/connections         
-TODO: Crud of adding/removing relationships from many-to-many on edges.     
-TODO: Support more relationships inside input types       
-TODO: Do a three-way-diff merge for changes and let user choose parts of code which should not take over generated code.       
+TODO: Batch create generation in resolvers (have working version here for.PostgreSQL https://github.com/web-ridge/contact-tracing, need maybe different implementation for different ORM's?).  
+TODO: Support gqlgen multiple .graphql files  
+TODO: Edges/connections  
+TODO: Crud of adding/removing relationships from many-to-many on edges.  
+TODO: Support more relationships inside input types  
+TODO: Do a three-way-diff merge for changes and let user choose parts of code which should not take over generated code.
 
 ## Requirements
 
@@ -42,95 +42,7 @@ You have a personal project with a very big database and a 'Laravel API'. I want
 ## Example result of this plugin
 
 ```golang
-func AddressToGraphQL(m *models.Address, roots []interface{}) *graphql_models.Address {
-	if m == nil {
-		return nil
-	}
 
-	r := &graphql_models.Address{
-		ID:          AddressIDUnique(m.ID),
-		Street:      helper.NullDotStringToPointerString(m.Street),
-		HouseNumber: helper.NullDotStringToPointerString(m.HouseNumber),
-		ZipAddress:  helper.NullDotStringToPointerString(m.ZipAddress),
-		City:        helper.NullDotStringToPointerString(m.City),
-		Longitude:   helper.TypesNullDecimalToFloat64(m.Longitude),
-		Latitude:    helper.TypesNullDecimalToFloat64(m.Latitude),
-		Description: helper.NullDotStringToPointerString(m.Description),
-		Name:        helper.NullDotStringToPointerString(m.Name),
-		Permission:  helper.NullDotBoolToPointerBool(m.Permission),
-		UpdatedAt:   helper.NullDotTimeToPointerInt(m.UpdatedAt),
-		DeletedAt:   helper.NullDotTimeToPointerInt(m.DeletedAt),
-		CreatedAt:   helper.NullDotTimeToPointerInt(m.CreatedAt),
-	}
-
-	if helper.UintIsFilled(m.AddressStatusID) {
-		if m.R != nil && m.R.AddressStatus != nil {
-			if !alreadyConverted(roots, m.R.AddressStatus) {
-				r.AddressStatus = AddressStatusToGraphQL(m.R.AddressStatus, append(roots, m))
-			}
-		} else {
-			r.AddressStatus = AddressStatusWithUintID(m.AddressStatusID)
-		}
-	}
-
-	if helper.NullDotUintIsFilled(m.CompanyID) {
-		if m.R != nil && m.R.Company != nil {
-			if !alreadyConverted(roots, m.R.Company) {
-				r.Company = CompanyToGraphQL(m.R.Company, append(roots, m))
-			}
-		} else {
-			r.Company = CompanyWithNullDotUintID(m.CompanyID)
-		}
-	}
-
-	if helper.NullDotUintIsFilled(m.ContactPersonID) {
-		if m.R != nil && m.R.ContactPerson != nil {
-			if !alreadyConverted(roots, m.R.ContactPerson) {
-				r.ContactPerson = PersonToGraphQL(m.R.ContactPerson, append(roots, m))
-			}
-		} else {
-			r.ContactPerson = PersonWithNullDotUintID(m.ContactPersonID)
-		}
-	}
-
-	if helper.NullDotUintIsFilled(m.HouseTypeID) {
-		if m.R != nil && m.R.HouseType != nil {
-			if !alreadyConverted(roots, m.R.HouseType) {
-				r.HouseType = HouseTypeToGraphQL(m.R.HouseType, append(roots, m))
-			}
-		} else {
-			r.HouseType = HouseTypeWithNullDotUintID(m.HouseTypeID)
-		}
-	}
-
-	if helper.NullDotUintIsFilled(m.OwnerID) {
-		if m.R != nil && m.R.Owner != nil {
-			if !alreadyConverted(roots, m.R.Owner) {
-				r.Owner = PersonToGraphQL(m.R.Owner, append(roots, m))
-			}
-		} else {
-			r.Owner = PersonWithNullDotUintID(m.OwnerID)
-		}
-	}
-
-	if helper.UintIsFilled(m.UserOrganizationID) {
-		if m.R != nil && m.R.UserOrganization != nil {
-			if !alreadyConverted(roots, m.R.UserOrganization) {
-				r.UserOrganization = UserOrganizationToGraphQL(m.R.UserOrganization, append(roots, m))
-			}
-		} else {
-			r.UserOrganization = UserOrganizationWithUintID(m.UserOrganizationID)
-		}
-	}
-	if m.R != nil && m.R.Calamities != nil {
-		r.Calamities = CalamitiesToGraphQL(m.R.Calamities, append(roots, m))
-	}
-	if m.R != nil && m.R.People != nil {
-		r.People = PeopleToGraphQL(m.R.People, append(roots, m))
-	}
-
-	return r
-}
 ```
 
 sqlboiler.yml

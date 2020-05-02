@@ -761,8 +761,8 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 	if enum != nil {
 		cc.IsCustom = true
 		longType := field.OriginalType.String()
-		cc.ToBoiler = strings.TrimPrefix(getToBoiler(getBoilerTypeAsText(boilType), getEnumTypeAsText(graphType, longType)), "helper.")
-		cc.ToGraphQL = strings.TrimPrefix(getToGraphQL(getBoilerTypeAsText(boilType), getEnumTypeAsText(graphType, longType)), "helper.")
+		cc.ToBoiler = strings.TrimPrefix(getToBoiler(getBoilerTypeAsText(boilType), getEnumTypeAsText(graphType, longType)), "boilergql.")
+		cc.ToGraphQL = strings.TrimPrefix(getToGraphQL(getBoilerTypeAsText(boilType), getEnumTypeAsText(graphType, longType)), "boilergql.")
 
 	} else if graphType != boilType {
 		cc.IsCustom = true
@@ -774,14 +774,14 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 
 			// first unpointer json type if is pointer
 			if strings.HasPrefix(graphType, "*") {
-				cc.ToBoiler = "helper.PointerStringToString(VALUE)"
+				cc.ToBoiler = "boilergql.PointerStringToString(VALUE)"
 			}
 
 			goToUint := getBoilerTypeAsText(boilType) + "ToUint"
 			if goToUint == "IntToUint" {
 				cc.ToGraphQL = "uint(VALUE)"
 			} else if goToUint != "UintToUint" {
-				cc.ToGraphQL = "helper." + goToUint + "(VALUE)"
+				cc.ToGraphQL = "boilergql." + goToUint + "(VALUE)"
 			}
 
 			if field.IsPrimaryID {
@@ -793,12 +793,12 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 			isInt := strings.HasPrefix(strings.ToLower(boilType), "int") && !strings.HasPrefix(strings.ToLower(boilType), "uint")
 
 			if strings.HasPrefix(boilType, "null") {
-				cc.ToBoiler = fmt.Sprintf("helper.IDToNullBoiler(%v)", cc.ToBoiler)
+				cc.ToBoiler = fmt.Sprintf("boilergql.IDToNullBoiler(%v)", cc.ToBoiler)
 				if isInt {
-					cc.ToBoiler = fmt.Sprintf("helper.NullUintToNullInt(%v)", cc.ToBoiler)
+					cc.ToBoiler = fmt.Sprintf("boilergql.NullUintToNullInt(%v)", cc.ToBoiler)
 				}
 			} else {
-				cc.ToBoiler = fmt.Sprintf("helper.IDToBoiler(%v)", cc.ToBoiler)
+				cc.ToBoiler = fmt.Sprintf("boilergql.IDToBoiler(%v)", cc.ToBoiler)
 				if isInt {
 					cc.ToBoiler = fmt.Sprintf("int(%v)", cc.ToBoiler)
 				}
@@ -823,11 +823,11 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 }
 
 func getToBoiler(boilType, graphType string) string {
-	return "helper." + getGraphTypeAsText(graphType) + "To" + getBoilerTypeAsText(boilType)
+	return "boilergql." + getGraphTypeAsText(graphType) + "To" + getBoilerTypeAsText(boilType)
 }
 
 func getToGraphQL(boilType, graphType string) string {
-	return "helper." + getBoilerTypeAsText(boilType) + "To" + getGraphTypeAsText(graphType)
+	return "boilergql." + getBoilerTypeAsText(boilType) + "To" + getGraphTypeAsText(graphType)
 }
 
 func getBoilerTypeAsText(boilType string) string {

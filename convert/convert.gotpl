@@ -7,16 +7,22 @@
 {{ reserveImport "errors"  }}
 {{ reserveImport "bytes"  }}
 {{ reserveImport "strings"  }}
-{{ reserveImport "github.com/volatiletech/sqlboiler/boil"}}
-{{ reserveImport "github.com/ericlagergren/decimal"  }}
-{{ reserveImport "github.com/volatiletech/null"  }}
-{{ reserveImport "github.com/volatiletech/sqlboiler/types"  }}
-{{ reserveImport "github.com/web-ridge/gqlgen-sqlboiler/helper" }}
+
+{{ reserveImport "github.com/web-ridge/utils-go/boilergql" }}
 {{ reserveImport "github.com/vektah/gqlparser/v2" }}
 {{ reserveImport "github.com/vektah/gqlparser/v2/ast" }}
 {{ reserveImport "github.com/99designs/gqlgen/graphql" }}
 {{ reserveImport "github.com/99designs/gqlgen/graphql/introspection" }}
-{{ reserveImport "github.com/volatiletech/sqlboiler/queries/qm" }}
+
+
+{{ reserveImport "github.com/ericlagergren/decimal" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/boil" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/queries" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/queries/qm" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/queries/qmhelper" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/types" }}
+{{ reserveImport "github.com/volatiletech/null/v8" }}
+
 {{ reserveImport "database/sql" }}
 {{ reserveImport  $.BackendModelsPath }}
 {{ reserveImport  $.FrontendModelsPath }}
@@ -126,7 +132,7 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 		{{ range $field := .Fields }}
 			{{- if $field.IsPrimaryID -}}
 				func {{ $model.Name|go }}IDToGraphQL(v uint) string {
-					return helper.IDToGraphQL(v, models.TableNames.{{ $model.Name|go }})
+					return boilergql.IDToGraphQL(v, models.TableNames.{{ $model.Name|go }})
 				}
 			{{- end -}}
 		{{- end }}
@@ -162,7 +168,7 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 					} 
 				{{- else }}	
 				
-				if helper.{{ $field.ConvertConfig.BoilerTypeAsText }}IsFilled(m.{{ $field.Name|go }}ID) {
+				if boilergql.{{ $field.ConvertConfig.BoilerTypeAsText }}IsFilled(m.{{ $field.Name|go }}ID) {
 					if m.R != nil && m.R.{{ $field.Name|go }} != nil  {
 						if !alreadyConverted(roots,  m.R.{{ $field.Name|go }}) {
 							r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }}, append(roots, m.R.{{ $field.Name|go }}))
@@ -181,11 +187,11 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 		{{ range $field := .Fields }}
 			{{- if $field.IsPrimaryID }}
 				func {{ $model.Name|go }}ID(v string) {{ $field.BoilerField.Type }} {
-					return helper.IDToBoiler{{ $field.BoilerField.Type|go }}(v)
+					return boilergql.IDToBoiler{{ $field.BoilerField.Type|go }}(v)
 				}
 
 				func {{ $model.Name|go }}IDs(a []string) []{{ $field.BoilerField.Type }} {
-					return helper.IDsToBoiler{{ $field.BoilerField.Type|go }}(a)
+					return boilergql.IDsToBoiler{{ $field.BoilerField.Type|go }}(a)
 				}
 				
 			{{- end -}}

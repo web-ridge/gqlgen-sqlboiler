@@ -7,16 +7,21 @@
 {{ reserveImport "errors"  }}
 {{ reserveImport "bytes"  }}
 {{ reserveImport "strings"  }}
-{{ reserveImport "github.com/volatiletech/sqlboiler/boil"}}
-{{ reserveImport "github.com/ericlagergren/decimal"  }}
-{{ reserveImport "github.com/volatiletech/null"  }}
-{{ reserveImport "github.com/volatiletech/sqlboiler/types"  }}
-{{ reserveImport "github.com/web-ridge/gqlgen-sqlboiler/helper" }}
+
+{{ reserveImport "github.com/web-ridge/utils-go/boilergql" }}
 {{ reserveImport "github.com/vektah/gqlparser" }}
 {{ reserveImport "github.com/vektah/gqlparser/ast" }}
 {{ reserveImport "github.com/99designs/gqlgen/graphql" }}
 {{ reserveImport "github.com/99designs/gqlgen/graphql/introspection" }}
-{{ reserveImport "github.com/volatiletech/sqlboiler/queries/qm" }}
+
+{{ reserveImport "github.com/ericlagergren/decimal" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/boil" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/queries" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/queries/qm" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/queries/qmhelper" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/types" }}
+{{ reserveImport "github.com/volatiletech/null/v8" }}
+
 {{ reserveImport "database/sql" }}
 {{ reserveImport  $.BackendModelsPath }}
 {{ reserveImport  $.FrontendModelsPath }}
@@ -43,9 +48,9 @@
 	{{ end }}
 
 	{{- if .IsNormal  -}}
-	var {{ $model.Name|go }}PreloadMap = map[string]helper.ColumnSetting{
+	var {{ $model.Name|go }}PreloadMap = map[string]boilergql.ColumnSetting{
 		{{- range $key, $value := $model.PreloadMap }}
-		 	"{{$key}}": helper.ColumnSetting{
+		 	"{{$key}}": boilergql.ColumnSetting{
 				 Name: {{$value.Name}},
 				 IDAvailable: {{$value.IDAvailable}},
 			 },
