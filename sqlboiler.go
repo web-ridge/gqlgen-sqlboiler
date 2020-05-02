@@ -1,4 +1,4 @@
-package boiler
+package main
 
 import (
 	"fmt"

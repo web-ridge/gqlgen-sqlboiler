@@ -1,4 +1,4 @@
-package resolvergen
+package main
 
 import (
 	"fmt"
