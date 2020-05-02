@@ -53,7 +53,7 @@ const inputKey = "input"
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
-			return {{ .Model.Name|go }}ToGraphQL(m, nil), nil
+			return {{ .Model.Name|go }}ToGraphQL(m), nil
 
 		{{- end -}}
 
@@ -80,7 +80,7 @@ const inputKey = "input"
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
-			return {{ .Model.PluralName|go }}ToGraphQL(a, nil), nil
+			return {{ .Model.PluralName|go }}ToGraphQL(a), nil
 
 		{{- end -}}
 
@@ -176,7 +176,7 @@ const inputKey = "input"
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
 			return &fm.{{ .Model.Name }}Payload{
-				{{ .Model.Name|go }}: {{ .Model.Name|go }}ToGraphQL(pM, nil),
+				{{ .Model.Name|go }}: {{ .Model.Name|go }}ToGraphQL(pM),
 			}, nil
 
 		{{- end -}}
@@ -256,7 +256,7 @@ const inputKey = "input"
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
 			return &fm.{{ .Model.Name|go }}Payload{
-				{{ .Model.Name|go }}: {{ .Model.Name|go }}ToGraphQL(pM, nil),
+				{{ .Model.Name|go }}: {{ .Model.Name|go }}ToGraphQL(pM),
 			}, nil
 
 		{{- end -}}
