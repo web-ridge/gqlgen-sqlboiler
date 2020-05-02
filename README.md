@@ -26,6 +26,8 @@ DONE: public errors in resolvers + optional logging via zerolog. (feel free for 
 TODO: Batch create generation in resolvers (have working version here for.PostgreSQL https://github.com/web-ridge/contact-tracing, need maybe different implementation for different ORM's?).  
 TODO: Support gqlgen multiple .graphql files  
 TODO: Edges/connections  
+TODO: Generate tests
+TODO: Run automatic tests in Github CI/CD in https://github.com/web-ridge/gqlgen-sqlboiler-examples
 TODO: Crud of adding/removing relationships from many-to-many on edges.  
 TODO: Support more relationships inside input types  
 TODO: Do a three-way-diff merge for changes and let user choose parts of code which should not take over generated code.
