@@ -12,25 +12,25 @@ To make this program a success tight coupling (same naming) between your databas
 4. Generate gqlgen structs + converts between gqlgen and sqlboiler with this program  
    e.g. `go run convert_plugin.go` for file contents of that program see bottom of this readme
 
-[x]: Generate converts between sqlboiler structs and graphql (with relations included)  
-[x]: Generate converts between input models and sqlboiler  
-[x]: Fetch sqlboiler preloads from graphql context  
-[x]: Support for foreign keys named differently than their corresponding model  
-[x]: New plugin which generates CRUD resolvers based on mutations in graphql scheme.  
-[x]: Support one-to-one relationships inside input types.  
-[x]: Generate code which implements the generated where and search filters  
-[x]: Batch update/delete generation in resolvers (Not tested yet).  
-[x]: Enum support.  
-[x]: public errors in resolvers + optional logging via zerolog. (feel free for PR for configurable logging!)
+- [x]: Generate converts between sqlboiler structs and graphql (with relations included)
+- [x]: Generate converts between input models and sqlboiler
+- [x]: Fetch sqlboiler preloads from graphql context
+- [x]: Support for foreign keys named differently than their corresponding model
+- [x]: New plugin which generates CRUD resolvers based on mutations in graphql scheme.
+- [x]: Support one-to-one relationships inside input types.
+- [x]: Generate code which implements the generated where and search filters
+- [x]: Batch update/delete generation in resolvers (Not tested yet).
+- [x]: Enum support.
+- [x]: public errors in resolvers + optional logging via zerolog. (feel free for PR for configurable logging!)
 
-[ ]: Batch create generation in resolvers (have working version here for.PostgreSQL https://github.com/web-ridge/contact-tracing, need maybe different implementation for different ORM's?).  
-[ ]: Support gqlgen multiple .graphql files  
-[ ]: Edges/connections  
-[ ]: Generate tests
-[ ]: Run automatic tests in Github CI/CD in https://github.com/web-ridge/gqlgen-sqlboiler-examples
-[ ]: Crud of adding/removing relationships from many-to-many on edges.  
-[ ]: Support more relationships inside input types  
-[ ]: Do a three-way-diff merge for changes and let user choose parts of code which should not take over generated code.
+- [ ]: Batch create generation in resolvers (have working version here for.PostgreSQL https://github.com/web-ridge/contact-tracing, need maybe different implementation for different ORM's?).
+- [ ]: Support gqlgen multiple .graphql files
+- [ ]: Edges/connections
+- [ ]: Generate tests
+- [ ]: Run automatic tests in Github CI/CD in https://github.com/web-ridge/gqlgen-sqlboiler-examples
+- [ ]: Crud of adding/removing relationships from many-to-many on edges.
+- [ ]: Support more relationships inside input types
+- [ ]: Do a three-way-diff merge for changes and let user choose parts of code which should not take over generated code.
 
 ## Requirements
 
