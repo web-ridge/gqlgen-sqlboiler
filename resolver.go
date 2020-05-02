@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/iancoleman/strcase"
-	"github.com/web-ridge/gqlgen-sqlboiler/v2/boiler"
-	"github.com/web-ridge/gqlgen-sqlboiler/v2/convert"
 
 	"github.com/99designs/gqlgen/codegen"
 	"github.com/99designs/gqlgen/codegen/config"
@@ -55,10 +53,10 @@ func (m *ResolverPlugin) GenerateCode(data *codegen.Data) error {
 
 	// Get all models information
 	fmt.Println("[resolver] get boiler models")
-	boilerModels := boiler.GetBoilerModels(m.backendModelsPath)
+	boilerModels := GetBoilerModels(m.backendModelsPath)
 
 	fmt.Println("[resolver] get models with information")
-	models := convert.GetModelsWithInformation(nil, data.Config, boilerModels)
+	models := GetModelsWithInformation(nil, data.Config, boilerModels)
 
 	fmt.Println("[resolver] generate file")
 	switch data.Config.Resolver.Layout {
@@ -72,7 +70,7 @@ func (m *ResolverPlugin) GenerateCode(data *codegen.Data) error {
 	return nil
 }
 
-func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*convert.Model, boilerModels []*boiler.BoilerModel) error {
+func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model, boilerModels []*BoilerModel) error {
 	file := File{}
 
 	file.imports = append(file.imports, Import{
@@ -134,7 +132,7 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*conver
 	})
 }
 
-func (m *ResolverPlugin) generatePerSchema(data *codegen.Data, models []*convert.Model, boilerModels []*boiler.BoilerModel) error {
+func (m *ResolverPlugin) generatePerSchema(data *codegen.Data, models []*Model, boilerModels []*BoilerModel) error {
 	rewriter, err := NewRewriter(data.Config.Resolver.ImportPath())
 	if err != nil {
 		return err
@@ -267,8 +265,8 @@ type Resolver struct {
 	ResolveOrganizationID     bool
 	ResolveUserOrganizationID bool
 	ResolveUserID             bool
-	Model                     convert.Model
-	InputModel                convert.Model
+	Model                     Model
+	InputModel                Model
 
 	PublicErrorKey     string
 	PublicErrorMessage string
@@ -280,7 +278,7 @@ func gqlToResolverName(base string, gqlname string) string {
 	return filepath.Join(base, strings.TrimSuffix(gqlname, ext)+".resolvers.go")
 }
 
-func hasBoilerField(boilerFields []*boiler.BoilerField, fieldName string) bool {
+func hasBoilerField(boilerFields []*BoilerField, fieldName string) bool {
 	for _, boilerField := range boilerFields {
 		if boilerField.Name == fieldName {
 			return true
@@ -289,7 +287,7 @@ func hasBoilerField(boilerFields []*boiler.BoilerField, fieldName string) bool {
 	return false
 }
 
-func enhanceResolver(r *Resolver, models []*convert.Model) {
+func enhanceResolver(r *Resolver, models []*Model) {
 	nameOfResolver := r.Field.GoFieldName
 
 	// get model names + model convert information
@@ -349,9 +347,9 @@ func enhanceResolver(r *Resolver, models []*convert.Model) {
 	r.PublicErrorKey += "Error"
 }
 
-func findModel(models []*convert.Model, modelName string) convert.Model {
+func findModel(models []*Model, modelName string) Model {
 	if modelName == "" {
-		return convert.Model{}
+		return Model{}
 	}
 
 	for _, m := range models {
@@ -360,7 +358,7 @@ func findModel(models []*convert.Model, modelName string) convert.Model {
 		}
 	}
 
-	return convert.Model{}
+	return Model{}
 }
 
 var InputTypes = []string{"Create", "Update", "Delete"}

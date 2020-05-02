@@ -425,8 +425,6 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 }
 
 func getShortType(longType string) string {
-	//*github.com/web-ridge/gqlgen-sqlboiler/v2/examples/social-network/graphql_models.StringFilter
-
 	splittedBySlash := strings.Split(longType, "/")
 	lastPart := splittedBySlash[len(splittedBySlash)-1]
 	splitted := strings.Split(lastPart, ".")
