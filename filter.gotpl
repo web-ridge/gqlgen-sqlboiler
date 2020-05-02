@@ -55,10 +55,10 @@ func IDFilterToMods(m *graphql_models.IDFilter, column string) []qm.QueryMod {
 	}
 	var queryMods []qm.QueryMod
 	if m.EqualTo != nil {
-		queryMods = append(queryMods, qmboilergql.Where(column, qmboilergql.EQ, boilergql.IDToBoiler(*m.EqualTo)))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, boilergql.IDToBoiler(*m.EqualTo)))
 	}
 	if m.NotEqualTo != nil {
-		queryMods = append(queryMods, qmboilergql.Where(column, qmboilergql.NEQ, boilergql.IDToBoiler(*m.NotEqualTo)))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.NEQ, boilergql.IDToBoiler(*m.NotEqualTo)))
 	}
 	if len(m.In) > 0 {
 		queryMods = append(queryMods, qm.WhereIn(column + in, boilergql.IDsToBoilerInterfaces(m.In)...))
@@ -78,10 +78,10 @@ func StringFilterToMods(m *graphql_models.StringFilter, column string) []qm.Quer
 
 	var queryMods []qm.QueryMod
 	if m.EqualTo != nil {
-		queryMods = append(queryMods, qmboilergql.Where(column, qmboilergql.EQ, *m.EqualTo))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, *m.EqualTo))
 	}
 	if m.NotEqualTo != nil {
-		queryMods = append(queryMods, qmboilergql.Where(column, qmboilergql.NEQ, *m.NotEqualTo))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.NEQ, *m.NotEqualTo))
 	}
 
 	lowerColumn := "LOWER("+column+")"
@@ -122,22 +122,22 @@ func FloatFilterToMods(m *graphql_models.FloatFilter, column string) []qm.QueryM
 	}
 	var queryMods []qm.QueryMod
 	if m.EqualTo != nil {
-		queryMods = append(queryMods, qmboilergql.Where(column, qmboilergql.EQ, *m.EqualTo))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, *m.EqualTo))
 	}
 	if m.NotEqualTo != nil {
-		queryMods = append(queryMods, qmboilergql.Where(column, qmboilergql.NEQ, *m.NotEqualTo))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.NEQ, *m.NotEqualTo))
 	}
 	if m.LessThan != nil {
-		queryMods = append(queryMods, qmboilergql.Where(column, qmboilergql.LT, *m.LessThan))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.LT, *m.LessThan))
 	}
 	if m.MoreThan != nil {
-		queryMods = append(queryMods, qmboilergql.Where(column, qmboilergql.GT, *m.MoreThan))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.GT, *m.MoreThan))
 	}
 	if m.LessThanOrEqualTo != nil {
-		queryMods = append(queryMods, qmboilergql.Where(column, qmboilergql.LTE, *m.LessThanOrEqualTo))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.LTE, *m.LessThanOrEqualTo))
 	}
 	if m.MoreThanOrEqualTo != nil {
-		queryMods = append(queryMods, qmboilergql.Where(column, qmboilergql.GTE, *m.MoreThanOrEqualTo))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.GTE, *m.MoreThanOrEqualTo))
 	}
 	if len(m.In) > 0 {
 		queryMods = append(queryMods, qm.WhereIn(column + in, boilergql.FloatsToInterfaces(m.In)...))
@@ -154,22 +154,22 @@ func IntFilterToMods(m *graphql_models.IntFilter, column string) []qm.QueryMod {
 	}
 	var queryMods []qm.QueryMod
 	if m.EqualTo != nil {
-		queryMods = append(queryMods, qmboilergql.Where(column, qmboilergql.EQ, *m.EqualTo))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, *m.EqualTo))
 	}
 	if m.NotEqualTo != nil {
-		queryMods = append(queryMods, qmboilergql.Where(column, qmboilergql.NEQ, *m.NotEqualTo))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.NEQ, *m.NotEqualTo))
 	}
 	if m.LessThan != nil {
-		queryMods = append(queryMods, qmboilergql.Where(column, qmboilergql.LT, *m.LessThan))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.LT, *m.LessThan))
 	}
 	if m.MoreThan != nil {
-		queryMods = append(queryMods, qmboilergql.Where(column, qmboilergql.GT, *m.MoreThan))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.GT, *m.MoreThan))
 	}
 	if m.LessThanOrEqualTo != nil {
-		queryMods = append(queryMods, qmboilergql.Where(column, qmboilergql.LTE, *m.LessThanOrEqualTo))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.LTE, *m.LessThanOrEqualTo))
 	}
 	if m.MoreThanOrEqualTo != nil {
-		queryMods = append(queryMods, qmboilergql.Where(column, qmboilergql.GTE, *m.MoreThanOrEqualTo))
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.GTE, *m.MoreThanOrEqualTo))
 	}
 	if len(m.In) > 0 {
 		queryMods = append(queryMods, qm.WhereIn(column + in, boilergql.IntsToInterfaces(m.In)...))
