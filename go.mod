@@ -1,4 +1,4 @@
-module github.com/web-ridge/gqlgen-sqlboiler
+module github.com/web-ridge/gqlgen-sqlboiler/v2
 
 go 1.14
 
