@@ -27,16 +27,6 @@
 {{ reserveImport  $.BackendModelsPath }}
 {{ reserveImport  $.FrontendModelsPath }}
 
-// alreadyConverted prevents endless converts between self-referencing tables
-func alreadyConverted(roots []interface{}, check interface{}) bool {
-	for _, root := range roots {
-		if root == check {
-			return true
-		}
-	}
-	return false
-}
-
 {{ range $enum := .Enums }}
 	func NullDotStringToPointer{{ .Name|go }}(v null.String) *graphql_models.{{ .Name|go }} {
 		s := StringTo{{ .Name|go }}(v.String)
@@ -121,10 +111,10 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 			return {{ .Name|go }}WithUintID(uint(id.Int))
 		}
 
-		func {{ .PluralName|go }}ToGraphQL(am []*models.{{ .Name|go }}, roots []interface{})( []*graphql_models.{{ .Name|go }}) {
+		func {{ .PluralName|go }}ToGraphQL(am []*models.{{ .Name|go }})( []*graphql_models.{{ .Name|go }}) {
 			ar := make([]*graphql_models.{{ .Name|go }}, len(am))
 			for i,m := range am {
-				ar[i] = {{ .Name|go }}ToGraphQL(m, append(roots, m))
+				ar[i] = {{ .Name|go }}ToGraphQL(m)
 			}
 			return ar
 		}
@@ -138,7 +128,7 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 		{{- end }}
 
 
-	func {{ .Name|go }}ToGraphQL(m *models.{{ .BoilerModel.Name|go }}, roots []interface{})( *graphql_models.{{ .Name|go }}) {
+	func {{ .Name|go }}ToGraphQL(m *models.{{ .BoilerModel.Name|go }})( *graphql_models.{{ .Name|go }}) {
 		if m == nil {
 			return nil
 		}
@@ -164,15 +154,13 @@ func alreadyConverted(roots []interface{}, check interface{}) bool {
 			{{- if $field.IsRelation }}
 				{{- if $field.IsPlural }}
 					if m.R != nil && m.R.{{ $field.Name|go }} != nil  {
-						r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.PluralName|go }}ToGraphQL(m.R.{{ $field.Name|go }}, append(roots, m.R.{{ $field.Name|go }}))
+						r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.PluralName|go }}ToGraphQL(m.R.{{ $field.Name|go }}))
 					} 
 				{{- else }}	
 				
 				if boilergql.{{ $field.ConvertConfig.BoilerTypeAsText }}IsFilled(m.{{ $field.Name|go }}ID) {
 					if m.R != nil && m.R.{{ $field.Name|go }} != nil  {
-						if !alreadyConverted(roots,  m.R.{{ $field.Name|go }}) {
-							r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }}, append(roots, m.R.{{ $field.Name|go }}))
-						}
+						r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }}))
 					} else {
 						r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.Name|go }}With{{ $field.ConvertConfig.BoilerTypeAsText|go }}ID(m.{{ $field.Name|go }}ID)
 					}
