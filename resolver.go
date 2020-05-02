@@ -108,13 +108,14 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 		ResolverType: data.Config.Resolver.Type,
 		HasRoot:      true,
 	}
-
+	templates.CurrentImports = nil
 	return templates.Render(templates.Options{
 		Template:    getTemplate("resolver.gotpl"),
-		Filename:    "resolver.go",
-		Data:        resolverBuild,
 		PackageName: data.Config.Resolver.Package,
-		PackageDoc:  `// THIS CODE IS A STARTING POINT ONLY. IT WILL NOT BE UPDATED WITH SCHEMA CHANGES.`,
+		PackageDoc:  `// Generated with https://github.com/web-ridge/gqlgen-sqlboiler.`,
+		Filename:    data.Config.Resolver.Filename,
+		Data:        resolverBuild,
+		Packages:    data.Config.Packages,
 	})
 }
 
