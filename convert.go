@@ -678,6 +678,16 @@ func enhanceModelsWithPreloadMap(models []*Model) {
 		enhancePreloadMapWithNestedRelations(model.PreloadMap, preloadMapPerModel, 0)
 	}
 
+	// reverse loop since nested count works that way
+	// otherwise too much fields are added on the last models
+	for i := len(models) - 1; i >= 0; i-- {
+		model := models[i]
+		if !isPreloadableModel(model) {
+			continue
+		}
+		enhancePreloadMapWithNestedRelations(model.PreloadMap, preloadMapPerModel, 0)
+	}
+
 }
 
 func enhancePreloadMapWithNestedRelations(preloadMap map[string]ColumnSetting, preloadMapPerModel map[string]map[string]ColumnSetting, nested int) {
