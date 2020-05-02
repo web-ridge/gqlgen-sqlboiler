@@ -43,6 +43,8 @@ You have a personal project with a very big database and a 'Laravel API'. I want
 
 https://github.com/web-ridge/gqlgen-sqlboiler-examples/tree/master/social-network/helpers
 
+**Code snippet**
+
 ```golang
 func PostToGraphQL(m *models.Post) *graphql_models.Post {
 	if m == nil {
