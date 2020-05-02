@@ -366,7 +366,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 			isPrimaryID := golangName == "ID"
 
 			// get sqlboiler information of the field
-			boilerField := findBoilerField(m.BoilerModel.Fields, golangName, isRelation)
+			boilerField := findBoilerFieldOrForeignKey(m.BoilerModel.Fields, golangName, isRelation)
 			if isPrimaryID {
 				m.PrimaryKeyType = boilerField.Type
 			}
@@ -425,6 +425,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 }
 
 func getShortType(longType string) string {
+
 	splittedBySlash := strings.Split(longType, "/")
 	lastPart := splittedBySlash[len(splittedBySlash)-1]
 	splitted := strings.Split(lastPart, ".")
@@ -480,7 +481,7 @@ func findRelationModelForForeignKey(currentModelName string, foreignKey string, 
 	return nil
 }
 
-func findBoilerField(fields []*BoilerField, golangGraphQLName string, isRelation bool) BoilerField {
+func findBoilerFieldOrForeignKey(fields []*BoilerField, golangGraphQLName string, isRelation bool) BoilerField {
 	// get database friendly struct for this model
 	for _, field := range fields {
 		if isRelation {
