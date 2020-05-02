@@ -17,7 +17,6 @@ import (
 	pluralize "github.com/gertd/go-pluralize"
 	"github.com/iancoleman/strcase"
 	"github.com/vektah/gqlparser/v2/ast"
-	"github.com/web-ridge/gqlgen-sqlboiler/v2/boiler"
 )
 
 var pathRegex *regexp.Regexp
@@ -50,7 +49,7 @@ type Interface struct {
 type Model struct {
 	Name                  string
 	PluralName            string
-	BoilerModel           boiler.BoilerModel
+	BoilerModel           BoilerModel
 	PrimaryKeyType        string
 	Fields                []*Field
 	IsNormal              bool
@@ -89,7 +88,7 @@ type Field struct {
 	// relation stuff
 	IsRelation bool
 	// boiler relation stuff is inside this field
-	BoilerField boiler.BoilerField
+	BoilerField BoilerField
 	// graphql relation ship can be found here
 	Relationship *Model
 	IsOr         bool
@@ -114,19 +113,19 @@ type EnumValue struct {
 	NameLower   string
 }
 
-func New(directory, backendModelsPath, frontendModelsPath string) plugin.Plugin {
-	return &Plugin{directory: directory, backendModelsPath: backendModelsPath, frontendModelsPath: frontendModelsPath}
+func NewConvertPlugin(directory, backendModelsPath, frontendModelsPath string) plugin.Plugin {
+	return &ConvertPlugin{directory: directory, backendModelsPath: backendModelsPath, frontendModelsPath: frontendModelsPath}
 }
 
-type Plugin struct {
+type ConvertPlugin struct {
 	directory          string
 	backendModelsPath  string
 	frontendModelsPath string
 }
 
-var _ plugin.ConfigMutator = &Plugin{}
+var _ plugin.ConfigMutator = &ConvertPlugin{}
 
-func (m *Plugin) Name() string {
+func (m *ConvertPlugin) Name() string {
 	return "convert-generator"
 }
 
@@ -143,7 +142,7 @@ func getGoImportFromFile(dir string) string {
 	return strings.TrimPrefix(pathRegex.FindString(longPath), "src/")
 }
 
-func GetModelsWithInformation(enums []*Enum, cfg *config.Config, boilerModels []*boiler.BoilerModel) []*Model {
+func GetModelsWithInformation(enums []*Enum, cfg *config.Config, boilerModels []*BoilerModel) []*Model {
 
 	// get models based on the schema and sqlboiler structs
 	models := getModelsFromSchema(cfg.Schema, boilerModels)
@@ -162,7 +161,7 @@ func GetModelsWithInformation(enums []*Enum, cfg *config.Config, boilerModels []
 	return models
 }
 
-func (m *Plugin) MutateConfig(originalCfg *config.Config) error {
+func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	b := &ModelBuild{
 		PackageName:        m.directory,
 		FrontendModelsPath: getGoImportFromFile(m.frontendModelsPath),
@@ -172,7 +171,7 @@ func (m *Plugin) MutateConfig(originalCfg *config.Config) error {
 	cfg := copyConfig(*originalCfg)
 
 	fmt.Println("[convert] get boiler models")
-	boilerModels := boiler.GetBoilerModels(m.backendModelsPath)
+	boilerModels := GetBoilerModels(m.backendModelsPath)
 
 	fmt.Println("[convert] get extra's from schema")
 	interfaces, enums, scalars := getExtrasFromSchema(cfg.Schema)
@@ -483,7 +482,7 @@ func findRelationModelForForeignKey(currentModelName string, foreignKey string, 
 	return nil
 }
 
-func findBoilerField(fields []*boiler.BoilerField, golangGraphQLName string, isRelation bool) boiler.BoilerField {
+func findBoilerField(fields []*BoilerField, golangGraphQLName string, isRelation bool) BoilerField {
 	// get database friendly struct for this model
 	for _, field := range fields {
 		if isRelation {
@@ -503,7 +502,7 @@ func findBoilerField(fields []*boiler.BoilerField, golangGraphQLName string, isR
 
 	// fmt.Println("???", golangGraphQLName)
 
-	return boiler.BoilerField{}
+	return BoilerField{}
 }
 
 func getGoFieldName(name string) string {
@@ -547,7 +546,7 @@ func getExtrasFromSchema(schema *ast.Schema) (interfaces []*Interface, enums []*
 	return
 }
 
-func getModelsFromSchema(schema *ast.Schema, boilerModels []*boiler.BoilerModel) (models []*Model) {
+func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (models []*Model) {
 	for _, schemaType := range schema.Types {
 
 		// skip boiler plate from ggqlgen, we only want the models
@@ -577,7 +576,7 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*boiler.BoilerModel)
 				}
 
 				// We will try to find a corresponding boiler struct
-				boilerModel := boiler.FindBoilerModel(boilerModels, getBaseModelFromName(modelName))
+				boilerModel := FindBoilerModel(boilerModels, getBaseModelFromName(modelName))
 
 				isInput := strings.HasSuffix(modelName, "Input") && modelName != "Input"
 				isCreateInput := strings.HasSuffix(modelName, "CreateInput") && modelName != "CreateInput"

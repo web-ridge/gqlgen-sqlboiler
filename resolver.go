@@ -31,24 +31,24 @@ func init() {
 	}
 }
 
-func New(convertHelpersDir, backendModelsPath, frontendModelsPath string, authImport string) plugin.Plugin {
-	return &Plugin{convertHelpersDir: convertHelpersDir, backendModelsPath: backendModelsPath, frontendModelsPath: frontendModelsPath, authImport: authImport}
+func NewResolverPlugin(convertHelpersDir, backendModelsPath, frontendModelsPath string, authImport string) plugin.Plugin {
+	return &ResolverPlugin{convertHelpersDir: convertHelpersDir, backendModelsPath: backendModelsPath, frontendModelsPath: frontendModelsPath, authImport: authImport}
 }
 
-type Plugin struct {
+type ResolverPlugin struct {
 	convertHelpersDir  string
 	backendModelsPath  string
 	frontendModelsPath string
 	authImport         string
 }
 
-var _ plugin.CodeGenerator = &Plugin{}
+var _ plugin.CodeGenerator = &ResolverPlugin{}
 
-func (m *Plugin) Name() string {
+func (m *ResolverPlugin) Name() string {
 	return "resolvergen"
 }
 
-func (m *Plugin) GenerateCode(data *codegen.Data) error {
+func (m *ResolverPlugin) GenerateCode(data *codegen.Data) error {
 	if !data.Config.Resolver.IsDefined() {
 		return nil
 	}
@@ -72,7 +72,7 @@ func (m *Plugin) GenerateCode(data *codegen.Data) error {
 	return nil
 }
 
-func (m *Plugin) generateSingleFile(data *codegen.Data, models []*convert.Model, boilerModels []*boiler.BoilerModel) error {
+func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*convert.Model, boilerModels []*boiler.BoilerModel) error {
 	file := File{}
 
 	file.imports = append(file.imports, Import{
@@ -134,7 +134,7 @@ func (m *Plugin) generateSingleFile(data *codegen.Data, models []*convert.Model,
 	})
 }
 
-func (m *Plugin) generatePerSchema(data *codegen.Data, models []*convert.Model, boilerModels []*boiler.BoilerModel) error {
+func (m *ResolverPlugin) generatePerSchema(data *codegen.Data, models []*convert.Model, boilerModels []*boiler.BoilerModel) error {
 	rewriter, err := NewRewriter(data.Config.Resolver.ImportPath())
 	if err != nil {
 		return err

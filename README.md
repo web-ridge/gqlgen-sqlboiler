@@ -96,8 +96,7 @@ import (
 
 	"github.com/99designs/gqlgen/api"
 	"github.com/99designs/gqlgen/codegen/config"
-	cm "github.com/web-ridge/gqlgen-sqlboiler/v2/convert"
-	rm "github.com/web-ridge/gqlgen-sqlboiler/v2/resolver"
+	gbgen "github.com/web-ridge/gqlgen-sqlboiler/v2"
 )
 
 func main() {
@@ -111,12 +110,12 @@ func main() {
 	sqlboilerDir := "models"
 	gqlgenModelDir := "graphql_models"
 	err = api.Generate(cfg,
-		api.AddPlugin(cm.New(
+		api.AddPlugin(gbgen.NewConvertPlugin(
 			convertHelpersDir, // directory where convert.go, convert_input.go and preload.go should live
 			sqlboilerDir,      // directory where sqlboiler files are put
 			gqlgenModelDir,    // directory where gqlgen models live
 		)),
-		api.AddPlugin(rm.New(
+		api.AddPlugin(gbgen.NewResolverPlugin(
 			convertHelpersDir,
 			sqlboilerDir,
 			gqlgenModelDir,
