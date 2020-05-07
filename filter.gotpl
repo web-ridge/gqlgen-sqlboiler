@@ -249,7 +249,7 @@ func IntFilterToMods(m *graphql_models.IntFilter, column string) []qm.QueryMod {
 						queryMods = append(queryMods, qm.Expr({{ $field.Type|go }}ToMods(m.And, true)...))
 					}
 				{{- else }}
-					{{- if  $field.IsPrimaryID }}
+					{{- if  $field.IsPrimaryNumberID }}
 					if withPrimaryID {
 						queryMods = append(queryMods, {{ $field.Type|go }}ToMods(m.{{ $field.Name|go }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)
 					}

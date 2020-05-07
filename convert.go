@@ -64,6 +64,7 @@ type Model struct {
 	HasOrganizationID     bool
 	HasUserOrganizationID bool
 	HasUserID             bool
+	HasStringPrimaryID    bool
 	// other stuff
 	Description string
 	PureFields  []*ast.FieldDefinition
@@ -77,14 +78,14 @@ type ColumnSetting struct {
 }
 
 type Field struct {
-	Name          string
-	PluralName    string
-	Type          string
-	IsID          bool
-	IsPrimaryID   bool
-	IsRequired    bool
-	IsPlural      bool
-	ConvertConfig ConvertConfig
+	Name              string
+	PluralName        string
+	Type              string
+	IsNumberID        bool
+	IsPrimaryNumberID bool
+	IsRequired        bool
+	IsPlural          bool
+	ConvertConfig     ConvertConfig
 	// relation stuff
 	IsRelation bool
 	// boiler relation stuff is inside this field
@@ -362,14 +363,27 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 			// generate some booleans because these checks will be used a lot
 			isRelation := fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject
 
-			isID := strings.Contains(golangName, "ID")
+			shortType := getShortType(typ.String())
+			isString := strings.Contains(strings.ToLower(shortType), "string")
+
 			isPrimaryID := golangName == "ID"
+
+			isNumberID := strings.Contains(golangName, "ID") && !isString
+			isPrimaryNumberID := isPrimaryID && !isString
+			isPrimaryStringID := isPrimaryID && isString
+			// enable simpler code in resolvers
+
+			if isPrimaryStringID {
+				fmt.Println("marked", m.Name, " as string id's")
+				m.HasStringPrimaryID = isPrimaryStringID
+			}
 
 			// get sqlboiler information of the field
 			boilerField := findBoilerFieldOrForeignKey(m.BoilerModel.Fields, golangName, isRelation)
-			if isPrimaryID {
+			if isPrimaryNumberID || isPrimaryStringID {
 				m.PrimaryKeyType = boilerField.Type
 			}
+
 			// log some warnings when fields could not be converted
 			if boilerField.Type == "" {
 				// TODO: add filter + where here
@@ -394,19 +408,19 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 
 			}
 			field := &Field{
-				Name:         name,
-				Type:         getShortType(typ.String()),
-				BoilerField:  boilerField,
-				IsID:         isID,
-				IsPrimaryID:  isPrimaryID,
-				IsRelation:   isRelation,
-				IsOr:         name == "or",
-				IsAnd:        name == "and",
-				IsPlural:     pluralizer.IsPlural(name),
-				PluralName:   pluralizer.Plural(name),
-				OriginalType: typ,
-				Description:  field.Description,
-				Tag:          `json:"` + field.Name + `"`,
+				Name:              name,
+				Type:              shortType,
+				BoilerField:       boilerField,
+				IsNumberID:        isNumberID,
+				IsPrimaryNumberID: isPrimaryNumberID,
+				IsRelation:        isRelation,
+				IsOr:              name == "or",
+				IsAnd:             name == "and",
+				IsPlural:          pluralizer.IsPlural(name),
+				PluralName:        pluralizer.Plural(name),
+				OriginalType:      typ,
+				Description:       field.Description,
+				Tag:               `json:"` + field.Name + `"`,
 			}
 			field.ConvertConfig = getConvertConfig(enums, m, field)
 			m.Fields = append(m.Fields, field)
@@ -775,7 +789,7 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 	} else if graphType != boilType {
 		cc.IsCustom = true
 
-		if field.IsPrimaryID || field.IsID {
+		if field.IsPrimaryNumberID || field.IsNumberID {
 
 			cc.ToGraphQL = "VALUE"
 			cc.ToBoiler = "VALUE"
@@ -792,9 +806,9 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 				cc.ToGraphQL = "boilergql." + goToUint + "(VALUE)"
 			}
 
-			if field.IsPrimaryID {
+			if field.IsPrimaryNumberID {
 				cc.ToGraphQL = model.Name + "IDToGraphQL(" + cc.ToGraphQL + ")"
-			} else if field.IsID {
+			} else if field.IsNumberID {
 				cc.ToGraphQL = field.BoilerField.Relationship.Name + "IDToGraphQL(" + cc.ToGraphQL + ")"
 			}
 
@@ -805,6 +819,7 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 				if isInt {
 					cc.ToBoiler = fmt.Sprintf("boilergql.NullUintToNullInt(%v)", cc.ToBoiler)
 				}
+
 			} else {
 				cc.ToBoiler = fmt.Sprintf("boilergql.IDToBoiler(%v)", cc.ToBoiler)
 				if isInt {

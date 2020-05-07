@@ -39,7 +39,13 @@ const inputKey = "input"
 	
 
 		{{- if .IsSingle }}
+
+			{{- if .Model.HasStringPrimaryID }}
+			dbID := id
+			{{- else }}
 			dbID := {{ .Model.Name }}ID(id)
+			{{- end }}
+
 			mods := boilergql.GetPreloadMods(ctx, {{ .Model.Name|go }}PreloadMap)
 			mods = append(mods, dm.{{ .Model.Name|go }}Where.ID.EQ(dbID))
 			{{- if .Model.BoilerModel.HasOrganizationID }}
@@ -198,7 +204,13 @@ const inputKey = "input"
 			{{ range $field := .InputModel.Fields -}}
 				{{ if $field.IsRelation -}}
 					if input.{{ $field.Name|go }} != nil && input.{{ $field.Name|go }}ID != nil {
+
+						{{- if $model.HasStringPrimaryID }}
+						dbID := *input.{{ $field.Name|go }}ID
+						{{- else }}
 						dbID := {{ $field.BoilerField.Relationship.Name }}ID(*input.{{ $field.Name|go }}ID)
+						{{- end }}
+
 						nestedM := {{ $field.BoilerField.Relationship.Name }}UpdateInputToModelM(
 							boilergql.GetInputFromContext(ctx, "input.{{ $field.Name }}"), 
 							*input.{{ $field.Name|go }},
@@ -229,7 +241,13 @@ const inputKey = "input"
 				{{ end -}}
 			{{ end -}}
 
+			{{- if .Model.HasStringPrimaryID }}
+			dbID := id
+			{{- else }}
 			dbID := {{ .Model.Name }}ID(id)
+			{{- end }}
+
+		
 			if _, err := dm.{{ .Model.PluralName }}(
 				dm.{{ .Model.Name }}Where.ID.EQ(dbID),
 				{{- if .Model.BoilerModel.HasOrganizationID  }}
@@ -271,7 +289,13 @@ const inputKey = "input"
 		{{- end -}}
 
 		{{- if .IsDelete }}
-			dbID := {{ .Model.Name|go }}ID(id)
+
+			{{- if .Model.HasStringPrimaryID }}
+			dbID := id
+			{{- else }}
+			dbID := {{ .Model.Name }}ID(id)
+			{{- end }}
+			
 			mods := []qm.QueryMod{
 				dm.{{ .Model.Name|go }}Where.ID.EQ(dbID),
 				{{- if .Model.BoilerModel.HasOrganizationID  }}
@@ -352,7 +376,11 @@ const inputKey = "input"
 			mods = append(mods, qm.Select(dm.{{ .Model.Name }}Columns.ID))
 			mods = append(mods, qm.From(dm.TableNames.{{ .Model.Name }}))
 
+			{{- if .Model.HasStringPrimaryID }}
+			var IDsToRemove []boilergql.RemovedStringID
+			{{- else }}
 			var IDsToRemove []boilergql.RemovedID
+			{{- end }}
 			if err := dm.{{ .Model.PluralName }}(mods...).Bind(ctx, r.db, IDsToRemove); err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
@@ -364,9 +392,16 @@ const inputKey = "input"
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
 
+			{{- if .Model.HasStringPrimaryID }}
+			return &fm.{{ .Model.PluralName }}DeletePayload{
+				Ids: boilerIDs,
+			}, nil
+			{{- else }}
 			return &fm.{{ .Model.PluralName }}DeletePayload{
 				Ids: boilergql.{{.Model.PrimaryKeyType|go}}IDsToGraphQL(boilerIDs, dm.TableNames.{{ .Model.Name }}),
 			}, nil
+			{{- end }}
+		
 
 		{{- end }}
 	}
