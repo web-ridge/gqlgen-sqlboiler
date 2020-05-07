@@ -364,21 +364,21 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 			isRelation := fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject
 
 			shortType := getShortType(typ.String())
-			isString := strings.Contains(strings.ToLower(shortType), "string")
 
 			isPrimaryID := golangName == "ID"
 
+			// get sqlboiler information of the field
+			boilerField := findBoilerFieldOrForeignKey(m.BoilerModel.Fields, golangName, isRelation)
+			isString := strings.Contains(boilerField.Type, "string")
 			isNumberID := strings.Contains(golangName, "ID") && !isString
 			isPrimaryNumberID := isPrimaryID && !isString
+
 			isPrimaryStringID := isPrimaryID && isString
 			// enable simpler code in resolvers
 
 			if isPrimaryStringID {
 				m.HasStringPrimaryID = isPrimaryStringID
 			}
-
-			// get sqlboiler information of the field
-			boilerField := findBoilerFieldOrForeignKey(m.BoilerModel.Fields, golangName, isRelation)
 			if isPrimaryNumberID || isPrimaryStringID {
 				m.PrimaryKeyType = boilerField.Type
 			}
