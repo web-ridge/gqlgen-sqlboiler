@@ -93,42 +93,42 @@
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 	{{- if .IsNormal  -}}
 
-	{{ - if $model.HasStringPrimaryID }}
-		func {{ .Name|go }}WithStringID(id string) *graphql_models.{{ .Name|go }} {
-			return &graphql_models.{{ .Name|go }}{
-				ID: id,
+		{{- if .HasStringPrimaryID }}
+			func {{ .Name|go }}WithStringID(id string) *graphql_models.{{ .Name|go }} {
+				return &graphql_models.{{ .Name|go }}{
+					ID: id,
+				}
 			}
-		}
 
-		func {{ .Name|go }}WithNullDotStringID(id null.String) *graphql_models.{{ .Name|go }} {
-			return {{ .Name|go }}WithStringID(id.String)
-		}
-	{{- else }}
-		func {{ .Name|go }}WithUintID(id uint) *graphql_models.{{ .Name|go }} {
-			return &graphql_models.{{ .Name|go }}{
-				ID: {{ $model.Name|go }}IDToGraphQL(id),
+			func {{ .Name|go }}WithNullDotStringID(id null.String) *graphql_models.{{ .Name|go }} {
+				return {{ .Name|go }}WithStringID(id.String)
 			}
-		}
-
-		func {{ .Name|go }}WithIntID(id int) *graphql_models.{{ .Name|go }} {
-			return {{ .Name|go }}WithUintID(uint(id))
-		}
-
-		func {{ .Name|go }}WithNullDotUintID(id null.Uint) *graphql_models.{{ .Name|go }} {
-			return {{ .Name|go }}WithUintID(id.Uint)
-		}
-
-		func {{ .Name|go }}WithNullDotIntID(id null.Int) *graphql_models.{{ .Name|go }} {
-			return {{ .Name|go }}WithUintID(uint(id.Int))
-		}
-
-		func {{ .PluralName|go }}ToGraphQL(am []*models.{{ .Name|go }})( []*graphql_models.{{ .Name|go }}) {
-			ar := make([]*graphql_models.{{ .Name|go }}, len(am))
-			for i,m := range am {
-				ar[i] = {{ .Name|go }}ToGraphQL(m)
+		{{- else }}
+			func {{ .Name|go }}WithUintID(id uint) *graphql_models.{{ .Name|go }} {
+				return &graphql_models.{{ .Name|go }}{
+					ID: {{ $model.Name|go }}IDToGraphQL(id),
+				}
 			}
-			return ar
-		}
+
+			func {{ .Name|go }}WithIntID(id int) *graphql_models.{{ .Name|go }} {
+				return {{ .Name|go }}WithUintID(uint(id))
+			}
+
+			func {{ .Name|go }}WithNullDotUintID(id null.Uint) *graphql_models.{{ .Name|go }} {
+				return {{ .Name|go }}WithUintID(id.Uint)
+			}
+
+			func {{ .Name|go }}WithNullDotIntID(id null.Int) *graphql_models.{{ .Name|go }} {
+				return {{ .Name|go }}WithUintID(uint(id.Int))
+			}
+
+			func {{ .PluralName|go }}ToGraphQL(am []*models.{{ .Name|go }})( []*graphql_models.{{ .Name|go }}) {
+				ar := make([]*graphql_models.{{ .Name|go }}, len(am))
+				for i,m := range am {
+					ar[i] = {{ .Name|go }}ToGraphQL(m)
+				}
+				return ar
+			}
 		{{- end }}
 	
 		{{ range $field := .Fields }}
