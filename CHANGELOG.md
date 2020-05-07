@@ -1,6 +1,10 @@
 # Changelog
 
-## May 2 - v2
+## v2.0.5
+
+Added support for string id's in sqlboiler
+
+## v2.0.0
 
 A few breaking changes, after this we will try to keep everything stable.
 We needed this since the go modules did not work well with the current approach.
