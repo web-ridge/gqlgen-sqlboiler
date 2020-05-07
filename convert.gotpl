@@ -121,16 +121,17 @@
 			func {{ .Name|go }}WithNullDotIntID(id null.Int) *graphql_models.{{ .Name|go }} {
 				return {{ .Name|go }}WithUintID(uint(id.Int))
 			}
-
-			func {{ .PluralName|go }}ToGraphQL(am []*models.{{ .Name|go }})( []*graphql_models.{{ .Name|go }}) {
-				ar := make([]*graphql_models.{{ .Name|go }}, len(am))
-				for i,m := range am {
-					ar[i] = {{ .Name|go }}ToGraphQL(m)
-				}
-				return ar
-			}
+			
 		{{- end }}
-	
+
+		func {{ .PluralName|go }}ToGraphQL(am []*models.{{ .Name|go }})( []*graphql_models.{{ .Name|go }}) {
+			ar := make([]*graphql_models.{{ .Name|go }}, len(am))
+			for i,m := range am {
+				ar[i] = {{ .Name|go }}ToGraphQL(m)
+			}
+			return ar
+		}
+
 		{{ range $field := .Fields }}
 			{{- if $field.IsPrimaryNumberID -}}
 				func {{ $model.Name|go }}IDToGraphQL(v uint) string {
