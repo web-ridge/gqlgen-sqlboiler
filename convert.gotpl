@@ -93,6 +93,17 @@
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 	{{- if .IsNormal  -}}
 
+	{{ - if $model.HasStringPrimaryID }}
+		func {{ .Name|go }}WithStringID(id string) *graphql_models.{{ .Name|go }} {
+			return &graphql_models.{{ .Name|go }}{
+				ID: id,
+			}
+		}
+
+		func {{ .Name|go }}WithNullDotStringID(id null.String) *graphql_models.{{ .Name|go }} {
+			return {{ .Name|go }}WithStringID(id.String)
+		}
+	{{- else }}
 		func {{ .Name|go }}WithUintID(id uint) *graphql_models.{{ .Name|go }} {
 			return &graphql_models.{{ .Name|go }}{
 				ID: {{ $model.Name|go }}IDToGraphQL(id),
@@ -118,6 +129,7 @@
 			}
 			return ar
 		}
+		{{- end }}
 	
 		{{ range $field := .Fields }}
 			{{- if $field.IsPrimaryNumberID -}}
