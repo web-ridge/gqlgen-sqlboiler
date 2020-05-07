@@ -374,7 +374,6 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 			// enable simpler code in resolvers
 
 			if isPrimaryStringID {
-				fmt.Println("marked", m.Name, " as string id's")
 				m.HasStringPrimaryID = isPrimaryStringID
 			}
 
