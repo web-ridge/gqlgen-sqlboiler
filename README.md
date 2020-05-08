@@ -1,5 +1,6 @@
-Please consider a donation if we did save you a lot of time ;-) [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7B9KKQLXTEW9Q&source=url) 
+# gqlgen-sqlboiler
 
+We want developers to be able to build software faster using modern tools like GraphQL, Golang, React Native without depending on commercial providers like Firebase or AWS Amplify.
 
 
 This program generates code like this between your generated gqlgen and sqlboiler with support for Relay.dev (unique id's etc). We can automatically generate the implementation of queries and mutations like create, update, delete working based on your graphql scheme and your sqlboiler models.
