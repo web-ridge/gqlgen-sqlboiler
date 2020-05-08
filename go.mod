@@ -2,16 +2,11 @@ module github.com/web-ridge/gqlgen-sqlboiler/v2
 
 go 1.14
 
-// https://github.com/volatiletech/sqlboiler/issues/607
-replace github.com/ericlagergren/decimal => github.com/ericlagergren/decimal v0.0.0-20181231230500-73749d4874d5
-
-replace github.com/gertd/go-pluralize => github.com/gertd/go-pluralize v0.1.2
-
 require (
 	github.com/99designs/gqlgen v0.11.3
-	github.com/gertd/go-pluralize v0.1.2
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
 	github.com/pkg/errors v0.9.1
 	github.com/vektah/gqlparser/v2 v2.0.1
-	golang.org/x/tools v0.0.0-20200507175145-08cbf656cea5
+	github.com/web-ridge/go-pluralize v0.1.5
+	golang.org/x/tools v0.0.0-20200507205054-480da3ebd79c
 )
