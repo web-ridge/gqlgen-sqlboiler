@@ -1,3 +1,8 @@
+# gqlgen-sqlboiler
+
+We want developers to be able to build software faster using modern tools like GraphQL, Golang, React Native without depending on commercial providers like Firebase or AWS Amplify.
+
+
 This program generates code like this between your generated gqlgen and sqlboiler with support for Relay.dev (unique id's etc). We can automatically generate the implementation of queries and mutations like create, update, delete working based on your graphql scheme and your sqlboiler models.
 
 To make this program a success tight coupling (same naming) between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed. However everything is created with support for change so you could write some extra GrapQL resolvers if you'd like without a problem.
@@ -171,3 +176,8 @@ func main() {
 ```
 
 `go run convert_plugin.go`
+
+## Donate
+
+Did we save you a lot of time? Please consider a donation so we can invest more time in this library: [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7B9KKQLXTEW9Q&source=url)
+
