@@ -32,13 +32,14 @@ func init() {
 }
 
 type ModelBuild struct {
-	BackendModelsPath  string
-	FrontendModelsPath string
-	PackageName        string
-	Interfaces         []*Interface
-	Models             []*Model
-	Enums              []*Enum
-	Scalars            []string
+	BackendModelsPath   string
+	FrontendModelsPath  string
+	HasStringPrimaryIDs bool
+	PackageName         string
+	Interfaces          []*Interface
+	Models              []*Model
+	Enums               []*Enum
+	Scalars             []string
 }
 
 type Interface struct {
@@ -181,6 +182,7 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	models := GetModelsWithInformation(enums, originalCfg, boilerModels)
 
 	b.Models = models
+	b.HasStringPrimaryIDs = HasStringPrimaryIDsInModels(models)
 	b.Interfaces = interfaces
 	b.Enums = enums
 	b.Scalars = scalars
@@ -259,6 +261,14 @@ func getTemplate(filename string) string {
 		return "Could not read .gotpl file"
 	}
 	return string(content)
+}
+func HasStringPrimaryIDsInModels(models []*Model) bool {
+	for _, model := range models {
+		if model.HasStringPrimaryID {
+			return true
+		}
+	}
+	return false
 }
 
 // getFieldType check's if user has defined a
@@ -369,9 +379,13 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 
 			// get sqlboiler information of the field
 			boilerField := findBoilerFieldOrForeignKey(m.BoilerModel.Fields, golangName, isRelation)
-			isString := strings.Contains(boilerField.Type, "string")
+			isString := strings.Contains(strings.ToLower(boilerField.Type), "string")
 			isNumberID := strings.Contains(golangName, "ID") && !isString
 			isPrimaryNumberID := isPrimaryID && !isString
+
+			if isNumberID || isPrimaryNumberID {
+				fmt.Println(isNumberID, isPrimaryNumberID, boilerField)
+			}
 
 			isPrimaryStringID := isPrimaryID && isString
 			// enable simpler code in resolvers
