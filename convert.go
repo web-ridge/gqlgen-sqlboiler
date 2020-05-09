@@ -383,10 +383,6 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 			isNumberID := strings.Contains(golangName, "ID") && !isString
 			isPrimaryNumberID := isPrimaryID && !isString
 
-			if isNumberID || isPrimaryNumberID {
-				fmt.Println(isNumberID, isPrimaryNumberID, boilerField)
-			}
-
 			isPrimaryStringID := isPrimaryID && isString
 			// enable simpler code in resolvers
 
