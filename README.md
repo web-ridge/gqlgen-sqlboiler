@@ -40,7 +40,7 @@ It's really amazing how fast a generated api with these techniques is!
 
 ## Roadmap
 
-- [ ] Batch create generation in resolvers (have working version here for.PostgreSQL https://github.com/web-ridge/contact-tracing, need maybe different implementation for different ORM's?).
+- [ ] Batch create generation in resolvers (based on https://github.com/web-ridge/contact-tracing/blob/master/backend/helpers/convert_batch.go).
 - [ ] Support gqlgen multiple .graphql files
 - [ ] Edges/connections
 - [ ] Generate tests
