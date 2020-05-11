@@ -26,12 +26,38 @@
 {{ reserveImport  $.BackendModelsPath }}
 {{ reserveImport  $.FrontendModelsPath }}
 
+
+var TablePreloadMap = map[string]map[string]boilergql.ColumnSetting{
+	{{ range $model := .Models -}}
+	{{ if $model.IsPreloadable -}}
+		models.TableNames.{{- $model.Name }}: map[string]boilergql.ColumnSetting{
+			{{- range $value := $model.PreloadArray }}
+				 "{{$value.Key}}": {
+					 Name: {{$value.ColumnSetting.Name}},
+					 RelationshipModelName: models.TableNames.{{$value.ColumnSetting.RelationshipModelName}},
+					 IDAvailable: {{$value.ColumnSetting.IDAvailable}},
+				},
+			{{- end }}
+		},
+	{{ end -}}
+	{{ end -}}
+}
+
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 
+	{{ if $model.IsPreloadable -}}
+	func Get{{ .Name|go }}PreloadMods(ctx context.Context) (queryMods []qm.QueryMod) {
+		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, models.TableNames.{{ .Name|go }}, "")
+	}
 
-
-	{{- if .IsPayload -}}
+	func Get{{ .Name|go }}PreloadModsWithLevel(ctx context.Context, level string) (queryMods []qm.QueryMod) {
+		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, models.TableNames.{{ .Name|go }}, level)
+	}
+	{{ end -}}
+{{- end }}
+{{ range $model := .Models }}
+	{{ if .IsPayload -}}
 	var {{ .Name|go }}PreloadLevels = struct {
 		{{ range $field := .Fields }}
 		{{- if $field.IsRelation -}}
@@ -47,15 +73,6 @@
 	}
 	{{ end }}
 
-	{{- if .IsNormal  -}}
-	var {{ $model.Name|go }}PreloadMap = map[string]boilergql.ColumnSetting{
-		{{- range $value := $model.PreloadArray }}
-		 	"{{$value.Key}}": {
-				 Name: {{$value.ColumnSetting.Name}},
-				 IDAvailable: {{$value.ColumnSetting.IDAvailable}},
-			 },
-		{{- end }}
-	}
-	{{ end }}
+
 
 {{- end }}

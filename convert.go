@@ -66,6 +66,7 @@ type Model struct {
 	IsPayload             bool
 	IsWhere               bool
 	IsFilter              bool
+	IsPreloadable         bool
 	PreloadArray          []Preload
 	HasOrganizationID     bool
 	HasUserOrganizationID bool
@@ -646,6 +647,7 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 					IsNormalInput: isNormalInput,
 					IsPayload:     isPayload,
 					IsNormal:      !isInput && !isWhere && !isFilter && !isPayload,
+					IsPreloadable: !isInput && !isWhere && !isFilter && !isPayload,
 				}
 
 				for _, implementor := range schema.GetImplements(schemaType) {
@@ -658,14 +660,6 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 		}
 	}
 	return
-}
-
-func isPreloadableModel(m *Model) bool {
-	// nolint: gosimple -> keep it more readable
-	if m.IsInput {
-		return false
-	}
-	return true
 }
 
 func getPreloadMapForModel(model *Model) map[string]ColumnSetting {
@@ -696,48 +690,22 @@ func getPreloadMapForModel(model *Model) map[string]ColumnSetting {
 const maximumLevelOfPreloads = 4
 
 func enhanceModelsWithPreloadArray(models []*Model) {
-	fullMap := map[string]map[string]ColumnSetting{}
-	preloadMapPerModel := map[string]map[string]ColumnSetting{}
-	// first assing basic first level relations
+
+	// first adding basic first level relations
 	for _, model := range models {
-		if !isPreloadableModel(model) {
+		if !model.IsPreloadable {
 			continue
 		}
 
-		preloadMapPerModel[model.Name] = getPreloadMapForModel(model)
-		fullMap[model.Name] = getPreloadMapForModel(model)
-	}
-
-	for nested := 1; nested <= maximumLevelOfPreloads; nested++ {
-		// reverse loop since nested count works that way
-		// otherwise too much fields are added on the last models
-		for i := len(models) - 1; i >= 0; i-- {
-			model := models[i]
-			if !isPreloadableModel(model) {
-				continue
-			}
-			enhancePreloadMapWithNestedRelations(fullMap, preloadMapPerModel, model.Name)
-		}
-	}
-
-	for _, model := range models {
-
-		modelPreloadMap := fullMap[model.Name]
-
-		model.PreloadArray = make([]Preload, len(modelPreloadMap))
+		modelPreloadMap := getPreloadMapForModel(model)
 
 		sortedPreloadKeys := make([]string, 0, len(modelPreloadMap))
 		for k := range modelPreloadMap {
 			sortedPreloadKeys = append(sortedPreloadKeys, k)
 		}
-		// fmt.Println("FOR MODEL!!!!!!!!!!", model.Name)
-
-		// fmt.Println("BEFORE sortedPreloadKeys", sortedPreloadKeys)
-		// fmt.Println("  ")
 		sort.Strings(sortedPreloadKeys)
-		// fmt.Println("  ")
-		// fmt.Println("AFTER sortedPreloadKeys", sortedPreloadKeys)
 
+		model.PreloadArray = make([]Preload, len(sortedPreloadKeys))
 		for i, k := range sortedPreloadKeys {
 			columnSetting := modelPreloadMap[k]
 			model.PreloadArray[i] = Preload{

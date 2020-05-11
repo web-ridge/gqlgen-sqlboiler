@@ -46,7 +46,7 @@ const inputKey = "input"
 			dbID := {{ .Model.Name }}ID(id)
 			{{- end }}
 
-			mods := boilergql.GetPreloadMods(ctx, {{ .Model.Name|go }}PreloadMap)
+			mods := Get{{ .Model.Name|go }}PreloadMods(ctx)
 			mods = append(mods, dm.{{ .Model.Name|go }}Where.ID.EQ(dbID))
 			{{- if .Model.BoilerModel.HasOrganizationID }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
@@ -73,7 +73,7 @@ const inputKey = "input"
 		{{- end -}}
 
 		{{- if .IsList }}
-			mods := boilergql.GetPreloadMods(ctx, {{ .Model.Name|go }}PreloadMap)
+			mods := Get{{ .Model.Name|go }}PreloadMods(ctx)
 			{{- if .Model.BoilerModel.HasOrganizationID }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
 					auth.OrganizationIDFromContext(ctx),
@@ -168,7 +168,7 @@ const inputKey = "input"
 			}
 
 			// resolve requested fields after creating
-			mods := boilergql.GetPreloadModsWithLevel(ctx, {{ .Model.Name|go }}PreloadMap, {{ .Model.Name|go }}PayloadPreloadLevels.{{ .Model.Name|go }})
+			mods := Get{{ .Model.Name|go }}PreloadModsWithLevel(ctx, {{ .Model.Name|go }}PayloadPreloadLevels.{{ .Model.Name|go }})
 			mods = append(mods, dm.{{ .Model.Name|go }}Where.ID.EQ(m.ID))
 			{{- if .Model.BoilerModel.HasOrganizationID  }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
@@ -265,7 +265,7 @@ const inputKey = "input"
 			}
 
 			// resolve requested fields after updating
-			mods := boilergql.GetPreloadModsWithLevel(ctx, {{ .Model.Name|go }}PreloadMap, {{ .Model.Name|go }}PayloadPreloadLevels.{{ .Model.Name|go }})
+			mods := Get{{ .Model.Name|go }}PreloadModsWithLevel(ctx, {{ .Model.Name|go }}PayloadPreloadLevels.{{ .Model.Name|go }})
 			mods = append(mods, dm.{{ .Model.Name|go }}Where.ID.EQ(dbID))
 			{{- if .Model.BoilerModel.HasOrganizationID  }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
