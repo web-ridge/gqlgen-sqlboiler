@@ -2,10 +2,17 @@
 
 We want developers to be able to build software faster using modern tools like GraphQL, Golang, React Native without depending on commercial providers like Firebase or AWS Amplify.
 
-
 This program generates code like this between your generated gqlgen and sqlboiler with support for Relay.dev (unique id's etc). We can automatically generate the implementation of queries and mutations like create, update, delete working based on your graphql scheme and your sqlboiler models.
 
 To make this program a success tight coupling (same naming) between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed. However everything is created with support for change so you could write some extra GrapQL resolvers if you'd like without a problem.
+
+## Why gqlgen and sqlboiler
+They go back to a schema first approach which we like. The generated code with these tools are the most efficient and fast in the Golang system (and probably outside of it too).
+- sqlboiler: https://github.com/volatiletech/sqlboiler#benchmarks
+- gqlgen: https://github.com/appleboy/golang-graphql-benchmark#summary
+
+It's really amazing how fast a generated api with these techniques is!
+
 
 ## Usage
 
@@ -21,6 +28,7 @@ To make this program a success tight coupling (same naming) between your databas
 
 - [x] Generate converts between sqlboiler structs and graphql (with relations included)
 - [x] Generate converts between input models and sqlboiler
+- [x] Genarated code understands the difference between empty and null for update inputs so you can set things empty if you explicicitly set them in your mutation!
 - [x] Fetch sqlboiler preloads from graphql context
 - [x] Support for foreign keys named differently than their corresponding model
 - [x] New plugin which generates CRUD resolvers based on mutations in graphql scheme.
@@ -28,11 +36,11 @@ To make this program a success tight coupling (same naming) between your databas
 - [x] Generate code which implements the generated where and search filters
 - [x] Batch update/delete generation in resolvers (Not tested yet).
 - [x] Enum support.
-- [x] public errors in resolvers + optional logging via zerolog. (feel free for PR for configurable logging!)
+- [x] public errors in resolvers + logging via zerolog. (feel free for PR for configurable logging!)
 
 ## Roadmap
 
-- [ ] Batch create generation in resolvers (have working version here for.PostgreSQL https://github.com/web-ridge/contact-tracing, need maybe different implementation for different ORM's?).
+- [ ] Batch create generation in resolvers (based on https://github.com/web-ridge/contact-tracing/blob/master/backend/helpers/convert_batch.go).
 - [ ] Support gqlgen multiple .graphql files
 - [ ] Edges/connections
 - [ ] Generate tests
