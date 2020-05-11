@@ -828,7 +828,7 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 	graphType := field.Type
 	boilType := field.BoilerField.Type
 
-	enum := findEnum(enums, graphType)
+	enum := findEnum(enums, field.TypeWithoutPointer)
 	if enum != nil {
 		cc.IsCustom = true
 		cc.ToBoiler = strings.TrimPrefix(
