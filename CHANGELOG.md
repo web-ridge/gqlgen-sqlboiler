@@ -1,6 +1,6 @@
 # From now changes will be stated on the releases page
 
-
+Please look at https://github.com/web-ridge/gqlgen-sqlboiler/releases for latest releases and their changes!
 
 
 
