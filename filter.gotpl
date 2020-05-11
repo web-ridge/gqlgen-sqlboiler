@@ -225,7 +225,6 @@ func IntFilterToMods(m *graphql_models.IntFilter, column string) []qm.QueryMod {
 				return nil
 			}
 			var queryMods []qm.QueryMod
-			queryMods = append(queryMods)
 
 			// if foreign key exist so we can filter on ID in the root table instead of subquery
 			hasForeignKeyInRoot := foreignColumn != ""
