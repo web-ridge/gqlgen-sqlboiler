@@ -29,7 +29,7 @@ To make this program a success tight coupling (same naming) between your databas
 - [x] Generate code which implements the generated where and search filters
 - [x] Batch update/delete generation in resolvers (Not tested yet).
 - [x] Enum support.
-- [x] public errors in resolvers + optional logging via zerolog. (feel free for PR for configurable logging!)
+- [x] public errors in resolvers + logging via zerolog. (feel free for PR for configurable logging!)
 
 ## Roadmap
 
