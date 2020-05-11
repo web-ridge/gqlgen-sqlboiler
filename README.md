@@ -2,10 +2,17 @@
 
 We want developers to be able to build software faster using modern tools like GraphQL, Golang, React Native without depending on commercial providers like Firebase or AWS Amplify.
 
-
 This program generates code like this between your generated gqlgen and sqlboiler with support for Relay.dev (unique id's etc). We can automatically generate the implementation of queries and mutations like create, update, delete working based on your graphql scheme and your sqlboiler models.
 
 To make this program a success tight coupling (same naming) between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed. However everything is created with support for change so you could write some extra GrapQL resolvers if you'd like without a problem.
+
+## Why gqlgen and sqlboiler
+They go back to a schema first approach which we like. The generated code with these tools are the most efficient and fast in the Golang system (and probably outside of it too).
+- SQLBoiler: https://github.com/volatiletech/sqlboiler#benchmarks
+- GQLGen: https://github.com/appleboy/golang-graphql-benchmark#summary
+
+It's really amazing how fast a generated api with these techniques is!
+
 
 ## Usage
 
