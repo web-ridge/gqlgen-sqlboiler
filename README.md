@@ -21,6 +21,7 @@ To make this program a success tight coupling (same naming) between your databas
 
 - [x] Generate converts between sqlboiler structs and graphql (with relations included)
 - [x] Generate converts between input models and sqlboiler
+- [x] Genarated code understands the difference between empty and null for update inputs so you can set things empty if you explicicitly set them in your mutation!
 - [x] Fetch sqlboiler preloads from graphql context
 - [x] Support for foreign keys named differently than their corresponding model
 - [x] New plugin which generates CRUD resolvers based on mutations in graphql scheme.
