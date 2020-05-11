@@ -1,4 +1,8 @@
-# Changelog
+# From now changes will be stated on the releases page
+
+
+
+
 
 ## v2.0.5
 
@@ -32,7 +36,7 @@ go get github.com/web-ridge/gqlgen-sqlboiler/v2@LATEST_COMMIT
 E.g.
 
 ```
-go get github.com/web-ridge/gqlgen-sqlboiler/v2@46d41d9db0dff39411f528e23cff66e9eb629c39
+go get github.com/web-ridge/gqlgen-sqlboiler/v2@latest
 ```
 
 ## April 1-6
