@@ -47,6 +47,11 @@ type Interface struct {
 	Name        string
 }
 
+type Preload struct {
+	Key           string
+	ColumnSetting ColumnSetting
+}
+
 type Model struct {
 	Name                  string
 	PluralName            string
@@ -61,7 +66,7 @@ type Model struct {
 	IsPayload             bool
 	IsWhere               bool
 	IsFilter              bool
-	PreloadMap            map[string]ColumnSetting
+	PreloadArray          []Preload
 	HasOrganizationID     bool
 	HasUserOrganizationID bool
 	HasUserID             bool
@@ -79,15 +84,16 @@ type ColumnSetting struct {
 }
 
 type Field struct {
-	Name              string
-	PluralName        string
-	Type              string
-	IsNumberID        bool
-	IsPrimaryNumberID bool
-	IsPrimaryID       bool
-	IsRequired        bool
-	IsPlural          bool
-	ConvertConfig     ConvertConfig
+	Name               string
+	PluralName         string
+	Type               string
+	TypeWithoutPointer string
+	IsNumberID         bool
+	IsPrimaryNumberID  bool
+	IsPrimaryID        bool
+	IsRequired         bool
+	IsPlural           bool
+	ConvertConfig      ConvertConfig
 	// relation stuff
 	IsRelation bool
 	// boiler relation stuff is inside this field
@@ -154,7 +160,7 @@ func GetModelsWithInformation(enums []*Enum, cfg *config.Config, boilerModels []
 	enhanceModelsWithFields(enums, cfg.Schema, cfg, models)
 
 	// Add preload maps
-	enhanceModelsWithPreloadMap(models)
+	enhanceModelsWithPreloadArray(models)
 
 	// Sort in same order
 	sort.Slice(models, func(i, j int) bool { return models[i].Name < models[j].Name })
@@ -418,20 +424,21 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 
 			}
 			field := &Field{
-				Name:              name,
-				Type:              shortType,
-				BoilerField:       boilerField,
-				IsNumberID:        isNumberID,
-				IsPrimaryID:       isPrimaryID,
-				IsPrimaryNumberID: isPrimaryNumberID,
-				IsRelation:        isRelation,
-				IsOr:              name == "or",
-				IsAnd:             name == "and",
-				IsPlural:          pluralizer.IsPlural(name),
-				PluralName:        pluralizer.Plural(name),
-				OriginalType:      typ,
-				Description:       field.Description,
-				Tag:               `json:"` + field.Name + `"`,
+				Name:               name,
+				Type:               shortType,
+				TypeWithoutPointer: strings.TrimPrefix(shortType, "*"),
+				BoilerField:        boilerField,
+				IsNumberID:         isNumberID,
+				IsPrimaryID:        isPrimaryID,
+				IsPrimaryNumberID:  isPrimaryNumberID,
+				IsRelation:         isRelation,
+				IsOr:               name == "or",
+				IsAnd:              name == "and",
+				IsPlural:           pluralizer.IsPlural(name),
+				PluralName:         pluralizer.Plural(name),
+				OriginalType:       typ,
+				Description:        field.Description,
+				Tag:                `json:"` + field.Name + `"`,
 			}
 			field.ConvertConfig = getConvertConfig(enums, m, field)
 			m.Fields = append(m.Fields, field)
@@ -454,8 +461,12 @@ func getShortType(longType string) string {
 	splittedBySlash := strings.Split(longType, "/")
 	lastPart := splittedBySlash[len(splittedBySlash)-1]
 	splitted := strings.Split(lastPart, ".")
-	if len(splitted) > 1 {
+	isPointer := strings.HasPrefix(longType, "*")
 
+	if len(splitted) > 1 {
+		if isPointer {
+			return "*" + splitted[1]
+		}
 		return splitted[1]
 	}
 	return longType
@@ -682,56 +693,85 @@ func getPreloadMapForModel(model *Model) map[string]ColumnSetting {
 	return preloadMap
 }
 
-func enhanceModelsWithPreloadMap(models []*Model) {
+const maximumLevelOfPreloads = 4
+
+func enhanceModelsWithPreloadArray(models []*Model) {
+	fullMap := map[string]map[string]ColumnSetting{}
 	preloadMapPerModel := map[string]map[string]ColumnSetting{}
 	// first assing basic first level relations
 	for _, model := range models {
 		if !isPreloadableModel(model) {
 			continue
 		}
+
 		preloadMapPerModel[model.Name] = getPreloadMapForModel(model)
-		model.PreloadMap = getPreloadMapForModel(model)
+		fullMap[model.Name] = getPreloadMapForModel(model)
 	}
 
-	// reverse loop since nested count works that way
-	// otherwise too much fields are added on the last models
-	for i := len(models) - 1; i >= 0; i-- {
-		model := models[i]
-		if !isPreloadableModel(model) {
-			continue
+	for nested := 1; nested <= maximumLevelOfPreloads; nested++ {
+		// reverse loop since nested count works that way
+		// otherwise too much fields are added on the last models
+		for i := len(models) - 1; i >= 0; i-- {
+			model := models[i]
+			if !isPreloadableModel(model) {
+				continue
+			}
+			enhancePreloadMapWithNestedRelations(fullMap, preloadMapPerModel, model.Name)
 		}
-		enhancePreloadMapWithNestedRelations(model.PreloadMap, preloadMapPerModel, 0)
 	}
 
-	// reverse loop since nested count works that way
-	// otherwise too much fields are added on the last models
-	for i := len(models) - 1; i >= 0; i-- {
-		model := models[i]
-		if !isPreloadableModel(model) {
-			continue
+	for _, model := range models {
+
+		modelPreloadMap := fullMap[model.Name]
+
+		model.PreloadArray = make([]Preload, len(modelPreloadMap))
+
+		sortedPreloadKeys := make([]string, 0, len(modelPreloadMap))
+		for k := range modelPreloadMap {
+			sortedPreloadKeys = append(sortedPreloadKeys, k)
 		}
-		enhancePreloadMapWithNestedRelations(model.PreloadMap, preloadMapPerModel, 0)
-	}
+		// fmt.Println("FOR MODEL!!!!!!!!!!", model.Name)
 
+		// fmt.Println("BEFORE sortedPreloadKeys", sortedPreloadKeys)
+		// fmt.Println("  ")
+		sort.Strings(sortedPreloadKeys)
+		// fmt.Println("  ")
+		// fmt.Println("AFTER sortedPreloadKeys", sortedPreloadKeys)
+
+		for i, k := range sortedPreloadKeys {
+			columnSetting := modelPreloadMap[k]
+			model.PreloadArray[i] = Preload{
+				Key:           k,
+				ColumnSetting: columnSetting,
+			}
+		}
+	}
 }
 
-func enhancePreloadMapWithNestedRelations(preloadMap map[string]ColumnSetting, preloadMapPerModel map[string]map[string]ColumnSetting, nested int) {
-	if nested > 5 {
-		return
-	}
-	for key, value := range preloadMap {
+func enhancePreloadMapWithNestedRelations(
+	fullMap map[string]map[string]ColumnSetting,
+	preloadMapPerModel map[string]map[string]ColumnSetting,
+	modelName string,
+) {
+
+	for key, value := range preloadMapPerModel[modelName] {
 
 		// check if relation exist
 		if value.RelationshipModelName != "" {
-			nestedPreloads, ok := preloadMapPerModel[value.RelationshipModelName]
+			nestedPreloads, ok := fullMap[value.RelationshipModelName]
 			if ok {
 				for nestedKey, nestedValue := range nestedPreloads {
-					preloadMap[key+`.`+nestedKey] = ColumnSetting{
+
+					newKey := key + `.` + nestedKey
+
+					if strings.Count(newKey, ".") > maximumLevelOfPreloads {
+						continue
+					}
+					fullMap[modelName][newKey] = ColumnSetting{
 						Name:                  value.Name + `+ "." +` + nestedValue.Name,
 						RelationshipModelName: nestedValue.RelationshipModelName,
 					}
 				}
-
 			}
 		}
 	}
@@ -788,14 +828,20 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 	graphType := field.Type
 	boilType := field.BoilerField.Type
 
-	// fmt.Println("boilType for", field.Name, ":", boilType)
-
 	enum := findEnum(enums, graphType)
 	if enum != nil {
 		cc.IsCustom = true
-		longType := field.OriginalType.String()
-		cc.ToBoiler = strings.TrimPrefix(getToBoiler(getBoilerTypeAsText(boilType), getEnumTypeAsText(graphType, longType)), "boilergql.")
-		cc.ToGraphQL = strings.TrimPrefix(getToGraphQL(getBoilerTypeAsText(boilType), getEnumTypeAsText(graphType, longType)), "boilergql.")
+		cc.ToBoiler = strings.TrimPrefix(
+			getToBoiler(
+				getBoilerTypeAsText(boilType),
+				getGraphTypeAsText(graphType),
+			), "boilergql.")
+
+		cc.ToGraphQL = strings.TrimPrefix(
+			getToGraphQL(
+				getBoilerTypeAsText(boilType),
+				getGraphTypeAsText(graphType),
+			), "boilergql.")
 
 	} else if graphType != boilType {
 		cc.IsCustom = true
@@ -880,16 +926,6 @@ func getBoilerTypeAsText(boilType string) string {
 
 func getGraphTypeAsText(graphType string) string {
 	if strings.HasPrefix(graphType, "*") {
-		graphType = strings.TrimPrefix(graphType, "*")
-		graphType = strcase.ToCamel(graphType)
-		graphType = "Pointer" + graphType
-	}
-	return strcase.ToCamel(graphType)
-}
-
-func getEnumTypeAsText(graphType string, longType string) string {
-
-	if strings.HasPrefix(longType, "*") {
 		graphType = strings.TrimPrefix(graphType, "*")
 		graphType = strcase.ToCamel(graphType)
 		graphType = "Pointer" + graphType

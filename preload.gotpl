@@ -49,10 +49,10 @@
 
 	{{- if .IsNormal  -}}
 	var {{ $model.Name|go }}PreloadMap = map[string]boilergql.ColumnSetting{
-		{{- range $key, $value := $model.PreloadMap }}
-		 	"{{$key}}": {
-				 Name: {{$value.Name}},
-				 IDAvailable: {{$value.IDAvailable}},
+		{{- range $value := $model.PreloadArray }}
+		 	"{{$value.Key}}": {
+				 Name: {{$value.ColumnSetting.Name}},
+				 IDAvailable: {{$value.ColumnSetting.IDAvailable}},
 			 },
 		{{- end }}
 	}

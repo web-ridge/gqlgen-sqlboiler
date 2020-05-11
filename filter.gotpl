@@ -250,25 +250,25 @@ func IntFilterToMods(m *graphql_models.IntFilter, column string) []qm.QueryMod {
 			{{ range $field := .Fields }}
 				{{-  if and $field.IsRelation $field.BoilerField.IsRelation }}
 					{{- if  $field.IsPlural }}
-						queryMods = append(queryMods, {{ $field.Type|go }}SubqueryToMods(m.{{ $field.Name|go }}, "")...)
+						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name|go }}, "")...)
 					{{- else }}
-						queryMods = append(queryMods, {{ $field.Type|go }}SubqueryToMods(m.{{ $field.Name|go }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)
+						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name|go }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)
 					{{- end }}
 				{{-  else if $field.IsOr  }}
 					if m.Or != nil {
-						queryMods = append(queryMods, qm.Or2(qm.Expr({{ $field.Type|go }}ToMods(m.Or, true)...)))
+						queryMods = append(queryMods, qm.Or2(qm.Expr({{ $field.TypeWithoutPointer|go }}ToMods(m.Or, true)...)))
 					}
 				{{-  else if $field.IsAnd  }}
 					if m.And != nil {
-						queryMods = append(queryMods, qm.Expr({{ $field.Type|go }}ToMods(m.And, true)...))
+						queryMods = append(queryMods, qm.Expr({{ $field.TypeWithoutPointer|go }}ToMods(m.And, true)...))
 					}
 				{{- else }}
 					{{- if  $field.IsPrimaryID }}
 					if withPrimaryID {
-						queryMods = append(queryMods, {{ $field.Type|go }}ToMods(m.{{ $field.Name|go }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)
+						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}ToMods(m.{{ $field.Name|go }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)
 					}
 					{{- else }}
-						queryMods = append(queryMods, {{ $field.Type|go }}ToMods(m.{{ $field.Name|go }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)					
+						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}ToMods(m.{{ $field.Name|go }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)					
 					{{- end }}
 				{{- end -}}
 			{{ end }}
