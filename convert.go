@@ -84,6 +84,7 @@ type Field struct {
 	Type              string
 	IsNumberID        bool
 	IsPrimaryNumberID bool
+	IsPrimaryID       bool
 	IsRequired        bool
 	IsPlural          bool
 	ConvertConfig     ConvertConfig
@@ -421,6 +422,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 				Type:              shortType,
 				BoilerField:       boilerField,
 				IsNumberID:        isNumberID,
+				IsPrimaryID:       isPrimaryID,
 				IsPrimaryNumberID: isPrimaryNumberID,
 				IsRelation:        isRelation,
 				IsOr:              name == "or",
