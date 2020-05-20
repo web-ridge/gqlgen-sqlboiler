@@ -457,19 +457,32 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 	}
 }
 
+var ignoreTypePrefixes = []string{"graphql_models", "models"}
+
 func getShortType(longType string) string {
 
+	// longType e.g = gitlab.com/decicify/app/backend/graphql_models.FlowWhere
 	splittedBySlash := strings.Split(longType, "/")
-	lastPart := splittedBySlash[len(splittedBySlash)-1]
-	splitted := strings.Split(lastPart, ".")
-	isPointer := strings.HasPrefix(longType, "*")
+	// gitlab.com, decicify, app, backend, graphql_models.FlowWhere
 
-	if len(splitted) > 1 {
-		if isPointer {
-			return "*" + splitted[1]
+	lastPart := splittedBySlash[len(splittedBySlash)-1]
+	isPointer := strings.HasPrefix(longType, "*")
+	isStructInPackage := strings.Count(lastPart, ".") > 0
+
+	if isStructInPackage {
+		// if packages are deeper they don't have pointers but *time.Time will since it's not deep
+		returnType := strings.TrimPrefix(lastPart, "*")
+		for _, ignoreType := range ignoreTypePrefixes {
+			fullIgnoreType := ignoreType + "."
+			returnType = strings.TrimPrefix(returnType, fullIgnoreType)
 		}
-		return splitted[1]
+
+		if isPointer {
+			return "*" + returnType
+		}
+		return returnType
 	}
+
 	return longType
 }
 
@@ -814,6 +827,10 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 	} else if graphType != boilType {
 		cc.IsCustom = true
 
+		if strings.ToLower(model.Name) == "blockchoice" {
+			fmt.Println(graphType, boilType)
+		}
+
 		if field.IsPrimaryNumberID || field.IsNumberID {
 
 			cc.ToGraphQL = "VALUE"
@@ -879,16 +896,21 @@ func getToGraphQL(boilType, graphType string) string {
 }
 
 func getBoilerTypeAsText(boilType string) string {
-	if strings.HasPrefix(boilType, "null.") {
-		boilType = strings.TrimPrefix(boilType, "null.")
-		boilType = strcase.ToCamel(boilType)
-		boilType = "NullDot" + boilType
-	}
+
+	// backward compatible missed Dot
 	if strings.HasPrefix(boilType, "types.") {
 		boilType = strings.TrimPrefix(boilType, "types.")
 		boilType = strcase.ToCamel(boilType)
 		boilType = "Types" + boilType
 	}
+
+	// if strings.HasPrefix(boilType, "null.") {
+	// 	boilType = strings.TrimPrefix(boilType, "null.")
+	// 	boilType = strcase.ToCamel(boilType)
+	// 	boilType = "NullDot" + boilType
+	// }
+	boilType = strings.Replace(boilType, ".", "Dot", -1)
+
 	return strcase.ToCamel(boilType)
 }
 

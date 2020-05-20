@@ -30,7 +30,7 @@
 var TablePreloadMap = map[string]map[string]boilergql.ColumnSetting{
 	{{ range $model := .Models -}}
 	{{ if $model.IsPreloadable -}}
-		models.TableNames.{{- $model.Name }}: map[string]boilergql.ColumnSetting{
+		models.TableNames.{{- $model.Name }}: {
 			{{- range $value := $model.PreloadArray }}
 				 "{{$value.Key}}": {
 					 Name: {{$value.ColumnSetting.Name}},
