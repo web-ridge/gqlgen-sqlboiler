@@ -457,7 +457,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 	}
 }
 
-var ignoreTypePrefixes = []string{"graphql_models", "models"}
+var ignoreTypePrefixes = []string{"graphql_models", "models", "boilergql"}
 
 func getShortType(longType string) string {
 
