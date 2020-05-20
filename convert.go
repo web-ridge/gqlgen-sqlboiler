@@ -427,7 +427,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 			field := &Field{
 				Name:               name,
 				Type:               shortType,
-				TypeWithoutPointer: strings.TrimPrefix(shortType, "*"),
+				TypeWithoutPointer: strings.Replace(strings.TrimPrefix(shortType, "*"), ".", "Dot", -1),
 				BoilerField:        boilerField,
 				IsNumberID:         isNumberID,
 				IsPrimaryID:        isPrimaryID,
@@ -826,10 +826,6 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 
 	} else if graphType != boilType {
 		cc.IsCustom = true
-
-		if strings.ToLower(model.Name) == "blockchoice" {
-			fmt.Println(graphType, boilType)
-		}
 
 		if field.IsPrimaryNumberID || field.IsNumberID {
 
