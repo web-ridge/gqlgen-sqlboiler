@@ -7,12 +7,13 @@ This program generates type-safe code between your generated gqlgen and sqlboile
 To make this program a success coupling (same naming) between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed. However everything is created with support for change so you could write some extra GrapQL resolvers if you'd like without a problem.
 
 ## Why gqlgen and sqlboiler
+
 They go back to a schema first approach which we like. The generated code with these tools are the most efficient and fast in the Golang system (and probably outside of it too).
+
 - sqlboiler: https://github.com/volatiletech/sqlboiler#benchmarks
 - gqlgen: https://github.com/appleboy/golang-graphql-benchmark#summary
 
 It's really amazing how fast a generated api with these techniques is!
-
 
 ## Usage
 
@@ -159,8 +160,8 @@ func main() {
 		os.Exit(2)
 	}
 
-    output := gbgen.Config{
-		Directory:   "graph/helpers", // supports root or sub directories
+	output := gbgen.Config{
+		Directory:   "helpers", // supports root or sub directories
 		PackageName: "helpers",
 	}
 	backend := gbgen.Config{
@@ -168,20 +169,21 @@ func main() {
 		PackageName: "models",
 	}
 	frontend := gbgen.Config{
-		Directory:   "app",
-		PackageName: "app",
+		Directory:   "graphql_models",
+		PackageName: "graphql_models",
 	}
+
 	err = api.Generate(cfg,
 		api.AddPlugin(gbgen.NewConvertPlugin(
-			output, // directory where convert.go, convert_input.go and preload.go should live
-			backend,      // directory where sqlboiler files are put
-			frontend,    // directory where gqlgen models live
+			output,   // directory where convert.go, convert_input.go and preload.go should live
+			backend,  // directory where sqlboiler files are put
+			frontend, // directory where gqlgen models live
 		)),
 		api.AddPlugin(gbgen.NewResolverPlugin(
 			output,
 			backend,
 			frontend,
-			"github.com/yourauth/implementation" // leave empty if you don't have auth
+			"github.com/web-ridge/yourapp/yourauth", // leave empty if you don't have auth
 		)),
 	)
 	if err != nil {
@@ -197,4 +199,3 @@ func main() {
 ## Donate
 
 Did we save you a lot of time? Please consider a donation so we can invest more time in this library: [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7B9KKQLXTEW9Q&source=url)
-
