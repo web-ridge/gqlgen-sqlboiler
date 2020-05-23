@@ -23,8 +23,8 @@
 
 
 {{ reserveImport "database/sql" }}
-{{ reserveImport  $.BackendModelsPath }}
-{{ reserveImport  $.FrontendModelsPath }}
+{{ reserveImport  $.Backend.Directory }}
+{{ reserveImport  $.Frontend.Directory }}
 
 
 // const regexSign = `'`
@@ -44,7 +44,7 @@ func appendSubQuery(queryMods []qm.QueryMod, q *queries.Query) []qm.QueryMod {
 	return append(queryMods, qm.Where(fmt.Sprintf("EXISTS(%v)", qsClean), args...))
 }
 
-func BooleanFilterToMods(m *graphql_models.BooleanFilter, column string) []qm.QueryMod {
+func BooleanFilterToMods(m *{{ $.Frontend.PackageName }}.BooleanFilter, column string) []qm.QueryMod {
 	if m == nil {
 		return nil
 	}
@@ -58,7 +58,7 @@ func BooleanFilterToMods(m *graphql_models.BooleanFilter, column string) []qm.Qu
 	return queryMods
 }
 
-func IDFilterToMods(m *graphql_models.IDFilter, column string) []qm.QueryMod {
+func IDFilterToMods(m *{{ $.Frontend.PackageName }}.IDFilter, column string) []qm.QueryMod {
 	if m == nil {
 		return nil
 	}
@@ -95,7 +95,7 @@ func IDFilterToMods(m *graphql_models.IDFilter, column string) []qm.QueryMod {
 
 
 
-func StringFilterToMods(m *graphql_models.StringFilter, column string) []qm.QueryMod {
+func StringFilterToMods(m *{{ $.Frontend.PackageName }}.StringFilter, column string) []qm.QueryMod {
 	if m == nil {
 		return nil
 	}
@@ -140,7 +140,7 @@ func StringFilterToMods(m *graphql_models.StringFilter, column string) []qm.Quer
 }
 
 
-func FloatFilterToMods(m *graphql_models.FloatFilter, column string) []qm.QueryMod {
+func FloatFilterToMods(m *{{ $.Frontend.PackageName }}.FloatFilter, column string) []qm.QueryMod {
 	if m == nil {
 		return nil
 	}
@@ -172,7 +172,7 @@ func FloatFilterToMods(m *graphql_models.FloatFilter, column string) []qm.QueryM
 	return queryMods
 }
 
-func IntFilterToMods(m *graphql_models.IntFilter, column string) []qm.QueryMod {
+func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) []qm.QueryMod {
 	if m == nil {
 		return nil
 	}
@@ -207,7 +207,7 @@ func IntFilterToMods(m *graphql_models.IntFilter, column string) []qm.QueryMod {
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 	{{- if .IsFilter -}}
-		func {{ .Name|go }}ToMods(m *graphql_models.{{ .Name|go }}) []qm.QueryMod {
+		func {{ .Name|go }}ToMods(m *{{ $.Frontend.PackageName }}.{{ .Name|go }}) []qm.QueryMod {
 			if m == nil {
 				return nil
 			}
@@ -229,7 +229,7 @@ func IntFilterToMods(m *graphql_models.IntFilter, column string) []qm.QueryMod {
 		}
 	{{ end }}
 	{{- if .IsWhere  -}}
-		func {{ .Name|go }}SubqueryToMods(m *graphql_models.{{ .Name|go }}, foreignColumn string) []qm.QueryMod {
+		func {{ .Name|go }}SubqueryToMods(m *{{ $.Frontend.PackageName }}.{{ .Name|go }}, foreignColumn string) []qm.QueryMod {
 			if m == nil {
 				return nil
 			}
@@ -249,7 +249,7 @@ func IntFilterToMods(m *graphql_models.IntFilter, column string) []qm.QueryMod {
 			return queryMods
 		} 
 		
-		func {{ .Name|go }}ToMods(m *graphql_models.{{ .Name|go }}, withPrimaryID bool) []qm.QueryMod {
+		func {{ .Name|go }}ToMods(m *{{ $.Frontend.PackageName }}.{{ .Name|go }}, withPrimaryID bool) []qm.QueryMod {
 			if m == nil {
 				return nil
 			}

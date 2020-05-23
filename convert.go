@@ -32,8 +32,8 @@ func init() {
 }
 
 type ModelBuild struct {
-	BackendModelsPath   string
-	FrontendModelsPath  string
+	Backend             Config
+	Frontend            Config
 	HasStringPrimaryIDs bool
 	PackageName         string
 	Interfaces          []*Interface
@@ -123,14 +123,19 @@ type EnumValue struct {
 	NameLower   string
 }
 
-func NewConvertPlugin(directory, backendModelsPath, frontendModelsPath string) plugin.Plugin {
-	return &ConvertPlugin{directory: directory, backendModelsPath: backendModelsPath, frontendModelsPath: frontendModelsPath}
+func NewConvertPlugin(output, backend, frontend Config) plugin.Plugin {
+	return &ConvertPlugin{Output: output, Backend: backend, Frontend: frontend}
 }
 
 type ConvertPlugin struct {
-	directory          string
-	backendModelsPath  string
-	frontendModelsPath string
+	Output   Config
+	Backend  Config
+	Frontend Config
+}
+
+type Config struct {
+	Directory   string
+	PackageName string
 }
 
 var _ plugin.ConfigMutator = &ConvertPlugin{}
@@ -173,15 +178,21 @@ func GetModelsWithInformation(enums []*Enum, cfg *config.Config, boilerModels []
 
 func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	b := &ModelBuild{
-		PackageName:        m.directory,
-		FrontendModelsPath: getGoImportFromFile(m.frontendModelsPath),
-		BackendModelsPath:  getGoImportFromFile(m.backendModelsPath),
+		PackageName: m.Output.PackageName,
+		Backend: Config{
+			Directory:   getGoImportFromFile(m.Backend.Directory),
+			PackageName: m.Backend.PackageName,
+		},
+		Frontend: Config{
+			Directory:   getGoImportFromFile(m.Frontend.Directory),
+			PackageName: m.Frontend.PackageName,
+		},
 	}
 
 	cfg := copyConfig(*originalCfg)
 
 	fmt.Println("[convert] get boiler models")
-	boilerModels := GetBoilerModels(m.backendModelsPath)
+	boilerModels := GetBoilerModels(m.Backend.Directory)
 
 	fmt.Println("[convert] get extra's from schema")
 	interfaces, enums, scalars := getExtrasFromSchema(cfg.Schema)
@@ -211,8 +222,8 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	templates.CurrentImports = nil
 	if renderError := templates.Render(templates.Options{
 		Template:        getTemplate("preload.gotpl"),
-		PackageName:     m.directory,
-		Filename:        m.directory + "/" + "preload.go",
+		PackageName:     m.Output.PackageName,
+		Filename:        m.Output.Directory + "/" + "preload.go",
 		Data:            b,
 		GeneratedHeader: true,
 		Packages:        cfg.Packages,
@@ -223,8 +234,8 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	fmt.Println("[convert] render convert.gotpl")
 	if renderError := templates.Render(templates.Options{
 		Template:        getTemplate("convert.gotpl"),
-		PackageName:     m.directory,
-		Filename:        m.directory + "/" + "convert.go",
+		PackageName:     m.Output.PackageName,
+		Filename:        m.Output.Directory + "/" + "convert.go",
 		Data:            b,
 		GeneratedHeader: true,
 		Packages:        cfg.Packages,
@@ -235,8 +246,8 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	fmt.Println("[convert] render convert_input.gotpl")
 	if renderError := templates.Render(templates.Options{
 		Template:        getTemplate("convert_input.gotpl"),
-		PackageName:     m.directory,
-		Filename:        m.directory + "/" + "convert_input.go",
+		PackageName:     m.Output.PackageName,
+		Filename:        m.Output.Directory + "/" + "convert_input.go",
 		Data:            b,
 		GeneratedHeader: true,
 		Packages:        cfg.Packages,
@@ -247,8 +258,8 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	fmt.Println("[convert] render filter.gotpl")
 	if renderError := templates.Render(templates.Options{
 		Template:        getTemplate("filter.gotpl"),
-		PackageName:     m.directory,
-		Filename:        m.directory + "/" + "filter.go",
+		PackageName:     m.Output.PackageName,
+		Filename:        m.Output.Directory + "/" + "filter.go",
 		Data:            b,
 		GeneratedHeader: true,
 		Packages:        cfg.Packages,

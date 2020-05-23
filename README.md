@@ -66,7 +66,7 @@ https://github.com/web-ridge/gqlgen-sqlboiler-examples/tree/master/social-networ
 
 **Code snippet**
 
-```golang
+```go
 func PostToGraphQL(m *models.Post) *graphql_models.Post {
 	if m == nil {
 		return nil
@@ -138,7 +138,7 @@ Run normal generator
 
 Put this in your program convert_plugin.go e.g.
 
-```golang
+```go
 // +build ignore
 
 package main
@@ -159,19 +159,28 @@ func main() {
 		os.Exit(2)
 	}
 
-	convertHelpersDir := "helpers"
-	sqlboilerDir := "models"
-	gqlgenModelDir := "graphql_models"
+    output := gbgen.Config{
+		Directory:   "graph/helpers", // supports root or sub directories
+		PackageName: "helpers",
+	}
+	backend := gbgen.Config{
+		Directory:   "models",
+		PackageName: "models",
+	}
+	frontend := gbgen.Config{
+		Directory:   "app",
+		PackageName: "app",
+	}
 	err = api.Generate(cfg,
 		api.AddPlugin(gbgen.NewConvertPlugin(
-			convertHelpersDir, // directory where convert.go, convert_input.go and preload.go should live
-			sqlboilerDir,      // directory where sqlboiler files are put
-			gqlgenModelDir,    // directory where gqlgen models live
+			output, // directory where convert.go, convert_input.go and preload.go should live
+			backend,      // directory where sqlboiler files are put
+			frontend,    // directory where gqlgen models live
 		)),
 		api.AddPlugin(gbgen.NewResolverPlugin(
-			convertHelpersDir,
-			sqlboilerDir,
-			gqlgenModelDir,
+			output,
+			backend,
+			frontend,
 			"github.com/yourauth/implementation" // leave empty if you don't have auth
 		)),
 	)

@@ -15,15 +15,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewResolverPlugin(convertHelpersDir, backendModelsPath, frontendModelsPath string, authImport string) plugin.Plugin {
-	return &ResolverPlugin{convertHelpersDir: convertHelpersDir, backendModelsPath: backendModelsPath, frontendModelsPath: frontendModelsPath, authImport: authImport}
+func NewResolverPlugin(output, backend, frontend Config, authImport string) plugin.Plugin {
+	return &ResolverPlugin{output: output, backend: backend, frontend: frontend, authImport: authImport}
 }
 
 type ResolverPlugin struct {
-	convertHelpersDir  string
-	backendModelsPath  string
-	frontendModelsPath string
-	authImport         string
+	output     Config
+	backend    Config
+	frontend   Config
+	authImport string
 }
 
 var _ plugin.CodeGenerator = &ResolverPlugin{}
@@ -39,7 +39,7 @@ func (m *ResolverPlugin) GenerateCode(data *codegen.Data) error {
 
 	// Get all models information
 	fmt.Println("[resolver] get boiler models")
-	boilerModels := GetBoilerModels(m.backendModelsPath)
+	boilerModels := GetBoilerModels(m.backend.Directory)
 
 	fmt.Println("[resolver] get models with information")
 	models := GetModelsWithInformation(nil, data.Config, boilerModels)
@@ -61,16 +61,16 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 
 	file.imports = append(file.imports, Import{
 		Alias:      ".",
-		ImportPath: getGoImportFromFile(m.convertHelpersDir),
+		ImportPath: getGoImportFromFile(m.output.Directory),
 	})
 
 	file.imports = append(file.imports, Import{
 		Alias:      "dm",
-		ImportPath: getGoImportFromFile(m.backendModelsPath),
+		ImportPath: getGoImportFromFile(m.backend.Directory),
 	})
 	file.imports = append(file.imports, Import{
 		Alias:      "fm",
-		ImportPath: getGoImportFromFile(m.frontendModelsPath),
+		ImportPath: getGoImportFromFile(m.frontend.Directory),
 	})
 
 	if m.authImport != "" {

@@ -24,15 +24,15 @@
 {{ reserveImport "github.com/volatiletech/null/v8" }}
 
 {{ reserveImport "database/sql" }}
-{{ reserveImport  $.BackendModelsPath }}
-{{ reserveImport  $.FrontendModelsPath }}
+{{ reserveImport  $.Backend.Directory }}
+{{ reserveImport  $.Frontend.Directory }}
 
 
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 	{{- if .IsInput }}
 				
-		func {{ .PluralName|go }}ToBoiler(am []*graphql_models.{{ .Name|go }})( []*models.{{ .BoilerModel.Name|go }}) {
+		func {{ .PluralName|go }}ToBoiler(am []*{{ $.Frontend.PackageName }}.{{ .Name|go }})( []*models.{{ .BoilerModel.Name|go }}) {
 			ar := make([]*models.{{ .BoilerModel.Name|go }}, len(am))
 			for i,m := range am {
 				ar[i] = {{ .Name|go }}ToBoiler(
@@ -43,7 +43,7 @@
 		}
 		
 		func {{ .Name|go }}ToBoiler(
-				m *graphql_models.{{ .Name|go }},
+				m *{{ $.Frontend.PackageName }}.{{ .Name|go }},
 			)( *models.{{ .BoilerModel.Name|go }}) {
 			if m == nil {
 				return nil
@@ -65,7 +65,7 @@
 
 		func {{ .Name|go }}ToModelM(
 			input map[string]interface{},
-			m graphql_models.{{ .Name|go }},
+			m {{ $.Frontend.PackageName }}.{{ .Name|go }},
 		) models.M {
 			modelM := models.M{}
 			for key, _ := range input {
