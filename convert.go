@@ -1,9 +1,11 @@
 package gqlgen_sqlboiler
 
 import (
+	"bufio"
 	"fmt"
 	"go/types"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -149,12 +151,75 @@ func copyConfig(cfg config.Config) *config.Config {
 }
 
 func getGoImportFromFile(dir string) string {
+	dir = strings.TrimPrefix(dir, "/")
+	projectPath, err := getProjectPath(dir)
+	if err != nil {
+		// TODO: adhering to your original error handling
+		//  should consider doing something here rather than continuing
+		//  since this step occurs during generation, panicing or fatal error should be okay
+		fmt.Println("error while creating project path %w", err)
+	}
+	var importPath string
+	if hasGoMod(projectPath) {
+		modulePath, err := getModulePath(projectPath)
+		if err != nil {
+			// TODO: adhering to your original error handling
+			//  should consider doing something here rather than continuing
+			//  since this step occurs during generation, panicing or fatal error should be okay
+			fmt.Println("error while creating module path %w", err)
+		}
+		importPath = modulePath + "/" + dir
+	} else {
+		importPath = gopathImport(projectPath + "/" + dir)
+	}
+
+	return importPath
+}
+func getProjectPath(dir string) (string, error) {
 	longPath, err := filepath.Abs(dir)
 	if err != nil {
-		fmt.Println("error while trying to convert folder to gopath", err)
+		return "", fmt.Errorf("error while trying to convert folder to gopath %w", err)
 	}
-	// src/Users/.../go/src/gitlab.com/.../app/backend/graphql_models
-	return strings.TrimPrefix(pathRegex.FindString(longPath), "src/")
+	return strings.TrimSuffix(longPath, dir), nil
+}
+
+func hasGoMod(projectPath string) bool {
+	return fileExists(projectPath + "go.mod")
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+func getModulePath(projectPath string) (string, error) {
+	file, err := os.Open(projectPath + "go.mod")
+	if err != nil {
+		return "", fmt.Errorf("error while trying to read go mods path %w", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		// normalize to ensure readability
+		line := strings.TrimSpace(scanner.Text())
+
+		// look for the starting module statement
+		if strings.HasPrefix(line, "module") {
+			split := strings.Split(line, "module")
+			return strings.TrimSpace(split[1]), nil
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("error while trying to read go mods path %w", err)
+	}
+	return "", nil
+}
+func gopathImport(dir string) string {
+	return strings.TrimPrefix(pathRegex.FindString(dir), "src/")
 }
 
 func GetModelsWithInformation(enums []*Enum, cfg *config.Config, boilerModels []*BoilerModel) []*Model {
