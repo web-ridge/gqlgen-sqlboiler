@@ -23,8 +23,8 @@
 {{ reserveImport "github.com/volatiletech/null/v8" }}
 
 {{ reserveImport "database/sql" }}
-{{ reserveImport  $.BackendModelsPath }}
-{{ reserveImport  $.FrontendModelsPath }}
+{{ reserveImport  $.Backend.Directory }}
+{{ reserveImport  $.Frontend.Directory }}
 
 
 var TablePreloadMap = map[string]map[string]boilergql.ColumnSetting{
