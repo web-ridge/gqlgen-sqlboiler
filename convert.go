@@ -1,11 +1,9 @@
 package gqlgen_sqlboiler
 
 import (
-	"bufio"
 	"fmt"
 	"go/types"
 	"io/ioutil"
-	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -126,13 +124,14 @@ type EnumValue struct {
 }
 
 func NewConvertPlugin(output, backend, frontend Config) plugin.Plugin {
-	return &ConvertPlugin{Output: output, Backend: backend, Frontend: frontend}
+	return &ConvertPlugin{Output: output, Backend: backend, Frontend: frontend, rootImportPath: getRootImportPath()}
 }
 
 type ConvertPlugin struct {
-	Output   Config
-	Backend  Config
-	Frontend Config
+	Output         Config
+	Backend        Config
+	Frontend       Config
+	rootImportPath string
 }
 
 type Config struct {
@@ -148,78 +147,6 @@ func (m *ConvertPlugin) Name() string {
 
 func copyConfig(cfg config.Config) *config.Config {
 	return &cfg
-}
-
-func getGoImportFromFile(dir string) string {
-	dir = strings.TrimPrefix(dir, "/")
-	projectPath, err := getProjectPath(dir)
-	if err != nil {
-		// TODO: adhering to your original error handling
-		//  should consider doing something here rather than continuing
-		//  since this step occurs during generation, panicing or fatal error should be okay
-		fmt.Println("error while creating project path %w", err)
-	}
-	var importPath string
-	if hasGoMod(projectPath) {
-		modulePath, err := getModulePath(projectPath)
-		if err != nil {
-			// TODO: adhering to your original error handling
-			//  should consider doing something here rather than continuing
-			//  since this step occurs during generation, panicing or fatal error should be okay
-			fmt.Println("error while creating module path %w", err)
-		}
-		importPath = modulePath + "/" + dir
-	} else {
-		importPath = gopathImport(projectPath + "/" + dir)
-	}
-
-	return importPath
-}
-func getProjectPath(dir string) (string, error) {
-	longPath, err := filepath.Abs(dir)
-	if err != nil {
-		return "", fmt.Errorf("error while trying to convert folder to gopath %w", err)
-	}
-	return strings.TrimSuffix(longPath, dir), nil
-}
-
-func hasGoMod(projectPath string) bool {
-	return fileExists(projectPath + "go.mod")
-}
-
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
-}
-func getModulePath(projectPath string) (string, error) {
-	file, err := os.Open(projectPath + "go.mod")
-	if err != nil {
-		return "", fmt.Errorf("error while trying to read go mods path %w", err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		// normalize to ensure readability
-		line := strings.TrimSpace(scanner.Text())
-
-		// look for the starting module statement
-		if strings.HasPrefix(line, "module") {
-			split := strings.Split(line, "module")
-			return strings.TrimSpace(split[1]), nil
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("error while trying to read go mods path %w", err)
-	}
-	return "", nil
-}
-func gopathImport(dir string) string {
-	return strings.TrimPrefix(pathRegex.FindString(dir), "src/")
 }
 
 func GetModelsWithInformation(enums []*Enum, cfg *config.Config, boilerModels []*BoilerModel) []*Model {
@@ -245,11 +172,11 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	b := &ModelBuild{
 		PackageName: m.Output.PackageName,
 		Backend: Config{
-			Directory:   getGoImportFromFile(m.Backend.Directory),
+			Directory:   path.Join(m.rootImportPath, m.Backend.Directory),
 			PackageName: m.Backend.PackageName,
 		},
 		Frontend: Config{
-			Directory:   getGoImportFromFile(m.Frontend.Directory),
+			Directory:   path.Join(m.rootImportPath, m.Frontend.Directory),
 			PackageName: m.Frontend.PackageName,
 		},
 	}
