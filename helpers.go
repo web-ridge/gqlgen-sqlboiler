@@ -1,8 +1,9 @@
 package gqlgen_sqlboiler
 
 import (
-	"bufio"
 	"fmt"
+	"golang.org/x/mod/modfile"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -80,28 +81,16 @@ func fileExists(filename string) bool {
 
 func getModulePath(projectPath string) (string, error) {
 	filePath := path.Join(projectPath, "go.mod")
-	file, err := os.Open(filePath)
+	file, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return "", fmt.Errorf("error while trying to read go mods path %w", err)
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		// normalize to ensure readability
-		line := strings.TrimSpace(scanner.Text())
-
-		// look for the starting module statement
-		if strings.HasPrefix(line, "module") {
-			split := strings.Split(line, "module")
-			return strings.TrimSpace(split[1]), nil
-		}
+	modPath := modfile.ModulePath(file)
+	if modPath == "" {
+		return "", fmt.Errorf("could not determine mod path \n")
 	}
-
-	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("error while trying to read go mods path %w", err)
-	}
-	return "", nil
+	return modPath, nil
 }
 
 func gopathImport(dir string) string {
