@@ -124,13 +124,14 @@ type EnumValue struct {
 }
 
 func NewConvertPlugin(output, backend, frontend Config) plugin.Plugin {
-	return &ConvertPlugin{Output: output, Backend: backend, Frontend: frontend}
+	return &ConvertPlugin{Output: output, Backend: backend, Frontend: frontend, rootImportPath: getRootImportPath()}
 }
 
 type ConvertPlugin struct {
-	Output   Config
-	Backend  Config
-	Frontend Config
+	Output         Config
+	Backend        Config
+	Frontend       Config
+	rootImportPath string
 }
 
 type Config struct {
@@ -146,15 +147,6 @@ func (m *ConvertPlugin) Name() string {
 
 func copyConfig(cfg config.Config) *config.Config {
 	return &cfg
-}
-
-func getGoImportFromFile(dir string) string {
-	longPath, err := filepath.Abs(dir)
-	if err != nil {
-		fmt.Println("error while trying to convert folder to gopath", err)
-	}
-	// src/Users/.../go/src/gitlab.com/.../app/backend/graphql_models
-	return strings.TrimPrefix(pathRegex.FindString(longPath), "src/")
 }
 
 func GetModelsWithInformation(enums []*Enum, cfg *config.Config, boilerModels []*BoilerModel) []*Model {
@@ -180,11 +172,11 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	b := &ModelBuild{
 		PackageName: m.Output.PackageName,
 		Backend: Config{
-			Directory:   getGoImportFromFile(m.Backend.Directory),
+			Directory:   path.Join(m.rootImportPath, m.Backend.Directory),
 			PackageName: m.Backend.PackageName,
 		},
 		Frontend: Config{
-			Directory:   getGoImportFromFile(m.Frontend.Directory),
+			Directory:   path.Join(m.rootImportPath, m.Frontend.Directory),
 			PackageName: m.Frontend.PackageName,
 		},
 	}

@@ -3,6 +3,7 @@ package gqlgen_sqlboiler
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -16,14 +17,15 @@ import (
 )
 
 func NewResolverPlugin(output, backend, frontend Config, authImport string) plugin.Plugin {
-	return &ResolverPlugin{output: output, backend: backend, frontend: frontend, authImport: authImport}
+	return &ResolverPlugin{output: output, backend: backend, frontend: frontend, authImport: authImport, rootImportPath: getRootImportPath()}
 }
 
 type ResolverPlugin struct {
-	output     Config
-	backend    Config
-	frontend   Config
-	authImport string
+	output         Config
+	backend        Config
+	frontend       Config
+	authImport     string
+	rootImportPath string
 }
 
 var _ plugin.CodeGenerator = &ResolverPlugin{}
@@ -61,16 +63,16 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 
 	file.imports = append(file.imports, Import{
 		Alias:      ".",
-		ImportPath: getGoImportFromFile(m.output.Directory),
+		ImportPath: path.Join(m.rootImportPath, m.output.Directory),
 	})
 
 	file.imports = append(file.imports, Import{
 		Alias:      "dm",
-		ImportPath: getGoImportFromFile(m.backend.Directory),
+		ImportPath: path.Join(m.rootImportPath, m.backend.Directory),
 	})
 	file.imports = append(file.imports, Import{
 		Alias:      "fm",
-		ImportPath: getGoImportFromFile(m.frontend.Directory),
+		ImportPath: path.Join(m.rootImportPath, m.frontend.Directory),
 	})
 
 	if m.authImport != "" {
