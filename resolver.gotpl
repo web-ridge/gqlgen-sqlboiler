@@ -381,7 +381,7 @@ const inputKey = "input"
 			{{- else }}
 			var IDsToRemove []boilergql.RemovedID
 			{{- end }}
-			if err := dm.{{ .Model.PluralName }}(mods...).Bind(ctx, r.db, IDsToRemove); err != nil {
+			if err := dm.{{ .Model.PluralName }}(mods...).Bind(ctx, r.db, &IDsToRemove); err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
