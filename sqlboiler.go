@@ -187,22 +187,6 @@ func isFirstCharacterLowerCase(s string) bool {
 	return false
 }
 
-func appendIfMissing(slice []string, v string) []string {
-	if sliceContains(slice, v) {
-		return slice
-	}
-	return append(slice, v)
-}
-
-func sliceContains(slice []string, v string) bool {
-	for _, s := range slice {
-		if s == v {
-			return true
-		}
-	}
-	return false
-}
-
 // getSortedBoilerTypes orders the sqlboiler struct in an ordered slice of BoilerType
 func getSortedBoilerTypes(boilerTypeMap map[string]string, boilerTypeOrder map[string]int) (sortedBoilerTypes []*BoilerType) {
 

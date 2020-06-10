@@ -2,12 +2,13 @@ package gqlgen_sqlboiler
 
 import (
 	"fmt"
-	"golang.org/x/mod/modfile"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/mod/modfile"
 )
 
 func getRootImportPath() string {
@@ -66,11 +67,14 @@ func getWorkingPath() (string, error) {
 	}
 	return wd, nil
 }
+
 func hasGoMod(projectPath string) bool {
 	filePath := path.Join(projectPath, "go.mod")
 	return fileExists(filePath)
 }
 
+// fileExists checks if a file exists and is not a directory before we
+// try using it to prevent further errors.
 func fileExists(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
@@ -95,4 +99,20 @@ func getModulePath(projectPath string) (string, error) {
 
 func gopathImport(dir string) string {
 	return strings.TrimPrefix(pathRegex.FindString(dir), "src/")
+}
+
+func appendIfMissing(slice []string, v string) []string {
+	if sliceContains(slice, v) {
+		return slice
+	}
+	return append(slice, v)
+}
+
+func sliceContains(slice []string, v string) bool {
+	for _, s := range slice {
+		if s == v {
+			return true
+		}
+	}
+	return false
 }
