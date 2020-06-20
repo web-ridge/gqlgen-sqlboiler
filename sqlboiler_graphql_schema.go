@@ -13,207 +13,15 @@ import (
 const indent = "\t"
 const lineBreak = "\n"
 
-type GraphQLSchemaConfig struct {
-	ModelDirectory  string
-	OutputFile      string
-	Mutations       bool
-	BatchUpdate     bool
-	BatchCreate     bool
-	BatchDelete     bool
-	SkipInputFields []string
-	Directives      []string
-	Pagination      string
+type SchemaConfig struct {
+	ModelDirectory string
+	Directives     []string
+	Pagination     string
 }
-
-func GenerateGraphQLSchema(config GraphQLSchemaConfig) error {
-
-	// Generate schema based on config
-	schema := getSchema(
-		config.ModelDirectory,
-		config.Mutations,
-		config.BatchUpdate,
-		config.BatchCreate,
-		config.BatchDelete,
-		config.SkipInputFields,
-		config.Directives,
-		config.Pagination,
-	)
-
-	// TODO: Write schema to the configured location
-	if fileExists(config.OutputFile) {
-
-		baseFile := filenameWithoutExtension(config.OutputFile) +
-			"-empty" +
-			getFilenameExtension(config.OutputFile)
-
-		newOutputFile := filenameWithoutExtension(config.OutputFile) +
-			"-new" +
-			getFilenameExtension(config.OutputFile)
-
-		// remove previous files if exist
-		os.Remove(baseFile)
-		os.Remove(newOutputFile)
-
-		if err := writeContentToFile(newOutputFile, schema); err != nil {
-			return fmt.Errorf("could not write schema to disk: %v", err)
-		}
-		if err := formatFile(config.OutputFile); err != nil {
-			return fmt.Errorf("could not format with prettier %v: %v", config.OutputFile, err)
-		}
-		if err := formatFile(newOutputFile); err != nil {
-			return fmt.Errorf("could not format with prettier %v: %v", newOutputFile, err)
-		}
-
-		// Three way merging done based on this answer
-		// https://stackoverflow.com/a/9123563/2508481
-
-		// Empty file as base per the stackoverflow answer
-		name := "touch"
-		args := []string{baseFile}
-		out, err := exec.Command(name, args...).Output()
-		if err != nil {
-			fmt.Println("Executing command failed: ", name, strings.Join(args, " "))
-			return fmt.Errorf("merging failed %v: %v", err, out)
-		}
-
-		// Let's do the merge
-		name = "git"
-		args = []string{"merge-file", config.OutputFile, baseFile, newOutputFile}
-		out, err = exec.Command(name, args...).Output()
-		if err != nil {
-			fmt.Println("Executing command failed: ", name, strings.Join(args, " "))
-			// remove base file
-			os.Remove(baseFile)
-			return fmt.Errorf("Merging failed or had conflicts %v: %v", err, out)
-		}
-
-		fmt.Println("Merging done without conflicts: ", out)
-
-		// remove files
-		os.Remove(baseFile)
-		os.Remove(newOutputFile)
-
-		// fmt.Printf("The date is %s\n", out)
-
-	} else {
-		fmt.Println(fmt.Sprintf("Write schema of %v bytes to %v", len(schema), config.OutputFile))
-		if err := writeContentToFile(config.OutputFile, schema); err != nil {
-			fmt.Println("Could not write schema to disk: ", err)
-		}
-		return formatFile(config.OutputFile)
-	}
-
-	return nil
-}
-
-func getFilenameExtension(fn string) string {
-	return path.Ext(fn)
-}
-
-func filenameWithoutExtension(fn string) string {
-	return strings.TrimSuffix(fn, path.Ext(fn))
-}
-
-func formatFile(filename string) error {
-	name := "prettier"
-	args := []string{filename, "--write"}
-
-	out, err := exec.Command(name, args...).Output()
-	if err != nil {
-		return fmt.Errorf("Executing command: '%v %v' failed with: %v, output: %v", name, strings.Join(args, " "), err, out)
-	}
-	// fmt.Println(fmt.Sprintf("Formatting of %v done", filename))
-	return nil
-}
-
-func writeContentToFile(filename string, content string) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("could not write %v to disk: %v", filename, err)
-	}
-
-	// Close file if this functions returns early or at the end
-	defer func() {
-		closeErr := file.Close()
-		if closeErr != nil {
-			fmt.Println("Error while closing file: ", closeErr)
-		}
-	}()
-
-	if _, err := file.WriteString(content); err != nil {
-		return fmt.Errorf("could not write content to file %v: %v", filename, err)
-	}
-
-	return nil
-}
-
-// TODO: only generate these if they are set
-const queryHelperStructs = `
-input IDFilter {
-	equalTo: ID
-	notEqualTo: ID
-	in: [ID!]
-	notIn: [ID!]
-}
-
-input StringFilter {
-	equalTo: String
-	notEqualTo: String
-
-	in: [String!]
-	notIn: [String!]
-
-	startWith: String
-	notStartWith: String
-
-	endWith: String
-	notEndWith: String
-
-	contain: String
-	notContain: String
-
-	startWithStrict: String # Camel sensitive
-	notStartWithStrict: String # Camel sensitive
-
-	endWithStrict: String # Camel sensitive
-	notEndWithStrict: String # Camel sensitive
-
-	containStrict: String # Camel sensitive
-	notContainStrict: String # Camel sensitive
-}
-
-input IntFilter {
-	equalTo: Int
-	notEqualTo: Int
-	lessThan: Int
-	lessThanOrEqualTo: Int
-	moreThan: Int
-	moreThanOrEqualTo: Int
-	in: [Int!]
-	notIn: [Int!]
-}
-
-input FloatFilter {
-	equalTo: Float
-	notEqualTo: Float
-	lessThan: Float
-	lessThanOrEqualTo: Float
-	moreThan: Float
-	moreThanOrEqualTo: Float
-	in: [Float!]
-	notIn: [Float!]
-}
-
-input BooleanFilter {
-	equalTo: Boolean
-	notEqualTo: Boolean
-}
-`
 
 type SchemaModel struct {
 	Name   string
 	Fields []*SchemaField
-	// Implements *string
 }
 
 type SchemaField struct {
@@ -227,24 +35,44 @@ type SchemaField struct {
 	BoilerField      *BoilerField
 }
 
-func getSchema(
-	modelDirectory string,
-	mutations bool,
-	batchUpdate bool,
-	batchCreate bool,
-	batchDelete bool,
-	skipInputFields []string,
-	directivesSlice []string,
-	pagination string,
+func SchemaGenerateAndMerge(config SchemaConfig, outputFile string, merge bool) error {
+
+	// Generate schema based on config
+	schema := SchemaGet(
+		config,
+	)
+
+	// TODO: Write schema to the configured location
+	if fileExists(outputFile) && merge {
+		if err := mergeContentInFile(outputFile, schema); err != nil {
+			fmt.Println("Could not write schema to disk: ", err)
+		}
+	} else {
+		fmt.Println(fmt.Sprintf("Write schema of %v bytes to %v", len(schema), outputFile))
+		if err := writeContentToFile(schema, outputFile); err != nil {
+			fmt.Println("Could not write schema to disk: ", err)
+		}
+		return formatFile(outputFile)
+	}
+
+	return nil
+}
+
+func SchemaAsString(config SchemaConfig) (string, error) {
+	return "", nil
+}
+
+func SchemaGet(
+	config SchemaConfig,
 ) string {
 	var s strings.Builder
 
 	// Parse models and their fields based on the sqlboiler model directory
-	boilerModels := GetBoilerModels(modelDirectory)
+	boilerModels := GetBoilerModels(config.ModelDirectory)
 	models := boilerModelsToModels(boilerModels)
 
 	fullDirectives := []string{}
-	for _, defaultDirective := range directivesSlice {
+	for _, defaultDirective := range config.Directives {
 		fullDirectives = append(fullDirectives, "@"+defaultDirective)
 		s.WriteString(fmt.Sprintf("directive @%v on FIELD_DEFINITION", defaultDirective))
 		s.WriteString(lineBreak)
@@ -307,7 +135,7 @@ func getSchema(
 		s.WriteString(lineBreak)
 		s.WriteString(lineBreak)
 		// Generate a pagination struct
-		if pagination == "offset" {
+		if config.Pagination == "offset" {
 			// type UserPagination {
 			// 	limit: Int!
 			// 	page: Int!
@@ -368,7 +196,7 @@ func getSchema(
 		modelPluralName := pluralizer.Plural(model.Name)
 		s.WriteString(indent)
 		var paginiationParameter string
-		if pagination == "offset" {
+		if config.Pagination == "offset" {
 			paginiationParameter = ", pagination: " + model.Name + "Pagination"
 		}
 		s.WriteString(strcase.ToLowerCamel(modelPluralName) + "(filter: " + model.Name + "Filter" + paginiationParameter + ")")
@@ -383,9 +211,9 @@ func getSchema(
 	s.WriteString(lineBreak)
 
 	// Generate input and payloads for mutatations
-	if mutations {
+	if config.Mutations {
 		for _, model := range models {
-			filteredFields := fieldsWithout(model.Fields, skipInputFields)
+			filteredFields := fieldsWithout(model.Fields, config.SkipInputFields)
 
 			modelPluralName := pluralizer.Plural(model.Name)
 			// input UserCreateInput {
@@ -435,7 +263,7 @@ func getSchema(
 			s.WriteString(lineBreak)
 			s.WriteString(lineBreak)
 
-			if batchCreate {
+			if config.BatchCreate {
 				s.WriteString("input " + modelPluralName + "CreateInput {")
 				s.WriteString(lineBreak)
 				s.WriteString(indent + strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "CreateInput!]!")
@@ -480,7 +308,7 @@ func getSchema(
 			// type UsersPayload {
 			// 	ids: [ID!]!
 			// }
-			if batchCreate {
+			if config.BatchCreate {
 				s.WriteString("type " + modelPluralName + "Payload {")
 				s.WriteString(lineBreak)
 				s.WriteString(indent + strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "!]!")
@@ -493,7 +321,7 @@ func getSchema(
 			// type UsersDeletePayload {
 			// 	ids: [ID!]!
 			// }
-			if batchDelete {
+			if config.BatchDelete {
 				s.WriteString("type " + modelPluralName + "DeletePayload {")
 				s.WriteString(lineBreak)
 				s.WriteString(indent + "ids: [ID!]!")
@@ -505,7 +333,7 @@ func getSchema(
 			// type UsersUpdatePayload {
 			// 	ok: Boolean!
 			// }
-			if batchUpdate {
+			if config.BatchUpdate {
 				s.WriteString("type " + modelPluralName + "UpdatePayload {")
 				s.WriteString(lineBreak)
 				s.WriteString(indent + "ok: Boolean!")
@@ -535,7 +363,7 @@ func getSchema(
 
 			// create multiple
 			// e.g createUsers(input: [UsersInput!]!): UsersPayload!
-			if batchCreate {
+			if config.BatchCreate {
 				s.WriteString(indent)
 				s.WriteString("create" + modelPluralName + "(input: " + modelPluralName + "CreateInput!)")
 				s.WriteString(": ")
@@ -555,7 +383,7 @@ func getSchema(
 
 			// update multiple (batch update)
 			// e.g updateUsers(filter: UserFilter, input: UsersInput!): UsersPayload!
-			if batchUpdate {
+			if config.BatchUpdate {
 				s.WriteString(indent)
 				s.WriteString("update" + modelPluralName + "(filter: " + model.Name + "Filter, input: " + model.Name + "UpdateInput!)")
 				s.WriteString(": ")
@@ -575,7 +403,7 @@ func getSchema(
 
 			// delete multiple
 			// e.g deleteUsers(filter: UserFilter, input: [UsersInput!]!): UsersPayload!
-			if batchDelete {
+			if config.BatchDelete {
 				s.WriteString(indent)
 				s.WriteString("delete" + modelPluralName + "(filter: " + model.Name + "Filter)")
 				s.WriteString(": ")
@@ -710,3 +538,161 @@ func fieldsWithout(fields []*SchemaField, skipFieldNames []string) []*SchemaFiel
 	}
 	return filteredFields
 }
+
+func mergeContentInFile(content, outputFile string) error {
+	baseFile := filenameWithoutExtension(outputFile) +
+		"-empty" +
+		getFilenameExtension(outputFile)
+
+	newOutputFile := filenameWithoutExtension(outputFile) +
+		"-new" +
+		getFilenameExtension(outputFile)
+
+	// remove previous files if exist
+	os.Remove(baseFile)
+	os.Remove(newOutputFile)
+
+	if err := writeContentToFile(content, newOutputFile); err != nil {
+		return fmt.Errorf("could not write schema to disk: %v", err)
+	}
+	if err := formatFile(outputFile); err != nil {
+		return fmt.Errorf("could not format with prettier %v: %v", outputFile, err)
+	}
+	if err := formatFile(newOutputFile); err != nil {
+		return fmt.Errorf("could not format with prettier %v: %v", newOutputFile, err)
+	}
+
+	// Three way merging done based on this answer
+	// https://stackoverflow.com/a/9123563/2508481
+
+	// Empty file as base per the stackoverflow answer
+	name := "touch"
+	args := []string{baseFile}
+	out, err := exec.Command(name, args...).Output()
+	if err != nil {
+		fmt.Println("Executing command failed: ", name, strings.Join(args, " "))
+		return fmt.Errorf("merging failed %v: %v", err, out)
+	}
+
+	// Let's do the merge
+	name = "git"
+	args = []string{"merge-file", outputFile, baseFile, newOutputFile}
+	out, err = exec.Command(name, args...).Output()
+	if err != nil {
+		fmt.Println("Executing command failed: ", name, strings.Join(args, " "))
+		// remove base file
+		os.Remove(baseFile)
+		return fmt.Errorf("Merging failed or had conflicts %v: %v", err, out)
+	}
+
+	fmt.Println("Merging done without conflicts: ", out)
+
+	// remove files
+	os.Remove(baseFile)
+	os.Remove(newOutputFile)
+	return nil
+}
+
+func getFilenameExtension(fn string) string {
+	return path.Ext(fn)
+}
+
+func filenameWithoutExtension(fn string) string {
+	return strings.TrimSuffix(fn, path.Ext(fn))
+}
+
+func formatFile(filename string) error {
+	name := "prettier"
+	args := []string{filename, "--write"}
+
+	out, err := exec.Command(name, args...).Output()
+	if err != nil {
+		return fmt.Errorf("Executing command: '%v %v' failed with: %v, output: %v", name, strings.Join(args, " "), err, out)
+	}
+	// fmt.Println(fmt.Sprintf("Formatting of %v done", filename))
+	return nil
+}
+
+func writeContentToFile(content string, filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("could not write %v to disk: %v", filename, err)
+	}
+
+	// Close file if this functions returns early or at the end
+	defer func() {
+		closeErr := file.Close()
+		if closeErr != nil {
+			fmt.Println("Error while closing file: ", closeErr)
+		}
+	}()
+
+	if _, err := file.WriteString(content); err != nil {
+		return fmt.Errorf("could not write content to file %v: %v", filename, err)
+	}
+
+	return nil
+}
+
+// TODO: only generate these if they are set
+const queryHelperStructs = `
+input IDFilter {
+	equalTo: ID
+	notEqualTo: ID
+	in: [ID!]
+	notIn: [ID!]
+}
+
+input StringFilter {
+	equalTo: String
+	notEqualTo: String
+
+	in: [String!]
+	notIn: [String!]
+
+	startWith: String
+	notStartWith: String
+
+	endWith: String
+	notEndWith: String
+
+	contain: String
+	notContain: String
+
+	startWithStrict: String # Camel sensitive
+	notStartWithStrict: String # Camel sensitive
+
+	endWithStrict: String # Camel sensitive
+	notEndWithStrict: String # Camel sensitive
+
+	containStrict: String # Camel sensitive
+	notContainStrict: String # Camel sensitive
+}
+
+input IntFilter {
+	equalTo: Int
+	notEqualTo: Int
+	lessThan: Int
+	lessThanOrEqualTo: Int
+	moreThan: Int
+	moreThanOrEqualTo: Int
+	in: [Int!]
+	notIn: [Int!]
+}
+
+input FloatFilter {
+	equalTo: Float
+	notEqualTo: Float
+	lessThan: Float
+	lessThanOrEqualTo: Float
+	moreThan: Float
+	moreThanOrEqualTo: Float
+	in: [Float!]
+	notIn: [Float!]
+}
+
+input BooleanFilter {
+	equalTo: Boolean
+	notEqualTo: Boolean
+}
+`
