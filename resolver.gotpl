@@ -46,8 +46,8 @@ const inputKey = "input"
 			dbID := {{ .Model.Name }}ID(id)
 			{{- end }}
 
-			mods := Get{{ .Model.Name|go }}PreloadMods(ctx)
-			mods = append(mods, dm.{{ .Model.Name|go }}Where.ID.EQ(dbID))
+			mods := Get{{ .Model.Name }}PreloadMods(ctx)
+			mods = append(mods, dm.{{ .Model.Name }}Where.ID.EQ(dbID))
 			{{- if .Model.BoilerModel.HasOrganizationID }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
 					auth.OrganizationIDFromContext(ctx),
@@ -63,17 +63,17 @@ const inputKey = "input"
 					auth.UserIDFromContext(ctx),
 				))
 			{{- end }}
-			m, err := dm.{{ .Model.PluralName|go }}(mods...).One(ctx, r.db)
+			m, err := dm.{{ .Model.PluralName }}(mods...).One(ctx, r.db)
 			if err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
-			return {{ .Model.Name|go }}ToGraphQL(m), nil
+			return {{ .Model.Name }}ToGraphQL(m), nil
 
 		{{- end -}}
 
 		{{- if .IsList }}
-			mods := Get{{ .Model.Name|go }}PreloadMods(ctx)
+			mods := Get{{ .Model.Name }}PreloadMods(ctx)
 			{{- if .Model.BoilerModel.HasOrganizationID }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
 					auth.OrganizationIDFromContext(ctx),
@@ -90,12 +90,12 @@ const inputKey = "input"
 				))
 			{{- end }}
 			mods = append(mods, {{.Model.Name}}FilterToMods(filter)...)
-			a, err := dm.{{ .Model.PluralName|go }}(mods...).All(ctx, r.db)
+			a, err := dm.{{ .Model.PluralName }}(mods...).All(ctx, r.db)
 			if err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
-			return {{ .Model.PluralName|go }}ToGraphQL(a), nil
+			return {{ .Model.PluralName }}ToGraphQL(a), nil
 
 		{{- end -}}
 
@@ -105,8 +105,8 @@ const inputKey = "input"
 			{{ $model := .Model -}}
 			{{ range $field := .InputModel.Fields -}}
 				{{ if $field.IsRelation -}}
-					if input.{{ $field.Name|go }} != nil {
-						{{ $field.Name }} := {{ $field.BoilerField.Relationship.Name }}CreateInputToBoiler(input.{{ $field.Name|go }})
+					if input.{{ $field.Name }} != nil {
+						{{ $field.Name }} := {{ $field.BoilerField.Relationship.Name }}CreateInputToBoiler(input.{{ $field.Name }})
 						{{- if $field.BoilerField.Relationship.HasOrganizationID  }}
 							{{ $field.Name }}.OrganizationID = auth.OrganizationIDFromContext(ctx)
 						{{- end }}
@@ -118,7 +118,7 @@ const inputKey = "input"
 						{{- end }}
 
 						{{ $field.Name }}Input := {{ $field.BoilerField.Relationship.Name }}CreateInputToBoilerWhitelist(
-							boilergql.GetInputFromContext(ctx, "input.{{ $field.Name }}"),
+							boilergql.GetInputFromContext(ctx, "input.{{ $field.JSONName }}"),
 							{{- if $model.BoilerModel.HasOrganizationID  }}
 								dm.{{ $field.BoilerField.Relationship.Name }}Columns.OrganizationID,
 							{{- end }}
@@ -135,7 +135,7 @@ const inputKey = "input"
 							log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 							return nil, errors.New({{ $resolver.PublicErrorKey }})
 						}
-						m.{{ $field.Name|go }}ID = {{ $field.Name }}.ID
+						m.{{ $field.Name }}ID = {{ $field.Name }}.ID
 					}
 					
 				{{ end -}}
@@ -168,8 +168,8 @@ const inputKey = "input"
 			}
 
 			// resolve requested fields after creating
-			mods := Get{{ .Model.Name|go }}PreloadModsWithLevel(ctx, {{ .Model.Name|go }}PayloadPreloadLevels.{{ .Model.Name|go }})
-			mods = append(mods, dm.{{ .Model.Name|go }}Where.ID.EQ(m.ID))
+			mods := Get{{ .Model.Name }}PreloadModsWithLevel(ctx, {{ .Model.Name }}PayloadPreloadLevels.{{ .Model.Name }})
+			mods = append(mods, dm.{{ .Model.Name }}Where.ID.EQ(m.ID))
 			{{- if .Model.BoilerModel.HasOrganizationID  }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
 					auth.OrganizationIDFromContext(ctx),
@@ -185,13 +185,13 @@ const inputKey = "input"
 					auth.UserIDFromContext(ctx),
 				))
 			{{- end }}
-			pM, err := dm.{{ .Model.PluralName|go }}(mods...).One(ctx, r.db)
+			pM, err := dm.{{ .Model.PluralName }}(mods...).One(ctx, r.db)
 			if err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
 			return &fm.{{ .Model.Name }}Payload{
-				{{ .Model.Name|go }}: {{ .Model.Name|go }}ToGraphQL(pM),
+				{{ .Model.Name }}: {{ .Model.Name }}ToGraphQL(pM),
 			}, nil
 
 		{{- end -}}
@@ -203,17 +203,17 @@ const inputKey = "input"
 			{{ $model := .Model -}}
 			{{ range $field := .InputModel.Fields -}}
 				{{ if $field.IsRelation -}}
-					if input.{{ $field.Name|go }} != nil && input.{{ $field.Name|go }}ID != nil {
+					if input.{{ $field.Name }} != nil && input.{{ $field.Name }}ID != nil {
 
 						{{- if $model.HasStringPrimaryID }}
-						dbID := *input.{{ $field.Name|go }}ID
+						dbID := *input.{{ $field.Name }}ID
 						{{- else }}
-						dbID := {{ $field.BoilerField.Relationship.Name }}ID(*input.{{ $field.Name|go }}ID)
+						dbID := {{ $field.BoilerField.Relationship.Name }}ID(*input.{{ $field.Name }}ID)
 						{{- end }}
 
 						nestedM := {{ $field.BoilerField.Relationship.Name }}UpdateInputToModelM(
-							boilergql.GetInputFromContext(ctx, "input.{{ $field.Name }}"), 
-							*input.{{ $field.Name|go }},
+							boilergql.GetInputFromContext(ctx, "input.{{ $field.JSONName }}"), 
+							*input.{{ $field.Name }},
 						)
 						if _, err := dm.{{ $field.BoilerField.Relationship.PluralName }}(
 							dm.{{ $field.BoilerField.Relationship.Name }}Where.ID.EQ(dbID),
@@ -265,8 +265,8 @@ const inputKey = "input"
 			}
 
 			// resolve requested fields after updating
-			mods := Get{{ .Model.Name|go }}PreloadModsWithLevel(ctx, {{ .Model.Name|go }}PayloadPreloadLevels.{{ .Model.Name|go }})
-			mods = append(mods, dm.{{ .Model.Name|go }}Where.ID.EQ(dbID))
+			mods := Get{{ .Model.Name }}PreloadModsWithLevel(ctx, {{ .Model.Name }}PayloadPreloadLevels.{{ .Model.Name }})
+			mods = append(mods, dm.{{ .Model.Name }}Where.ID.EQ(dbID))
 			{{- if .Model.BoilerModel.HasOrganizationID  }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
 			{{- end }}
@@ -277,13 +277,13 @@ const inputKey = "input"
 				mods = append(mods, dm.{{ .Model.Name }}Where.UserID.EQ(auth.UserIDFromContext(ctx)))
 			{{- end }}
 
-			pM, err := dm.{{ .Model.PluralName|go }}(mods...).One(ctx, r.db)
+			pM, err := dm.{{ .Model.PluralName }}(mods...).One(ctx, r.db)
 			if err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
-			return &fm.{{ .Model.Name|go }}Payload{
-				{{ .Model.Name|go }}: {{ .Model.Name|go }}ToGraphQL(pM),
+			return &fm.{{ .Model.Name }}Payload{
+				{{ .Model.Name }}: {{ .Model.Name }}ToGraphQL(pM),
 			}, nil
 
 		{{- end -}}
@@ -297,7 +297,7 @@ const inputKey = "input"
 			{{- end }}
 			
 			mods := []qm.QueryMod{
-				dm.{{ .Model.Name|go }}Where.ID.EQ(dbID),
+				dm.{{ .Model.Name }}Where.ID.EQ(dbID),
 				{{- if .Model.BoilerModel.HasOrganizationID  }}
 					dm.{{ .Model.Name }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
 				{{- end }}
@@ -308,12 +308,12 @@ const inputKey = "input"
 					dm.{{ .Model.Name }}Where.UserID.EQ(auth.UserIDFromContext(ctx)),
 				{{- end }}
 			}
-			 if _, err := dm.{{ .Model.PluralName|go }}(mods...).DeleteAll(ctx, r.db); err != nil {
+			 if _, err := dm.{{ .Model.PluralName }}(mods...).DeleteAll(ctx, r.db); err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
 	
-			return &fm.{{ .Model.Name|go }}DeletePayload{
+			return &fm.{{ .Model.Name }}DeletePayload{
 				ID: id,
 			}, nil
 
@@ -350,7 +350,7 @@ const inputKey = "input"
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
 
-			return &fm.{{ .Model.PluralName|go }}UpdatePayload{
+			return &fm.{{ .Model.PluralName }}UpdatePayload{
 				Ok: true,
 			}, nil
 		{{- end -}}

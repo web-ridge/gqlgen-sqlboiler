@@ -207,14 +207,14 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 	{{- if .IsFilter -}}
-		func {{ .Name|go }}ToMods(m *{{ $.Frontend.PackageName }}.{{ .Name|go }}) []qm.QueryMod {
+		func {{ .Name }}ToMods(m *{{ $.Frontend.PackageName }}.{{ .Name }}) []qm.QueryMod {
 			if m == nil {
 				return nil
 			}
 			if m.Search != nil || m.Where != nil {
 				var queryMods []qm.QueryMod
-				queryMods  = append(queryMods, {{ .BoilerModel.Name|go }}SearchToMods(m.Search)...)
-				queryMods  = append(queryMods, {{ .BoilerModel.Name|go }}WhereToMods(m.Where, true)...)
+				queryMods  = append(queryMods, {{ .BoilerModel.Name }}SearchToMods(m.Search)...)
+				queryMods  = append(queryMods, {{ .BoilerModel.Name }}WhereToMods(m.Where, true)...)
 				if len(queryMods) > 0 {
 					return []qm.QueryMod{
 						qm.Expr(queryMods...),
@@ -223,13 +223,13 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 			}
 			return nil
 		}
-		func {{ .BoilerModel.Name|go }}SearchToMods(search *string) []qm.QueryMod {
+		func {{ .BoilerModel.Name }}SearchToMods(search *string) []qm.QueryMod {
 			// TODO: implement your own custom search here
 			return nil
 		}
 	{{ end }}
 	{{- if .IsWhere  -}}
-		func {{ .Name|go }}SubqueryToMods(m *{{ $.Frontend.PackageName }}.{{ .Name|go }}, foreignColumn string) []qm.QueryMod {
+		func {{ .Name }}SubqueryToMods(m *{{ $.Frontend.PackageName }}.{{ .Name }}, foreignColumn string) []qm.QueryMod {
 			if m == nil {
 				return nil
 			}
@@ -241,7 +241,7 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 				queryMods = append(queryMods, IDFilterToMods(m.ID, foreignColumn)...)
 			}
 		
-			subQueryMods := {{ .Name|go }}ToMods(m, !hasForeignKeyInRoot)
+			subQueryMods := {{ .Name }}ToMods(m, !hasForeignKeyInRoot)
 			if len(subQueryMods) > 0 {
 				subQuery := models.{{.BoilerModel.PluralName}}(append(subQueryMods, qm.Select("1"))...)
 				queryMods = appendSubQuery(queryMods, subQuery.Query)
@@ -249,7 +249,7 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 			return queryMods
 		} 
 		
-		func {{ .Name|go }}ToMods(m *{{ $.Frontend.PackageName }}.{{ .Name|go }}, withPrimaryID bool) []qm.QueryMod {
+		func {{ .Name }}ToMods(m *{{ $.Frontend.PackageName }}.{{ .Name }}, withPrimaryID bool) []qm.QueryMod {
 			if m == nil {
 				return nil
 			}
@@ -259,9 +259,9 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 			{{ range $field := .Fields }}
 				{{-  if and $field.IsRelation $field.BoilerField.IsRelation }}
 					{{- if  $field.IsPlural }}
-						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name|go }}, "")...)
+						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, "")...)
 					{{- else }}
-						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name|go }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)
+						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)
 					{{- end }}
 				{{-  else if $field.IsOr  }}
 					if m.Or != nil {
@@ -274,10 +274,10 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 				{{- else }}
 					{{- if  $field.IsPrimaryID }}
 					if withPrimaryID {
-						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}ToMods(m.{{ $field.Name|go }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)
+						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}ToMods(m.{{ $field.Name }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)
 					}
 					{{- else }}
-						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}ToMods(m.{{ $field.Name|go }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)					
+						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}ToMods(m.{{ $field.Name }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)					
 					{{- end }}
 				{{- end -}}
 			{{ end }}

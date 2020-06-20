@@ -47,27 +47,27 @@ var TablePreloadMap = map[string]map[string]boilergql.ColumnSetting{
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 
 	{{ if $model.IsPreloadable -}}
-	func Get{{ .Name|go }}PreloadMods(ctx context.Context) (queryMods []qm.QueryMod) {
-		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, models.TableNames.{{ .Name|go }}, "")
+	func Get{{ .Name }}PreloadMods(ctx context.Context) (queryMods []qm.QueryMod) {
+		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, models.TableNames.{{ .Name }}, "")
 	}
 
-	func Get{{ .Name|go }}PreloadModsWithLevel(ctx context.Context, level string) (queryMods []qm.QueryMod) {
-		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, models.TableNames.{{ .Name|go }}, level)
+	func Get{{ .Name }}PreloadModsWithLevel(ctx context.Context, level string) (queryMods []qm.QueryMod) {
+		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, models.TableNames.{{ .Name }}, level)
 	}
 	{{ end -}}
 {{- end }}
 {{ range $model := .Models }}
 	{{ if .IsPayload -}}
-	var {{ .Name|go }}PreloadLevels = struct {
+	var {{ .Name }}PreloadLevels = struct {
 		{{ range $field := .Fields }}
 		{{- if $field.IsRelation -}}
-		{{- $field.Name|go }} string
+		{{- $field.Name }} string
 		{{- end }}
 		{{- end }}
 	}{
 		{{ range $field := .Fields }}
 		{{- if $field.IsRelation -}}
-		{{- $field.Name|go }}: "{{- $field.Name }}",
+		{{- $field.Name }}: "{{- $field.JSONName }}",
 		{{- end }}
 		{{- end }}
 	}
