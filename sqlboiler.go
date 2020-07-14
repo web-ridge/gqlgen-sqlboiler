@@ -31,7 +31,7 @@ type BoilerField struct {
 	IsArray          bool
 	IsRelation       bool
 	RelationshipName string
-	Relationship     BoilerModel
+	Relationship     *BoilerModel
 }
 
 type BoilerType struct {
@@ -164,13 +164,13 @@ func findBoilerField(fields []*BoilerField, fieldName string) *BoilerField {
 	}
 	return nil
 }
-func FindBoilerModel(models []*BoilerModel, modelName string) BoilerModel {
+func FindBoilerModel(models []*BoilerModel, modelName string) *BoilerModel {
 	for _, m := range models {
 		if m.Name == modelName {
-			return *m
+			return m
 		}
 	}
-	return BoilerModel{}
+	return nil
 }
 
 func isRequired(boilerType string) bool {

@@ -214,7 +214,7 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 			if m.Search != nil || m.Where != nil {
 				var queryMods []qm.QueryMod
 				queryMods  = append(queryMods, {{ .BoilerModel.Name }}SearchToMods(m.Search)...)
-				queryMods  = append(queryMods, {{ .BoilerModel.Name }}WhereToMods(m.Where, true)...)
+				queryMods  = append(queryMods, {{ .BoilerModel.Name }}WhereToMods(m.Where, true, "")...)
 				if len(queryMods) > 0 {
 					return []qm.QueryMod{
 						qm.Expr(queryMods...),
@@ -229,7 +229,7 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 		}
 	{{ end }}
 	{{- if .IsWhere  -}}
-		func {{ .Name }}SubqueryToMods(m *{{ $.Frontend.PackageName }}.{{ .Name }}, foreignColumn string) []qm.QueryMod {
+		func {{ .Name }}SubqueryToMods(m *{{ $.Frontend.PackageName }}.{{ .Name }}, foreignColumn string, parentTable string) []qm.QueryMod {
 			if m == nil {
 				return nil
 			}
@@ -241,7 +241,7 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 				queryMods = append(queryMods, IDFilterToMods(m.ID, foreignColumn)...)
 			}
 		
-			subQueryMods := {{ .Name }}ToMods(m, !hasForeignKeyInRoot)
+			subQueryMods := {{ .Name }}ToMods(m, !hasForeignKeyInRoot, parentTable)
 			if len(subQueryMods) > 0 {
 				subQuery := models.{{.BoilerModel.PluralName}}(append(subQueryMods, qm.Select("1"))...)
 				queryMods = appendSubQuery(queryMods, subQuery.Query)
@@ -249,7 +249,7 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 			return queryMods
 		} 
 		
-		func {{ .Name }}ToMods(m *{{ $.Frontend.PackageName }}.{{ .Name }}, withPrimaryID bool) []qm.QueryMod {
+		func {{ .Name }}ToMods(m *{{ $.Frontend.PackageName }}.{{ .Name }}, withPrimaryID bool, parentTable string) []qm.QueryMod {
 			if m == nil {
 				return nil
 			}
@@ -259,17 +259,17 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 			{{ range $field := .Fields }}
 				{{-  if and $field.IsRelation $field.BoilerField.IsRelation }}
 					{{- if  $field.IsPlural }}
-						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, "")...)
+						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, "", models.TableNames.{{- $model.BoilerModel.Name }})...)
 					{{- else }}
-						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }})...)
+						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }}, models.TableNames.{{- $model.BoilerModel.Name }})...)
 					{{- end }}
 				{{-  else if $field.IsOr  }}
 					if m.Or != nil {
-						queryMods = append(queryMods, qm.Or2(qm.Expr({{ $field.TypeWithoutPointer|go }}ToMods(m.Or, true)...)))
+						queryMods = append(queryMods, qm.Or2(qm.Expr({{ $field.TypeWithoutPointer|go }}ToMods(m.Or, true, "")...)))
 					}
 				{{-  else if $field.IsAnd  }}
 					if m.And != nil {
-						queryMods = append(queryMods, qm.Expr({{ $field.TypeWithoutPointer|go }}ToMods(m.And, true)...))
+						queryMods = append(queryMods, qm.Expr({{ $field.TypeWithoutPointer|go }}ToMods(m.And, true, "")...))
 					}
 				{{- else }}
 					{{- if  $field.IsPrimaryID }}
@@ -281,6 +281,23 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 					{{- end }}
 				{{- end -}}
 			{{ end }}
+
+			if len(queryMods) > 0 && parentTable != "" {
+				{{ range $field := .Fields }}
+					{{-  if and $field.IsRelation $field.BoilerField.IsRelation }}
+					if parentTable == models.TableNames.{{ $field.Relationship.Name }} {
+						{{- if  $field.IsPlural }}
+						{{- else }}
+						queryMods = append(queryMods, qm.Where(fmt.Sprintf("%v.%v = %v.id", models.TableNames.{{- $model.BoilerModel.Name }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }}, parentTable)))
+						{{- end }}
+					}
+					{{- end -}}
+				{{ end }}
+
+			}
+
+
+
 			return queryMods
 		}
 	{{ end }}

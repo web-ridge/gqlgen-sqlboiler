@@ -55,7 +55,7 @@ type Preload struct {
 type Model struct {
 	Name                  string
 	PluralName            string
-	BoilerModel           BoilerModel
+	BoilerModel           *BoilerModel
 	PrimaryKeyType        string
 	Fields                []*Field
 	IsNormal              bool
@@ -463,7 +463,9 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 		m.HasUserOrganizationID = findField(m.Fields, "userOrganizationId") != nil
 		m.HasUserID = findField(m.Fields, "userId") != nil
 		for _, f := range m.Fields {
-			f.Relationship = findModel(models, f.BoilerField.Relationship.Name)
+			if f.BoilerField.Relationship != nil {
+				f.Relationship = findModel(models, f.BoilerField.Relationship.Name)
+			}
 		}
 	}
 }
@@ -646,7 +648,7 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 				isPayload := strings.HasSuffix(modelName, "Payload") && modelName != "Payload"
 
 				// if no boiler model is found
-				if boilerModel.Name == "" {
+				if boilerModel == nil || boilerModel.Name == "" {
 					if isInput || isWhere || isFilter || isPayload {
 						// silent continue
 						continue
