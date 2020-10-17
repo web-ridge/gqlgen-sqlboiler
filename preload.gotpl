@@ -30,7 +30,7 @@
 var TablePreloadMap = map[string]map[string]boilergql.ColumnSetting{
 	{{ range $model := .Models -}}
 	{{ if $model.IsPreloadable -}}
-		models.TableNames.{{- $model.Name }}: {
+		models.TableNames.{{- $model.BoilerModel.TableName }}: {
 			{{- range $value := $model.PreloadArray }}
 				 "{{$value.Key}}": {
 					 Name: {{$value.ColumnSetting.Name}},
@@ -48,11 +48,11 @@ var TablePreloadMap = map[string]map[string]boilergql.ColumnSetting{
 
 	{{ if $model.IsPreloadable -}}
 	func Get{{ .Name }}PreloadMods(ctx context.Context) (queryMods []qm.QueryMod) {
-		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, models.TableNames.{{ .Name }}, "")
+		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, models.TableNames.{{ $model.BoilerModel.TableName }}, "")
 	}
 
 	func Get{{ .Name }}PreloadModsWithLevel(ctx context.Context, level string) (queryMods []qm.QueryMod) {
-		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, models.TableNames.{{ .Name }}, level)
+		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, models.TableNames.{{ $model.BoilerModel.TableName }}, level)
 	}
 	{{ end -}}
 {{- end }}

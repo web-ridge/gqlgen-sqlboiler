@@ -47,18 +47,24 @@
 			)( *models.{{ .BoilerModel.Name }}) {
 			if m == nil {
 				return nil
-			}	
+			}
+
 			r := &models.{{ .BoilerModel.Name }}{
 			{{ range $field := .Fields -}}
-				{{ if $field.IsNumberID -}}
-					{{- $field.BoilerField.Name }} : {{ $field.ConvertConfig.ToBoiler }},
-				{{ else if $field.IsRelation -}}
-				{{ else if $field.ConvertConfig.IsCustom -}}
-					{{- $field.BoilerField.Name }} : {{ $field.ConvertConfig.ToBoiler }}(m.{{ $field.Name }}),
-				{{ else -}}	
+				{{- if $field.ConvertConfig.IsCustom -}}
+					{{- if $field.IsPrimaryNumberID -}}
+						{{- $field.BoilerField.Name }} : {{ $field.ConvertConfig.ToBoiler }},
+					{{- else if and $field.IsNumberID $field.BoilerField.IsRelation -}}
+						{{- $field.BoilerField.Name }} : {{ $field.ConvertConfig.ToBoiler }},
+					{{- else if $field.IsRelation -}}
+					{{- else -}}
+						{{- $field.BoilerField.Name }} : {{ $field.ConvertConfig.ToBoiler }}(m.{{ $field.Name }}),
+					{{- end }}
+				{{- else if $field.IsRelation -}}
+				{{- else -}}
 					{{- $field.BoilerField.Name }}: m.{{ $field.Name }},
-				{{ end }}
-			{{- end -}}
+				{{- end }}
+			{{ end }}
 			}
 			return r
 		}
@@ -72,14 +78,19 @@
 				switch key {
 					{{ range $field := .Fields -}}
 					case "{{ $field.JSONName }}":
-						{{ if $field.IsNumberID -}}
-							modelM[models.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = {{ $field.ConvertConfig.ToBoiler }}
-						{{ else if $field.IsRelation -}}
-						{{ else if $field.ConvertConfig.IsCustom -}}
-							modelM[models.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = {{ $field.ConvertConfig.ToBoiler }}(m.{{ $field.Name }})
-						{{ else -}}	
+						{{- if $field.ConvertConfig.IsCustom }}
+							{{- if $field.IsPrimaryNumberID }}
+								modelM[models.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = {{ $field.ConvertConfig.ToBoiler }}
+							{{- else if and $field.IsNumberID $field.BoilerField.IsRelation }}
+								modelM[models.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = {{ $field.ConvertConfig.ToBoiler }}
+							{{- else if $field.IsRelation -}}
+							{{- else }}
+								modelM[models.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = {{ $field.ConvertConfig.ToBoiler }}(m.{{ $field.Name }})
+							{{- end }}
+						{{- else if $field.IsRelation -}}
+						{{- else }}
 							modelM[models.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = m.{{ $field.Name }}
-						{{ end -}}
+						{{- end }}
 					{{ end -}}
 				}
 			}

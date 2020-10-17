@@ -3,6 +3,8 @@
 {{ reserveImport "io"  }}
 {{ reserveImport "strconv"  }}
 {{ reserveImport "time"  }}
+{{ reserveImport "reflect"  }}
+{{ reserveImport "unsafe"  }}
 {{ reserveImport "sync"  }}
 {{ reserveImport "errors"  }}
 {{ reserveImport "bytes"  }}
@@ -12,7 +14,7 @@
 {{ reserveImport "github.com/vektah/gqlparser/v2/ast" }}
 {{ reserveImport "github.com/99designs/gqlgen/graphql" }}
 {{ reserveImport "github.com/99designs/gqlgen/graphql/introspection" }}
-
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/drivers" }}
 {{ reserveImport "github.com/ericlagergren/decimal" }}
 {{ reserveImport "github.com/volatiletech/sqlboiler/v4/boil" }}
 {{ reserveImport "github.com/volatiletech/sqlboiler/v4/queries" }}
@@ -39,6 +41,16 @@ const in = " IN ?"
 const notIn = " NOT IN ?"
 
 func appendSubQuery(queryMods []qm.QueryMod, q *queries.Query) []qm.QueryMod {
+	// TODO: integrate with subquery in sqlboiler if it will be released in the future
+	{{- if $.PluginConfig.UseReflectWorkaroundForSubModelFilteringInPostgresIssue25 }}
+		// https://github.com/web-ridge/gqlgen-sqlboiler/issues/25 we need this for postgres
+		member := reflect.ValueOf(q).Elem().FieldByName("dialect")
+		dialectPtr := (**drivers.Dialect)(unsafe.Pointer(member.UnsafeAddr()))
+		dialect := **dialectPtr
+		dialect.UseIndexPlaceholders = false
+		*dialectPtr = &dialect
+	{{- end }}
+
 	qs, args := queries.BuildQuery(q)
 	qsClean := strings.TrimSuffix(qs, ";")
 	return append(queryMods, qm.Where(fmt.Sprintf("EXISTS(%v)", qsClean), args...))
@@ -259,9 +271,11 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 			{{ range $field := .Fields }}
 				{{-  if and $field.IsRelation $field.BoilerField.IsRelation }}
 					{{- if  $field.IsPlural }}
-						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, "", models.TableNames.{{- $model.BoilerModel.Name }})...)
+						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, "", models.TableNames.{{- $model.BoilerModel.TableName }})...)
+					{{- else if $field.BoilerField.IsForeignKey }}
+						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }}, models.TableNames.{{- $model.BoilerModel.TableName }})...)
 					{{- else }}
-						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }}, models.TableNames.{{- $model.BoilerModel.Name }})...)
+						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, "", models.TableNames.{{- $model.BoilerModel.TableName }})...)
 					{{- end }}
 				{{-  else if $field.IsOr  }}
 					if m.Or != nil {
@@ -284,16 +298,21 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 
 			if len(queryMods) > 0 && parentTable != "" {
 				{{ range $field := .Fields }}
-					{{-  if and $field.IsRelation $field.BoilerField.IsRelation }}
-					if parentTable == models.TableNames.{{ $field.Relationship.Name }} {
-						{{- if  $field.IsPlural }}
-						{{- else }}
-						queryMods = append(queryMods, qm.Where(fmt.Sprintf("%v.%v = %v.id", models.TableNames.{{- $model.BoilerModel.Name }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }}, parentTable)))
-						{{- end }}
-					}
+					{{- if  not $field.IsPlural -}}
+						{{-  if and $field.IsRelation $field.BoilerField.IsRelation  -}}
+							{{- if $field.BoilerField.IsForeignKey }}
+								if parentTable == models.TableNames.{{ $field.Relationship.BoilerModel.TableName }} {
+									queryMods = append(queryMods, qm.Where(fmt.Sprintf("%v.%v = %v.id", models.TableNames.{{- $model.BoilerModel.TableName }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }}, parentTable)))
+								}
+							{{- else }}
+								// TODO: if the relations filtering does not work, please make an issue
+								// if parentTable == models.TableNames.{{ $field.Relationship.BoilerModel.TableName }} {
+									// queryMods = append(queryMods, qm.Where(fmt.Sprintf("%v.%v = %v.id", models.TableNames.{{- $model.BoilerModel.TableName }}, models.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }}, parentTable)))
+								// }
+							{{- end -}}
+						{{- end -}}
 					{{- end -}}
 				{{ end }}
-
 			}
 
 

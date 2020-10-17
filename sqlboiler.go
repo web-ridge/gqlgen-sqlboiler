@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -15,6 +16,7 @@ import (
 
 type BoilerModel struct {
 	Name                  string
+	TableName             string
 	PluralName            string
 	Fields                []*BoilerField
 	HasOrganizationID     bool
@@ -44,10 +46,11 @@ type BoilerType struct {
 func GetBoilerModels(dir string) []*BoilerModel {
 	boilerTypeMap, _, boilerTypeOrder := parseBoilerFile(dir)
 	boilerTypes := getSortedBoilerTypes(boilerTypeMap, boilerTypeOrder)
+	tableNames := parseTableNames(dir)
 
 	// sortedModelNames is needed to get the right order back of the models since we want the same order every time
 	// this program has ran.
-	modelNames := []string{}
+	var modelNames []string
 
 	// fieldsPerModelName is needed to group the fields per model, so we can get all fields per modelName later on
 	fieldsPerModelName := map[string][]*BoilerField{}
@@ -55,7 +58,7 @@ func GetBoilerModels(dir string) []*BoilerModel {
 
 	// Anonymous function because this is used 2 times it prevents duplicated code
 	// It's automatically inits an empty field array if it does not exist yet
-	var addFieldToMap = func(m map[string][]*BoilerField, modelName string, field *BoilerField) {
+	addFieldToMap := func(m map[string][]*BoilerField, modelName string, field *BoilerField) {
 		modelNames = appendIfMissing(modelNames, modelName)
 		_, ok := m[modelName]
 		if !ok {
@@ -66,7 +69,6 @@ func GetBoilerModels(dir string) []*BoilerModel {
 
 	// Let's parse boilerTypes to models and fields
 	for _, boiler := range boilerTypes {
-
 		// split on . input is like model.Field e.g. -> User.ID
 		splitted := strings.Split(boiler.Name, ".")
 		// result in e.g. User
@@ -76,7 +78,6 @@ func GetBoilerModels(dir string) []*BoilerModel {
 
 		// handle names with lowercase e.g. userR, userL or other sqlboiler extra's
 		if isFirstCharacterLowerCase(modelName) {
-
 			// It's the relations of the model
 			// let's add them so we can use them later
 			if strings.HasSuffix(modelName, "R") {
@@ -116,7 +117,6 @@ func GetBoilerModels(dir string) []*BoilerModel {
 			RelationshipName: strings.TrimSuffix(boilerFieldName, "ID"),
 			IsForeignKey:     isRelation,
 		})
-
 	}
 	sort.Strings(modelNames)
 
@@ -124,8 +124,10 @@ func GetBoilerModels(dir string) []*BoilerModel {
 	models := make([]*BoilerModel, len(modelNames))
 	for i, modelName := range modelNames {
 		fields := fieldsPerModelName[modelName]
+		tableName := findTableName(tableNames, modelName)
 		models[i] = &BoilerModel{
 			Name:                  modelName,
+			TableName:             tableName,
 			PluralName:            pluralizer.Plural(modelName),
 			Fields:                fields,
 			HasOrganizationID:     findBoilerField(fields, "OrganizationID") != nil,
@@ -146,16 +148,27 @@ func GetBoilerModels(dir string) []*BoilerModel {
 			if foreignKey != nil {
 				foreignKey.Relationship = relationship
 			} else {
-
+				// fmt.Println("could not find foreignkey", foreignKey, model.Name, relationField.Name)
 				// this is not a foreign key but a normal relationship
 				relationField.Relationship = relationship
 				model.Fields = append(model.Fields, relationField)
 			}
 		}
-
 	}
+	for _, model := range models {
+		for _, field := range model.Fields {
+			if field.IsRelation && field.Relationship == nil {
+				fmt.Printf("[warn] We could not find the relationship in the generated "+
+					"boiler structs for %v.%v this could result in unexpected behavior, we marked this field as "+
+					"non-relational \n", model.Name, field.Name)
+				field.IsRelation = false
+			}
+		}
+	}
+
 	return models
 }
+
 func findBoilerField(fields []*BoilerField, fieldName string) *BoilerField {
 	for _, m := range fields {
 		if m.Name == fieldName {
@@ -164,6 +177,23 @@ func findBoilerField(fields []*BoilerField, fieldName string) *BoilerField {
 	}
 	return nil
 }
+
+func findTableName(tableNames []string, modelName string) string {
+	for _, tableName := range tableNames {
+		if modelName == tableName {
+			return tableName
+		}
+	}
+
+	// if database name is plural
+	for _, tableName := range tableNames {
+		if pluralizer.Plural(modelName) == tableName {
+			return tableName
+		}
+	}
+	return modelName
+}
+
 func FindBoilerModel(models []*BoilerModel, modelName string) *BoilerModel {
 	for _, m := range models {
 		if m.Name == modelName {
@@ -204,8 +234,8 @@ func sliceContains(slice []string, v string) bool {
 }
 
 // getSortedBoilerTypes orders the sqlboiler struct in an ordered slice of BoilerType
-func getSortedBoilerTypes(boilerTypeMap map[string]string, boilerTypeOrder map[string]int) (sortedBoilerTypes []*BoilerType) {
-
+func getSortedBoilerTypes(boilerTypeMap map[string]string, boilerTypeOrder map[string]int) (
+	sortedBoilerTypes []*BoilerType) {
 	boilerTypeKeys := make([]string, 0, len(boilerTypeMap))
 	for k := range boilerTypeMap {
 		boilerTypeKeys = append(boilerTypeKeys, k)
@@ -214,7 +244,6 @@ func getSortedBoilerTypes(boilerTypeMap map[string]string, boilerTypeOrder map[s
 	// order same way as sqlboiler fields with one exception
 	// let createdAt, updatedAt and deletedAt as last
 	sort.Slice(boilerTypeKeys, func(i, b int) bool {
-
 		aKey := boilerTypeKeys[i]
 		bKey := boilerTypeKeys[b]
 
@@ -241,7 +270,30 @@ func getSortedBoilerTypes(boilerTypeMap map[string]string, boilerTypeOrder map[s
 			Type: boilerTypeMap[modelAndField],
 		})
 	}
-	return
+	return //nolint:nakedret
+}
+
+var tableNameRegex = regexp.MustCompile(`\s*(.*[^ ])\s*string`) //nolint:gochecknoglobals
+
+func parseTableNames(dir string) []string {
+	dir, err := filepath.Abs(dir)
+	errMessage := "[WARN] could not open boiler table names file, this could not lead to problems if you're " +
+		"using plural table names"
+	if err != nil {
+		fmt.Println(errMessage, err)
+		return nil
+	}
+	content, err := ioutil.ReadFile(filepath.Join(dir, "boil_table_names.go"))
+	if err != nil {
+		fmt.Println(errMessage, err)
+		return nil
+	}
+	tableNamesMatches := tableNameRegex.FindAllStringSubmatch(string(content), -1)
+	tableNames := make([]string, len(tableNamesMatches))
+	for i, tableNameMatch := range tableNamesMatches {
+		tableNames[i] = tableNameMatch[1]
+	}
+	return tableNames
 }
 
 // will return StructName.key
@@ -275,8 +327,7 @@ func parseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 		}
 
 		filename := filepath.Join(dir, file.Name())
-		if src, err := parser.ParseFile(fset, filename, nil, parser.ParseComments); err == nil {
-
+		if src, err := parser.ParseFile(fset, filename, nil, parser.ParseComments); err == nil { //nolint:nestif
 			var i int
 			for _, decl := range src.Decls {
 				typeDecl, ok := decl.(*ast.GenDecl)
@@ -285,7 +336,6 @@ func parseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 				}
 
 				for _, spec := range typeDecl.Specs {
-
 					safeTypeSpec, ok := spec.(*ast.TypeSpec)
 					if !ok {
 						continue
@@ -306,16 +356,14 @@ func parseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 								name := field.Names[0].Name
 
 								if si, ok := xv.X.(*ast.Ident); ok {
-
 									k := safeTypeSpec.Name.String() + "." + name
 									//https://stackoverflow.com/questions/28246970/how-to-parse-a-method-declaration
 									fieldsMap[k] = si.Name
 									fieldsOrder[k] = i
 								}
-
-							} else {
-								// fmt.Println("len(field.Names) == 0", field)
-							}
+							} // else {
+							// fmt.Println("len(field.Names) == 0", field)
+						//	}
 
 						case *ast.SelectorExpr:
 							t, _ := field.Type.(*ast.SelectorExpr)
@@ -330,7 +378,7 @@ func parseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 
 							t, _ := field.Type.(*ast.Ident) // The type as a string
 							typeName := t.Name
-							name := field.Names[0].Name //name as a string
+							name := field.Names[0].Name // name as a string
 
 							k := safeTypeSpec.Name.String() + "." + name
 							fieldsMap[k] = typeName
@@ -342,9 +390,7 @@ func parseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 						i++
 					}
 				}
-
 			}
-
 		}
 	}
 

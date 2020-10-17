@@ -19,7 +19,8 @@ func Test_gopathImport(t *testing.T) {
 			want: "github.com/someonefamous/famous-project",
 		},
 	}
-	for _, tt := range tests {
+	for i := range tests {
+		tt := tests[i]
 		t.Run(tt.name, func(t *testing.T) {
 			if got := gopathImport(tt.args.dir); got != tt.want {
 				t.Errorf("gopathImport() = %v, want %v", got, tt.want)

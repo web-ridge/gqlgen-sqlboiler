@@ -34,7 +34,11 @@
 const inputKey = "input"
 
 {{ range $resolver := .Resolvers -}}
+	{{- if  .IsBatchCreate -}}
+	//
+	{{- end -}}
 	const {{ $resolver.PublicErrorKey }} = "{{ $resolver.PublicErrorMessage }}"
+
 	func (r *{{lcFirst $resolver.Object.Name}}{{ucFirst $.ResolverType}}) {{$resolver.Field.GoFieldName}} {{ $resolver.Field.ShortResolverDeclaration }} {
 	
 
@@ -48,21 +52,24 @@ const inputKey = "input"
 
 			mods := Get{{ .Model.Name }}PreloadMods(ctx)
 			mods = append(mods, dm.{{ .Model.Name }}Where.ID.EQ(dbID))
-			{{- if .Model.BoilerModel.HasOrganizationID }}
+			{{ if $.HasAuth }}
+				{{- if .Model.BoilerModel.HasOrganizationID }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
-					auth.OrganizationIDFromContext(ctx),
+				auth.OrganizationIDFromContext(ctx),
 				))
-			{{- end }}
-			{{- if .Model.BoilerModel.HasUserOrganizationID }}
+				{{- end }}
+				{{- if .Model.BoilerModel.HasUserOrganizationID }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(
-					auth.OrganizationIDFromContext(ctx),
+				auth.OrganizationIDFromContext(ctx),
 				))
-			{{- end }}
-			{{- if .Model.BoilerModel.HasUserID }}
+				{{- end }}
+				{{- if .Model.BoilerModel.HasUserID }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.UserID.EQ(
-					auth.UserIDFromContext(ctx),
+				auth.UserIDFromContext(ctx),
 				))
-			{{- end }}
+				{{- end }}
+			{{ end }}
+
 			m, err := dm.{{ .Model.PluralName }}(mods...).One(ctx, r.db)
 			if err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
@@ -74,21 +81,24 @@ const inputKey = "input"
 
 		{{- if .IsList }}
 			mods := Get{{ .Model.Name }}PreloadMods(ctx)
-			{{- if .Model.BoilerModel.HasOrganizationID }}
+			{{ if $.HasAuth }}
+				{{- if .Model.BoilerModel.HasOrganizationID }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
-					auth.OrganizationIDFromContext(ctx),
+				auth.OrganizationIDFromContext(ctx),
 				))
-			{{- end }}
-			{{- if .Model.BoilerModel.HasUserOrganizationID }}
+				{{- end }}
+				{{- if .Model.BoilerModel.HasUserOrganizationID }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(
-					auth.OrganizationIDFromContext(ctx),
+				auth.OrganizationIDFromContext(ctx),
 				))
-			{{- end }}
-			{{- if .Model.BoilerModel.HasUserID }}
+				{{- end }}
+				{{- if .Model.BoilerModel.HasUserID }}
 				mods = append(mods, dm.{{ .Model.Name }}Where.UserID.EQ(
-					auth.UserIDFromContext(ctx),
+				auth.UserIDFromContext(ctx),
 				))
-			{{- end }}
+				{{- end }}
+			{{ end }}
+
 			mods = append(mods, {{.Model.Name}}FilterToMods(filter)...)
 			a, err := dm.{{ .Model.PluralName }}(mods...).All(ctx, r.db)
 			if err != nil {
@@ -107,26 +117,30 @@ const inputKey = "input"
 				{{ if $field.IsRelation -}}
 					if input.{{ $field.Name }} != nil {
 						{{ $field.Name }} := {{ $field.BoilerField.Relationship.Name }}CreateInputToBoiler(input.{{ $field.Name }})
-						{{- if $field.BoilerField.Relationship.HasOrganizationID  }}
-							{{ $field.Name }}.OrganizationID = auth.OrganizationIDFromContext(ctx)
-						{{- end }}
-						{{- if $field.BoilerField.Relationship.HasUserOrganizationID  }}
-							{{ $field.Name }}.UserOrganizationID = auth.OrganizationIDFromContext(ctx)
-						{{- end }}
-						{{- if $field.BoilerField.Relationship.HasUserID  }}
-							{{ $field.Name }}.UserID = auth.UserIDFromContext(ctx)
+						{{ if $.HasAuth }}
+							{{- if $field.BoilerField.Relationship.HasOrganizationID  }}
+								{{ $field.Name }}.OrganizationID = auth.OrganizationIDFromContext(ctx)
+							{{- end }}
+							{{- if $field.BoilerField.Relationship.HasUserOrganizationID  }}
+								{{ $field.Name }}.UserOrganizationID = auth.OrganizationIDFromContext(ctx)
+							{{- end }}
+							{{- if $field.BoilerField.Relationship.HasUserID  }}
+								{{ $field.Name }}.UserID = auth.UserIDFromContext(ctx)
+							{{- end }}
 						{{- end }}
 
 						{{ $field.Name }}Input := {{ $field.BoilerField.Relationship.Name }}CreateInputToBoilerWhitelist(
 							boilergql.GetInputFromContext(ctx, "input.{{ $field.JSONName }}"),
-							{{- if $model.BoilerModel.HasOrganizationID  }}
-								dm.{{ $field.BoilerField.Relationship.Name }}Columns.OrganizationID,
-							{{- end }}
-							{{- if $model.BoilerModel.HasUserOrganizationID  }}
-								dm.{{ $field.BoilerField.Relationship.Name }}Columns.UserOrganizationID,
-							{{- end }}
-							{{- if $model.BoilerModel.HasUserID  }}
-								dm.{{ $field.BoilerField.Relationship.Name }}Columns.UserID,
+							{{ if $.HasAuth }}
+								{{- if $model.BoilerModel.HasOrganizationID  }}
+									dm.{{ $field.BoilerField.Relationship.Name }}Columns.OrganizationID,
+								{{- end }}
+								{{- if $model.BoilerModel.HasUserOrganizationID  }}
+									dm.{{ $field.BoilerField.Relationship.Name }}Columns.UserOrganizationID,
+								{{- end }}
+								{{- if $model.BoilerModel.HasUserID  }}
+									dm.{{ $field.BoilerField.Relationship.Name }}Columns.UserID,
+								{{- end }}
 							{{- end }}
 						)
 
@@ -140,26 +154,30 @@ const inputKey = "input"
 					
 				{{ end -}}
 			{{ end -}}
-			{{ if .Model.BoilerModel.HasOrganizationID  -}}
-				m.OrganizationID = auth.OrganizationIDFromContext(ctx)
-			{{- end }}
-			{{ if .Model.BoilerModel.HasUserOrganizationID  -}}
-				m.UserOrganizationID = auth.OrganizationIDFromContext(ctx)
-			{{- end }}
-			{{ if .Model.BoilerModel.HasUserID  -}}
-				m.UserID = auth.UserIDFromContext(ctx)
+			{{ if $.HasAuth }}
+				{{ if .Model.BoilerModel.HasOrganizationID  -}}
+					m.OrganizationID = auth.OrganizationIDFromContext(ctx)
+				{{- end }}
+				{{ if .Model.BoilerModel.HasUserOrganizationID  -}}
+					m.UserOrganizationID = auth.OrganizationIDFromContext(ctx)
+				{{- end }}
+				{{ if .Model.BoilerModel.HasUserID  -}}
+					m.UserID = auth.UserIDFromContext(ctx)
+				{{- end }}
 			{{- end }}
 
 			whiteList := {{ .InputModel.Name }}ToBoilerWhitelist(
 				boilergql.GetInputFromContext(ctx, inputKey),
-				{{- if .Model.BoilerModel.HasOrganizationID  }}
-					dm.{{ .Model.Name }}Columns.OrganizationID,
-				{{- end }}
-				{{- if .Model.BoilerModel.HasUserOrganizationID  }}
-					dm.{{ .Model.Name }}Columns.UserOrganizationID,
-				{{- end }}
-				{{- if .Model.BoilerModel.HasUserID  }}
-					dm.{{ .Model.Name }}Columns.UserID,
+				{{ if $.HasAuth }}
+					{{- if .Model.BoilerModel.HasOrganizationID  }}
+						dm.{{ .Model.Name }}Columns.OrganizationID,
+					{{- end }}
+					{{- if .Model.BoilerModel.HasUserOrganizationID  }}
+						dm.{{ .Model.Name }}Columns.UserOrganizationID,
+					{{- end }}
+					{{- if .Model.BoilerModel.HasUserID  }}
+						dm.{{ .Model.Name }}Columns.UserID,
+					{{- end }}
 				{{- end }}
 			)
 			if err := m.Insert(ctx, r.db, whiteList); err != nil {
@@ -170,20 +188,22 @@ const inputKey = "input"
 			// resolve requested fields after creating
 			mods := Get{{ .Model.Name }}PreloadModsWithLevel(ctx, {{ .Model.Name }}PayloadPreloadLevels.{{ .Model.Name }})
 			mods = append(mods, dm.{{ .Model.Name }}Where.ID.EQ(m.ID))
-			{{- if .Model.BoilerModel.HasOrganizationID  }}
-				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
-					auth.OrganizationIDFromContext(ctx),
-				))
-			{{- end }}
-			{{- if .Model.BoilerModel.HasUserOrganizationID  }}
-				mods = append(mods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(
-					auth.OrganizationIDFromContext(ctx),
-				))
-			{{- end }}
-			{{- if .Model.BoilerModel.HasUserID  }}
-				mods = append(mods, dm.{{ .Model.Name }}Where.UserID.EQ(
-					auth.UserIDFromContext(ctx),
-				))
+			{{ if $.HasAuth }}
+				{{- if .Model.BoilerModel.HasOrganizationID  }}
+					mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
+						auth.OrganizationIDFromContext(ctx),
+					))
+				{{- end }}
+				{{- if .Model.BoilerModel.HasUserOrganizationID  }}
+					mods = append(mods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(
+						auth.OrganizationIDFromContext(ctx),
+					))
+				{{- end }}
+				{{- if .Model.BoilerModel.HasUserID  }}
+					mods = append(mods, dm.{{ .Model.Name }}Where.UserID.EQ(
+						auth.UserIDFromContext(ctx),
+					))
+				{{- end }}
 			{{- end }}
 			pM, err := dm.{{ .Model.PluralName }}(mods...).One(ctx, r.db)
 			if err != nil {
@@ -217,20 +237,22 @@ const inputKey = "input"
 						)
 						if _, err := dm.{{ $field.BoilerField.Relationship.PluralName }}(
 							dm.{{ $field.BoilerField.Relationship.Name }}Where.ID.EQ(dbID),
-							{{- if  $field.BoilerField.Relationship.HasOrganizationID }}
-								dm.{{ $field.BoilerField.Relationship.Name }}Where.OrganizationID.EQ(
-									auth.OrganizationIDFromContext(ctx),
-								),
-							{{- end }}
-							{{- if  $field.BoilerField.Relationship.HasUserOrganizationID }}
-								dm.{{ $field.BoilerField.Relationship.Name }}Where.UserOrganizationID.EQ(
-									auth.OrganizationIDFromContext(ctx),
-								),
-							{{- end }}
-							{{- if  $field.BoilerField.Relationship.HasUserID }}
-								dm.{{ $field.BoilerField.Relationship.Name }}Where.UserID.EQ(
-									auth.UserIDFromContext(ctx),
-								),
+							{{ if $.HasAuth }}
+								{{- if  $field.BoilerField.Relationship.HasOrganizationID }}
+									dm.{{ $field.BoilerField.Relationship.Name }}Where.OrganizationID.EQ(
+										auth.OrganizationIDFromContext(ctx),
+									),
+								{{- end }}
+								{{- if  $field.BoilerField.Relationship.HasUserOrganizationID }}
+									dm.{{ $field.BoilerField.Relationship.Name }}Where.UserOrganizationID.EQ(
+										auth.OrganizationIDFromContext(ctx),
+									),
+								{{- end }}
+								{{- if  $field.BoilerField.Relationship.HasUserID }}
+									dm.{{ $field.BoilerField.Relationship.Name }}Where.UserID.EQ(
+										auth.UserIDFromContext(ctx),
+									),
+								{{- end }}
 							{{- end }}
 						).UpdateAll(ctx, r.db, nestedM); err != nil {
 							log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
@@ -250,14 +272,16 @@ const inputKey = "input"
 		
 			if _, err := dm.{{ .Model.PluralName }}(
 				dm.{{ .Model.Name }}Where.ID.EQ(dbID),
-				{{- if .Model.BoilerModel.HasOrganizationID  }}
-					dm.{{ .Model.Name }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
-				{{- end }}
-				{{- if .Model.BoilerModel.HasUserOrganizationID  }}
-					dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
-				{{- end }}
-				{{- if .Model.BoilerModel.HasUserID  }}
-					dm.{{ .Model.Name }}Where.UserID.EQ(auth.UserIDFromContext(ctx)),
+				{{ if $.HasAuth }}
+					{{- if .Model.BoilerModel.HasOrganizationID  }}
+						dm.{{ .Model.Name }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
+					{{- end }}
+					{{- if .Model.BoilerModel.HasUserOrganizationID  }}
+						dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
+					{{- end }}
+					{{- if .Model.BoilerModel.HasUserID  }}
+						dm.{{ .Model.Name }}Where.UserID.EQ(auth.UserIDFromContext(ctx)),
+					{{- end }}
 				{{- end }}
 			).UpdateAll(ctx, r.db, m); err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
@@ -267,16 +291,17 @@ const inputKey = "input"
 			// resolve requested fields after updating
 			mods := Get{{ .Model.Name }}PreloadModsWithLevel(ctx, {{ .Model.Name }}PayloadPreloadLevels.{{ .Model.Name }})
 			mods = append(mods, dm.{{ .Model.Name }}Where.ID.EQ(dbID))
-			{{- if .Model.BoilerModel.HasOrganizationID  }}
-				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
+			{{ if $.HasAuth }}
+				{{- if .Model.BoilerModel.HasOrganizationID  }}
+					mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
+				{{- end }}
+				{{- if .Model.BoilerModel.HasUserOrganizationID  }}
+					mods = append(mods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
+				{{- end }}
+				{{- if .Model.BoilerModel.HasUserID  }}
+					mods = append(mods, dm.{{ .Model.Name }}Where.UserID.EQ(auth.UserIDFromContext(ctx)))
+				{{- end }}
 			{{- end }}
-			{{- if .Model.BoilerModel.HasUserOrganizationID  }}
-				mods = append(mods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)))
-			{{- end }}
-			{{- if .Model.BoilerModel.HasUserID  }}
-				mods = append(mods, dm.{{ .Model.Name }}Where.UserID.EQ(auth.UserIDFromContext(ctx)))
-			{{- end }}
-
 			pM, err := dm.{{ .Model.PluralName }}(mods...).One(ctx, r.db)
 			if err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
@@ -298,14 +323,16 @@ const inputKey = "input"
 			
 			mods := []qm.QueryMod{
 				dm.{{ .Model.Name }}Where.ID.EQ(dbID),
-				{{- if .Model.BoilerModel.HasOrganizationID  }}
-					dm.{{ .Model.Name }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
-				{{- end }}
-				{{- if .Model.BoilerModel.HasUserOrganizationID  }}
-					dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
-				{{- end }}
-				{{- if .Model.BoilerModel.HasUserID  }}
-					dm.{{ .Model.Name }}Where.UserID.EQ(auth.UserIDFromContext(ctx)),
+				{{ if $.HasAuth }}
+					{{- if .Model.BoilerModel.HasOrganizationID  }}
+						dm.{{ .Model.Name }}Where.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
+					{{- end }}
+					{{- if .Model.BoilerModel.HasUserOrganizationID  }}
+						dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
+					{{- end }}
+					{{- if .Model.BoilerModel.HasUserID  }}
+						dm.{{ .Model.Name }}Where.UserID.EQ(auth.UserIDFromContext(ctx)),
+					{{- end }}
 				{{- end }}
 			}
 			 if _, err := dm.{{ .Model.PluralName }}(mods...).DeleteAll(ctx, r.db); err != nil {
@@ -327,20 +354,22 @@ const inputKey = "input"
 
 		{{- if .IsBatchUpdate }}
 			var mods []qm.QueryMod
-			{{- if .Model.BoilerModel.HasOrganizationID }}
-				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
-					auth.OrganizationIDFromContext(ctx),
-				))
-			{{- end }}
-			{{- if .Model.BoilerModel.HasUserOrganizationID }}
-				mods = append(mods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(
-					auth.OrganizationIDFromContext(ctx),
-				))
-			{{- end }}
-			{{- if .Model.BoilerModel.HasUserID }}
-				mods = append(mods, dm.{{ .Model.Name }}Where.UserID.EQ(
-					auth.UserIDFromContext(ctx),
-				))
+			{{ if $.HasAuth }}
+				{{- if .Model.BoilerModel.HasOrganizationID }}
+					mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
+						auth.OrganizationIDFromContext(ctx),
+					))
+				{{- end }}
+				{{- if .Model.BoilerModel.HasUserOrganizationID }}
+					mods = append(mods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(
+						auth.OrganizationIDFromContext(ctx),
+					))
+				{{- end }}
+				{{- if .Model.BoilerModel.HasUserID }}
+					mods = append(mods, dm.{{ .Model.Name }}Where.UserID.EQ(
+						auth.UserIDFromContext(ctx),
+					))
+				{{- end }}
 			{{- end }}
 			mods = append(mods, {{.Model.Name}}FilterToMods(filter)...)
 
@@ -357,24 +386,26 @@ const inputKey = "input"
 
 		{{- if .IsBatchDelete }}
 			var mods []qm.QueryMod
-			{{- if .Model.BoilerModel.HasOrganizationID }}
-				mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
-					auth.OrganizationIDFromContext(ctx),
-				))
-			{{- end }}
-			{{- if .Model.BoilerModel.HasUserOrganizationID }}
-				mods = append(mods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(
-					auth.OrganizationIDFromContext(ctx),
-				))
-			{{- end }}
-			{{- if .Model.BoilerModel.HasUserID }}
-				mods = append(mods, dm.{{ .Model.Name }}Where.UserID.EQ(
-					auth.UserIDFromContext(ctx),
-				))
+			{{ if $.HasAuth }}
+				{{- if .Model.BoilerModel.HasOrganizationID }}
+					mods = append(mods, dm.{{ .Model.Name }}Where.OrganizationID.EQ(
+						auth.OrganizationIDFromContext(ctx),
+					))
+				{{- end }}
+				{{- if .Model.BoilerModel.HasUserOrganizationID }}
+					mods = append(mods, dm.{{ .Model.Name }}Where.UserOrganizationID.EQ(
+						auth.OrganizationIDFromContext(ctx),
+					))
+				{{- end }}
+				{{- if .Model.BoilerModel.HasUserID }}
+					mods = append(mods, dm.{{ .Model.Name }}Where.UserID.EQ(
+						auth.UserIDFromContext(ctx),
+					))
+				{{- end }}
 			{{- end }}
 			mods = append(mods, {{.Model.Name}}FilterToMods(filter)...)
 			mods = append(mods, qm.Select(dm.{{ .Model.Name }}Columns.ID))
-			mods = append(mods, qm.From(dm.TableNames.{{ .Model.Name }}))
+			mods = append(mods, qm.From(dm.TableNames.{{ .Model.BoilerModel.TableName }}))
 
 			{{- if .Model.HasStringPrimaryID }}
 			var IDsToRemove []boilergql.RemovedStringID
@@ -398,7 +429,7 @@ const inputKey = "input"
 			}, nil
 			{{- else }}
 			return &fm.{{ .Model.PluralName }}DeletePayload{
-				Ids: boilergql.{{.Model.PrimaryKeyType|go}}IDsToGraphQL(boilerIDs, dm.TableNames.{{ .Model.Name }}),
+				Ids: boilergql.{{.Model.PrimaryKeyType|go}}IDsToGraphQL(boilerIDs, dm.TableNames.{{ .Model.BoilerModel.TableName }}),
 			}, nil
 			{{- end }}
 		
