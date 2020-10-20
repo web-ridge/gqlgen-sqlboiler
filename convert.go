@@ -1,4 +1,4 @@
-package gqlgen_sqlboiler
+package gbgen
 
 import (
 	"fmt"
@@ -356,7 +356,9 @@ func getGraphqlFieldName(cfg *config.Config, modelName string, field *ast.FieldD
 	return name
 }
 
-func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Config, models []*Model) {
+//nolint:gocognit,gocyclo
+func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Config,
+	models []*Model) {
 	binder := cfg.NewBinder()
 
 	// Generate the basic of the fields
@@ -576,7 +578,7 @@ func getExtrasFromSchema(schema *ast.Schema) (interfaces []*Interface, enums []*
 	return
 }
 
-func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (models []*Model) {
+func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (models []*Model) { //nolint:gocognit,gocyclo
 	for _, schemaType := range schema.Types {
 		// skip boiler plate from ggqlgen, we only want the models
 		if strings.HasPrefix(schemaType.Name, "_") {
@@ -752,7 +754,7 @@ func findEnum(enums []*Enum, graphType string) *Enum {
 	return nil
 }
 
-func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConfig) { //nolint:nakedret
+func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConfig) { //nolint:gocognit,gocyclo
 	graphType := field.Type
 	boilType := field.BoilerField.Type
 

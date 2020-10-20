@@ -1,4 +1,4 @@
-package gqlgen_sqlboiler
+package gbgen
 
 import "testing"
 

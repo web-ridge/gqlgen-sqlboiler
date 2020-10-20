@@ -1,7 +1,7 @@
 // testing really need more improvements!
 // Please add more tests if you use this
 
-package gqlgen_sqlboiler
+package gbgen
 
 import "testing"
 

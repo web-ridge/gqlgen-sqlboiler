@@ -8,7 +8,7 @@ https://github.com/99designs/gqlgen/issues/1058
 
 */
 
-package gqlgen_sqlboiler
+package gbgen
 
 import (
 	"bytes"

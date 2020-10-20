@@ -1,4 +1,4 @@
-package gqlgen_sqlboiler
+package gbgen
 
 import (
 	"fmt"
@@ -43,7 +43,7 @@ type BoilerType struct {
 
 // parseModelsAndFieldsFromBoiler since these are like User.ID, User.Organization and we want them grouped by
 // modelName and their belonging fields.
-func GetBoilerModels(dir string) []*BoilerModel {
+func GetBoilerModels(dir string) []*BoilerModel { //nolint:gocognit,gocyclo
 	boilerTypeMap, _, boilerTypeOrder := parseBoilerFile(dir)
 	boilerTypes := getSortedBoilerTypes(boilerTypeMap, boilerTypeOrder)
 	tableNames := parseTableNames(dir)
@@ -286,7 +286,7 @@ func parseTableNames(dir string) []string {
 // Address.Longitude: null.String
 // Address.Latitude : null.Decimal
 // needed to generate the right convert code
-func parseBoilerFile(dir string) (map[string]string, map[string]string, map[string]int) {
+func parseBoilerFile(dir string) (map[string]string, map[string]string, map[string]int) { //nolint:gocognit,gocyclo
 	fieldsMap := make(map[string]string)
 	structsMap := make(map[string]string)
 	fieldsOrder := make(map[string]int)
@@ -350,6 +350,7 @@ func parseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 						//	}
 
 						case *ast.SelectorExpr:
+							//nolint:errcheck //TODO: handle errors
 							t, _ := field.Type.(*ast.SelectorExpr)
 							name := field.Names[0].Name
 
@@ -359,7 +360,7 @@ func parseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 							fieldsOrder[k] = i
 
 						case *ast.Ident:
-
+							//nolint:errcheck //TODO: handle errors
 							t, _ := field.Type.(*ast.Ident) // The type as a string
 							typeName := t.Name
 							name := field.Names[0].Name // name as a string

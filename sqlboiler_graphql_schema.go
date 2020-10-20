@@ -1,4 +1,6 @@
-package gqlgen_sqlboiler
+// TODO: needs big refactor
+
+package gbgen
 
 import (
 	"fmt"
@@ -10,13 +12,28 @@ import (
 	"github.com/iancoleman/strcase"
 )
 
-const indent = "\t"
-const lineBreak = "\n"
+const (
+	indent    = "\t"
+	lineBreak = "\n"
+)
+
+var Paginations = struct { //nolint:gochecknoglobals
+	Connections string
+	None        string
+}{
+	Connections: "connections",
+	None:        "none",
+}
 
 type SchemaConfig struct {
-	ModelDirectory string
-	Directives     []string
-	Pagination     string
+	ModelDirectory      string
+	Directives          []string
+	SkipInputFields     []string
+	Pagination          string
+	GenerateBatchCreate bool
+	GenerateMutations   bool
+	GenerateBatchDelete bool
+	GenerateBatchUpdate bool
 }
 
 type SchemaModel struct {
@@ -35,8 +52,7 @@ type SchemaField struct {
 	BoilerField      *BoilerField
 }
 
-func SchemaGenerateAndMerge(config SchemaConfig, outputFile string, merge bool) error {
-
+func SchemaWrite(config SchemaConfig, outputFile string, merge bool) error {
 	// Generate schema based on config
 	schema := SchemaGet(
 		config,
@@ -48,7 +64,7 @@ func SchemaGenerateAndMerge(config SchemaConfig, outputFile string, merge bool) 
 			fmt.Println("Could not write schema to disk: ", err)
 		}
 	} else {
-		fmt.Println(fmt.Sprintf("Write schema of %v bytes to %v", len(schema), outputFile))
+		fmt.Printf("Write schema of %v bytes to %v \n", len(schema), outputFile)
 		if err := writeContentToFile(schema, outputFile); err != nil {
 			fmt.Println("Could not write schema to disk: ", err)
 		}
@@ -58,10 +74,7 @@ func SchemaGenerateAndMerge(config SchemaConfig, outputFile string, merge bool) 
 	return nil
 }
 
-func SchemaAsString(config SchemaConfig) (string, error) {
-	return "", nil
-}
-
+//nolint:gocognit,gocyclo
 func SchemaGet(
 	config SchemaConfig,
 ) string {
@@ -71,9 +84,9 @@ func SchemaGet(
 	boilerModels := GetBoilerModels(config.ModelDirectory)
 	models := boilerModelsToModels(boilerModels)
 
-	fullDirectives := []string{}
-	for _, defaultDirective := range config.Directives {
-		fullDirectives = append(fullDirectives, "@"+defaultDirective)
+	fullDirectives := make([]string, len(config.Directives))
+	for i, defaultDirective := range config.Directives {
+		fullDirectives[i] = "@" + defaultDirective
 		s.WriteString(fmt.Sprintf("directive @%v on FIELD_DEFINITION", defaultDirective))
 		s.WriteString(lineBreak)
 	}
@@ -88,7 +101,6 @@ func SchemaGet(
 	// 	organization: Organization!
 	// }
 	for _, model := range models {
-
 		s.WriteString("type " + model.Name + " {")
 		s.WriteString(lineBreak)
 		for _, field := range model.Fields {
@@ -102,7 +114,6 @@ func SchemaGet(
 				s.WriteString(indent + field.Name + ": " + field.FullType)
 				s.WriteString(lineBreak)
 			}
-
 		}
 		s.WriteString("}")
 		s.WriteString(lineBreak)
@@ -115,7 +126,6 @@ func SchemaGet(
 
 	// generate filter structs per model
 	for _, model := range models {
-
 		// Ignore some specified input fields
 
 		// Generate a type safe grapql filter
@@ -194,24 +204,25 @@ func SchemaGet(
 
 		// lists
 		modelPluralName := pluralizer.Plural(model.Name)
-		s.WriteString(indent)
-		var paginiationParameter string
+		var paginationParameter string
 		if config.Pagination == "offset" {
-			paginiationParameter = ", pagination: " + model.Name + "Pagination"
+			paginationParameter = ", pagination: " + model.Name + "Pagination"
 		}
-		s.WriteString(strcase.ToLowerCamel(modelPluralName) + "(filter: " + model.Name + "Filter" + paginiationParameter + ")")
+
+		s.WriteString(indent)
+		s.WriteString(strcase.ToLowerCamel(modelPluralName) + "(filter: " + model.Name + "Filter" +
+			paginationParameter + ")")
 		s.WriteString(": ")
 		s.WriteString("[" + model.Name + "!]!")
 		s.WriteString(joinedDirectives)
 		s.WriteString(lineBreak)
-
 	}
 	s.WriteString("}")
 	s.WriteString(lineBreak)
 	s.WriteString(lineBreak)
 
 	// Generate input and payloads for mutatations
-	if config.Mutations {
+	if config.GenerateMutations { //nolint:nestif
 		for _, model := range models {
 			filteredFields := fieldsWithout(model.Fields, config.SkipInputFields)
 
@@ -229,7 +240,10 @@ func SchemaGet(
 					continue
 				}
 				// not possible yet in input
-				if field.BoilerField.IsRelation && field.BoilerField.IsArray {
+				// TODO: make this possible for one-to-one structs?
+				// only for foreign keys inside model itself
+				if field.BoilerField.IsRelation && field.BoilerField.IsArray ||
+					field.BoilerField.IsRelation && !strings.HasSuffix(field.BoilerField.Name, "ID") {
 					continue
 				}
 				s.WriteString(indent + field.Name + ": " + field.FullType)
@@ -253,7 +267,9 @@ func SchemaGet(
 				}
 				// not possible yet in input
 				// TODO: make this possible for one-to-one structs?
-				if field.BoilerField.IsRelation && field.BoilerField.IsArray {
+				// only for foreign keys inside model itself
+				if field.BoilerField.IsRelation && field.BoilerField.IsArray ||
+					field.BoilerField.IsRelation && !strings.HasSuffix(field.BoilerField.Name, "ID") {
 					continue
 				}
 				s.WriteString(indent + field.Name + ": " + field.FullTypeOptional)
@@ -263,7 +279,7 @@ func SchemaGet(
 			s.WriteString(lineBreak)
 			s.WriteString(lineBreak)
 
-			if config.BatchCreate {
+			if config.GenerateBatchCreate {
 				s.WriteString("input " + modelPluralName + "CreateInput {")
 				s.WriteString(lineBreak)
 				s.WriteString(indent + strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "CreateInput!]!")
@@ -308,7 +324,7 @@ func SchemaGet(
 			// type UsersPayload {
 			// 	ids: [ID!]!
 			// }
-			if config.BatchCreate {
+			if config.GenerateBatchCreate {
 				s.WriteString("type " + modelPluralName + "Payload {")
 				s.WriteString(lineBreak)
 				s.WriteString(indent + strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "!]!")
@@ -321,7 +337,7 @@ func SchemaGet(
 			// type UsersDeletePayload {
 			// 	ids: [ID!]!
 			// }
-			if config.BatchDelete {
+			if config.GenerateBatchDelete {
 				s.WriteString("type " + modelPluralName + "DeletePayload {")
 				s.WriteString(lineBreak)
 				s.WriteString(indent + "ids: [ID!]!")
@@ -333,7 +349,7 @@ func SchemaGet(
 			// type UsersUpdatePayload {
 			// 	ok: Boolean!
 			// }
-			if config.BatchUpdate {
+			if config.GenerateBatchUpdate {
 				s.WriteString("type " + modelPluralName + "UpdatePayload {")
 				s.WriteString(lineBreak)
 				s.WriteString(indent + "ok: Boolean!")
@@ -342,14 +358,12 @@ func SchemaGet(
 				s.WriteString(lineBreak)
 				s.WriteString(lineBreak)
 			}
-
 		}
 
 		// Generate mutation queries
 		s.WriteString("type Mutation {")
 		s.WriteString(lineBreak)
 		for _, model := range models {
-
 			modelPluralName := pluralizer.Plural(model.Name)
 
 			// create single
@@ -363,7 +377,7 @@ func SchemaGet(
 
 			// create multiple
 			// e.g createUsers(input: [UsersInput!]!): UsersPayload!
-			if config.BatchCreate {
+			if config.GenerateBatchCreate {
 				s.WriteString(indent)
 				s.WriteString("create" + modelPluralName + "(input: " + modelPluralName + "CreateInput!)")
 				s.WriteString(": ")
@@ -383,9 +397,10 @@ func SchemaGet(
 
 			// update multiple (batch update)
 			// e.g updateUsers(filter: UserFilter, input: UsersInput!): UsersPayload!
-			if config.BatchUpdate {
+			if config.GenerateBatchUpdate {
 				s.WriteString(indent)
-				s.WriteString("update" + modelPluralName + "(filter: " + model.Name + "Filter, input: " + model.Name + "UpdateInput!)")
+				s.WriteString("update" + modelPluralName + "(filter: " + model.Name + "Filter, input: " +
+					model.Name + "UpdateInput!)")
 				s.WriteString(": ")
 				s.WriteString(modelPluralName + "UpdatePayload!")
 				s.WriteString(joinedDirectives)
@@ -403,7 +418,7 @@ func SchemaGet(
 
 			// delete multiple
 			// e.g deleteUsers(filter: UserFilter, input: [UsersInput!]!): UsersPayload!
-			if config.BatchDelete {
+			if config.GenerateBatchDelete {
 				s.WriteString(indent)
 				s.WriteString("delete" + modelPluralName + "(filter: " + model.Name + "Filter)")
 				s.WriteString(": ")
@@ -411,7 +426,6 @@ func SchemaGet(
 				s.WriteString(joinedDirectives)
 				s.WriteString(lineBreak)
 			}
-
 		}
 		s.WriteString("}")
 		s.WriteString(lineBreak)
@@ -431,7 +445,7 @@ func getFullType(fieldType string, isArray bool, isRequired bool) string {
 	if isRequired {
 		// Use an exclamation point to indicate a type cannot be nullable,
 		// so String! is a non-nullable string.
-		gType = gType + "!"
+		gType += "!"
 	}
 	return gType
 }
@@ -456,13 +470,19 @@ func boilerFieldsToFields(boilerFields []*BoilerField) []*SchemaField {
 }
 
 func boilerFieldToField(boilerField *BoilerField) *SchemaField {
-	relationName := strcase.ToLowerCamel(boilerField.RelationshipName)
-	relationType := boilerField.Relationship.Name
-	relationFullType := getFullType(
-		relationType,
-		boilerField.IsArray,
-		boilerField.IsRequired,
-	)
+	var relationName string
+	var relationType string
+	var relationFullType string
+	if boilerField.Relationship != nil {
+		relationName = strcase.ToLowerCamel(boilerField.RelationshipName)
+		relationType = boilerField.Relationship.Name
+
+		relationFullType = getFullType(
+			relationType,
+			boilerField.IsArray,
+			boilerField.IsRequired,
+		)
+	}
 
 	t := toGraphQLType(boilerField.Name, boilerField.Type)
 	return &SchemaField{
@@ -490,7 +510,7 @@ func toGraphQLName(fieldName string) string {
 		graphqlName = "url"
 	}
 
-	// e.g. OrganizationID
+	// e.g. OrganizationID, TODO: more robust solution?
 	graphqlName = strings.Replace(graphqlName, "ID", "Id", -1)
 	graphqlName = strings.Replace(graphqlName, "URL", "Url", -1)
 
@@ -530,7 +550,7 @@ func toGraphQLType(fieldName, boilerType string) string {
 }
 
 func fieldsWithout(fields []*SchemaField, skipFieldNames []string) []*SchemaField {
-	filteredFields := []*SchemaField{}
+	var filteredFields []*SchemaField
 	for _, field := range fields {
 		if !sliceContains(skipFieldNames, field.Name) {
 			filteredFields = append(filteredFields, field)
@@ -549,8 +569,8 @@ func mergeContentInFile(content, outputFile string) error {
 		getFilenameExtension(outputFile)
 
 	// remove previous files if exist
-	os.Remove(baseFile)
-	os.Remove(newOutputFile)
+	_ = os.Remove(baseFile)
+	_ = os.Remove(newOutputFile)
 
 	if err := writeContentToFile(content, newOutputFile); err != nil {
 		return fmt.Errorf("could not write schema to disk: %v", err)
@@ -581,15 +601,15 @@ func mergeContentInFile(content, outputFile string) error {
 	if err != nil {
 		fmt.Println("Executing command failed: ", name, strings.Join(args, " "))
 		// remove base file
-		os.Remove(baseFile)
-		return fmt.Errorf("Merging failed or had conflicts %v: %v", err, out)
+		_ = os.Remove(baseFile)
+		return fmt.Errorf("merging failed or had conflicts %v: %v", err, out)
 	}
 
 	fmt.Println("Merging done without conflicts: ", out)
 
 	// remove files
-	os.Remove(baseFile)
-	os.Remove(newOutputFile)
+	_ = os.Remove(baseFile)
+	_ = os.Remove(newOutputFile)
 	return nil
 }
 
@@ -607,7 +627,7 @@ func formatFile(filename string) error {
 
 	out, err := exec.Command(name, args...).Output()
 	if err != nil {
-		return fmt.Errorf("Executing command: '%v %v' failed with: %v, output: %v", name, strings.Join(args, " "), err, out)
+		return fmt.Errorf("executing command: '%v %v' failed with: %v, output: %v", name, strings.Join(args, " "), err, out)
 	}
 	// fmt.Println(fmt.Sprintf("Formatting of %v done", filename))
 	return nil

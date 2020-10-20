@@ -1,4 +1,4 @@
-package gqlgen_sqlboiler
+package gbgen
 
 import (
 	"fmt"
@@ -129,7 +129,8 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 	})
 }
 
-func (m *ResolverPlugin) generatePerSchema(data *codegen.Data, models []*Model, boilerModels []*BoilerModel) error {
+//nolint:gocyclo
+func (m *ResolverPlugin) generatePerSchema(data *codegen.Data, _ []*Model, _ []*BoilerModel) error {
 	rewriter, err := NewRewriter(data.Config.Resolver.ImportPath())
 	if err != nil {
 		return err
@@ -239,8 +240,10 @@ type File struct {
 func (f *File) Imports() string {
 	for _, imp := range f.imports {
 		if imp.Alias == "" {
+			//nolint:errcheck //TODO: handle errors
 			_, _ = templates.CurrentImports.Reserve(imp.ImportPath)
 		} else {
+			//nolint:errcheck //TODO: handle errors
 			_, _ = templates.CurrentImports.Reserve(imp.ImportPath, imp.Alias)
 		}
 	}
@@ -276,7 +279,7 @@ func gqlToResolverName(base string, gqlname string) string {
 	return filepath.Join(base, strings.TrimSuffix(gqlname, ext)+".resolvers.go")
 }
 
-func enhanceResolver(r *Resolver, models []*Model) {
+func enhanceResolver(r *Resolver, models []*Model) { //nolint:gocyclo
 	nameOfResolver := r.Field.GoFieldName
 
 	// get model names + model convert information
@@ -319,31 +322,34 @@ func enhanceResolver(r *Resolver, models []*Model) {
 		r.PublicErrorKey += "One"
 	}
 	r.PublicErrorKey += model.Name
-	if r.IsSingle {
+
+	switch {
+	case r.IsSingle:
 		r.PublicErrorKey += "Single"
 		r.PublicErrorMessage = "could not get " + lmName
-	} else if r.IsList {
+	case r.IsList:
 		r.PublicErrorKey += "List"
 		r.PublicErrorMessage = "could not list " + lmpName
-	} else if r.IsCreate {
+	case r.IsCreate:
 		r.PublicErrorKey += "Create"
 		r.PublicErrorMessage = "could not create " + lmName
-	} else if r.IsUpdate {
+	case r.IsUpdate:
 		r.PublicErrorKey += "Update"
 		r.PublicErrorMessage = "could not update " + lmName
-	} else if r.IsDelete {
+	case r.IsDelete:
 		r.PublicErrorKey += "Delete"
 		r.PublicErrorMessage = "could not delete " + lmName
-	} else if r.IsBatchCreate {
+	case r.IsBatchCreate:
 		r.PublicErrorKey += "BatchCreate"
 		r.PublicErrorMessage = "could not create " + lmpName
-	} else if r.IsBatchUpdate {
+	case r.IsBatchUpdate:
 		r.PublicErrorKey += "BatchUpdate"
 		r.PublicErrorMessage = "could not update " + lmpName
-	} else if r.IsBatchDelete {
+	case r.IsBatchDelete:
 		r.PublicErrorKey += "BatchDelete"
 		r.PublicErrorMessage = "could not delete " + lmpName
 	}
+
 	r.PublicErrorKey += "Error"
 }
 
