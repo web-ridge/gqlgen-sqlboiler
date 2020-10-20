@@ -28,22 +28,22 @@
 {{ reserveImport  $.Frontend.Directory }}
 
 {{ range $enum := .Enums }}
-	func NullDotStringToPointer{{ .Name|go }}(v null.String) *{{ $.Frontend.PackageName }}.{{ .Name|go }} {
-		s := StringTo{{ .Name|go }}(v.String)
+	func NullDotStringToPointer{{ .Name }}(v null.String) *{{ $.Frontend.PackageName }}.{{ .Name }} {
+		s := StringTo{{ .Name }}(v.String)
 		if s == "" {
 			return nil
 		}
 		return &s
 	}
 
-	func NullDotStringTo{{ .Name|go }}(v null.String) {{ $.Frontend.PackageName }}.{{ .Name|go }} {
+	func NullDotStringTo{{ .Name }}(v null.String) {{ $.Frontend.PackageName }}.{{ .Name }} {
 		if !v.Valid {
 			return ""
 		}
-		return StringTo{{ .Name|go }}(v.String)
+		return StringTo{{ .Name }}(v.String)
 	}
 
-	func StringTo{{ .Name|go }}(v string) {{ $.Frontend.PackageName }}.{{ .Name|go }} {
+	func StringTo{{ .Name }}(v string) {{ $.Frontend.PackageName }}.{{ .Name }} {
 		{{- range $value := .Values }}
 			if v == "{{ .NameLower }}" {
 				return {{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }}
@@ -52,34 +52,34 @@
 		return ""
 	}
 
-	func StringToPointer{{ .Name|go }}(v string) *{{ $.Frontend.PackageName }}.{{ .Name|go }} {
-		s := StringTo{{ .Name|go }}(v)
+	func StringToPointer{{ .Name }}(v string) *{{ $.Frontend.PackageName }}.{{ .Name }} {
+		s := StringTo{{ .Name }}(v)
 		if s == "" {
 			return nil
 		}
 		return &s
 	}
 
-	func Pointer{{ .Name|go }}ToString(v *{{ $.Frontend.PackageName }}.{{ .Name|go }}) string {
+	func Pointer{{ .Name }}ToString(v *{{ $.Frontend.PackageName }}.{{ .Name }}) string {
 		if v == nil {
 			return ""
 		}
-		return {{ .Name|go }}ToString(*v)
+		return {{ .Name }}ToString(*v)
 	}
 
-	func Pointer{{ .Name|go }}ToNullDotString(v *{{ $.Frontend.PackageName }}.{{ .Name|go }}) null.String {
+	func Pointer{{ .Name }}ToNullDotString(v *{{ $.Frontend.PackageName }}.{{ .Name }}) null.String {
 		if v == nil {
 			return null.NewString("", false)
 		}
-		return {{ .Name|go }}ToNullDotString(*v)
+		return {{ .Name }}ToNullDotString(*v)
 	}
 
-	func {{ .Name|go }}ToNullDotString(v {{ $.Frontend.PackageName }}.{{ .Name|go }}) null.String {
-		s := {{ .Name|go }}ToString(v)
+	func {{ .Name }}ToNullDotString(v {{ $.Frontend.PackageName }}.{{ .Name }}) null.String {
+		s := {{ .Name }}ToString(v)
 		return null.NewString(s, s != "")
 	}
 
-	func {{ .Name|go }}ToString(v {{ $.Frontend.PackageName }}.{{ .Name|go }}) string {
+	func {{ .Name }}ToString(v {{ $.Frontend.PackageName }}.{{ .Name }}) string {
 		{{- range $value := .Values }}
 			if v == {{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }} {
 				return "{{ .NameLower }}"
@@ -94,90 +94,101 @@
 	{{- if .IsNormal  -}}
 
 		{{- if .HasStringPrimaryID }}
-			func {{ .Name|go }}WithStringID(id string) *{{ $.Frontend.PackageName }}.{{ .Name|go }} {
-				return &{{ $.Frontend.PackageName }}.{{ .Name|go }}{
+			func {{ .Name }}WithStringID(id string) *{{ $.Frontend.PackageName }}.{{ .Name }} {
+				return &{{ $.Frontend.PackageName }}.{{ .Name }}{
 					ID: id,
 				}
 			}
 
-			func {{ .Name|go }}WithNullDotStringID(id null.String) *{{ $.Frontend.PackageName }}.{{ .Name|go }} {
-				return {{ .Name|go }}WithStringID(id.String)
+			func {{ .Name }}WithNullDotStringID(id null.String) *{{ $.Frontend.PackageName }}.{{ .Name }} {
+				return {{ .Name }}WithStringID(id.String)
 			}
 		{{- else }}
-			func {{ .Name|go }}WithUintID(id uint) *{{ $.Frontend.PackageName }}.{{ .Name|go }} {
-				return &{{ $.Frontend.PackageName }}.{{ .Name|go }}{
-					ID: {{ $model.Name|go }}IDToGraphQL(id),
+			func {{ .Name }}WithUintID(id uint) *{{ $.Frontend.PackageName }}.{{ .Name }} {
+				return &{{ $.Frontend.PackageName }}.{{ .Name }}{
+					ID: {{ $model.Name }}IDToGraphQL(id),
 				}
 			}
 
-			func {{ .Name|go }}WithIntID(id int) *{{ $.Frontend.PackageName }}.{{ .Name|go }} {
-				return {{ .Name|go }}WithUintID(uint(id))
+			func {{ .Name }}WithIntID(id int) *{{ $.Frontend.PackageName }}.{{ .Name }} {
+				return {{ .Name }}WithUintID(uint(id))
 			}
 
-			func {{ .Name|go }}WithNullDotUintID(id null.Uint) *{{ $.Frontend.PackageName }}.{{ .Name|go }} {
-				return {{ .Name|go }}WithUintID(id.Uint)
+			func {{ .Name }}WithNullDotUintID(id null.Uint) *{{ $.Frontend.PackageName }}.{{ .Name }} {
+				return {{ .Name }}WithUintID(id.Uint)
 			}
 
-			func {{ .Name|go }}WithNullDotIntID(id null.Int) *{{ $.Frontend.PackageName }}.{{ .Name|go }} {
-				return {{ .Name|go }}WithUintID(uint(id.Int))
+			func {{ .Name }}WithNullDotIntID(id null.Int) *{{ $.Frontend.PackageName }}.{{ .Name }} {
+				return {{ .Name }}WithUintID(uint(id.Int))
 			}
 			
 		{{- end }}
 
-		func {{ .PluralName|go }}ToGraphQL(am []*models.{{ .Name|go }})( []*{{ $.Frontend.PackageName }}.{{ .Name|go }}) {
-			ar := make([]*{{ $.Frontend.PackageName }}.{{ .Name|go }}, len(am))
+		func {{ .PluralName }}ToGraphQL(am []*models.{{ .Name }})( []*{{ $.Frontend.PackageName }}.{{ .Name }}) {
+			ar := make([]*{{ $.Frontend.PackageName }}.{{ .Name }}, len(am))
 			for i,m := range am {
-				ar[i] = {{ .Name|go }}ToGraphQL(m)
+				ar[i] = {{ .Name }}ToGraphQL(m)
 			}
 			return ar
 		}
 
 		{{ range $field := .Fields }}
 			{{- if $field.IsPrimaryNumberID -}}
-				func {{ $model.Name|go }}IDToGraphQL(v uint) string {
-					return boilergql.IDToGraphQL(v, models.TableNames.{{ $model.Name|go }})
+				func {{ $model.Name }}IDToGraphQL(v uint) string {
+					return boilergql.IDToGraphQL(v, models.TableNames.{{ $model.BoilerModel.TableName }})
 				}
 			{{- end -}}
 		{{- end }}
 
 
-	func {{ .Name|go }}ToGraphQL(m *models.{{ .BoilerModel.Name|go }})( *{{ $.Frontend.PackageName }}.{{ .Name|go }}) {
+	func {{ .Name }}ToGraphQL(m *models.{{ .BoilerModel.Name }})( *{{ $.Frontend.PackageName }}.{{ .Name }}) {
 		if m == nil {
 			return nil
 		}
 
-		r := &{{ $.Frontend.PackageName }}.{{ .Name|go }}{
-			{{ range $field := .Fields }}
+		r := &{{ $.Frontend.PackageName }}.{{ .Name }}{
+			{{ range $field := .Fields -}}
 				{{- with .Description }}
 					{{.|prefixLines "// "}}
 				{{- end}}
-				{{- if $field.IsNumberID -}}
-					{{ $field.Name|go }}: {{ $field.ConvertConfig.ToGraphQL }},
+				{{- if $field.ConvertConfig.IsCustom -}}
+					{{- if $field.IsPrimaryNumberID -}}
+						{{- $field.Name }}: {{ $field.ConvertConfig.ToGraphQL }},
+					{{- else if and $field.IsNumberID $field.BoilerField.IsRelation -}}
+						{{- $field.Name }}: {{ $field.ConvertConfig.ToGraphQL }},
+					{{- else if $field.IsRelation -}}
+					{{- else -}}
+						{{- $field.Name }}: {{ $field.ConvertConfig.ToGraphQL }}(m.{{ $field.BoilerField.Name }}),
+					{{- end }}
 				{{- else if $field.IsRelation -}}
-				{{- else if $field.ConvertConfig.IsCustom }}
-					{{ $field.Name|go }}: {{ $field.ConvertConfig.ToGraphQL }}(m.{{ $field.BoilerField.Name|go }}),
-				{{- else }}	
-					{{ $field.Name|go }}: m.{{ $field.BoilerField.Name|go }},
-				{{- end -}}
-			{{- end }}
+				{{- else -}}
+					{{- $field.Name }}: m.{{ $field.BoilerField.Name }},
+				{{- end }}
+			{{ end }}
 		}
 
 		{{ range $field := .Fields }}
 	
 			{{- if $field.IsRelation }}
+
 				{{- if $field.IsPlural }}
-					if m.R != nil && m.R.{{ $field.Name|go }} != nil  {
-						r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.PluralName|go }}ToGraphQL(m.R.{{ $field.Name|go }})
+					if m.R != nil && m.R.{{ $field.Name }} != nil  {
+						r.{{ $field.Name }} = {{ $field.BoilerField.Relationship.PluralName }}ToGraphQL(m.R.{{ $field.Name }})
 					} 
-				{{- else }}	
-				
-				if boilergql.{{ $field.ConvertConfig.BoilerTypeAsText }}IsFilled(m.{{ $field.Name|go }}ID) {
-					if m.R != nil && m.R.{{ $field.Name|go }} != nil  {
-						r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.Name|go }}ToGraphQL(m.R.{{ $field.Name|go }})
-					} else {
-						r.{{ $field.Name|go }} = {{ $field.BoilerField.Relationship.Name|go }}With{{ $field.ConvertConfig.BoilerTypeAsText|go }}ID(m.{{ $field.Name|go }}ID)
-					}
-				}
+				{{- else }}
+					{{- if $field.BoilerField.IsForeignKey }}
+						if boilergql.{{ $field.ConvertConfig.BoilerTypeAsText }}IsFilled(m.{{ $field.Name }}ID) {
+							if m.R != nil && m.R.{{ $field.Name }} != nil  {
+								r.{{ $field.Name }} = {{ $field.BoilerField.Relationship.Name }}ToGraphQL(m.R.{{ $field.Name }})
+							} else {
+								r.{{ $field.Name }} = {{ $field.BoilerField.Relationship.Name }}With{{ $field.ConvertConfig.BoilerTypeAsText }}ID(m.{{ $field.Name }}ID)
+							}
+						}
+					{{- else }}
+						if m.R != nil && m.R.{{ $field.Name }} != nil  {
+							r.{{ $field.Name }} = {{ $field.BoilerField.Relationship.Name }}ToGraphQL(m.R.{{ $field.Name }})
+						}
+					{{- end -}}
 				{{- end -}}
 			{{end -}}
 		{{- end }}
@@ -187,11 +198,11 @@
 
 		{{ range $field := .Fields }}
 			{{- if $field.IsPrimaryNumberID }}
-				func {{ $model.Name|go }}ID(v string) {{ $field.BoilerField.Type }} {
+				func {{ $model.Name }}ID(v string) {{ $field.BoilerField.Type }} {
 					return boilergql.IDToBoiler{{ $field.BoilerField.Type|go }}(v)
 				}
 
-				func {{ $model.Name|go }}IDs(a []string) []{{ $field.BoilerField.Type }} {
+				func {{ $model.Name }}IDs(a []string) []{{ $field.BoilerField.Type }} {
 					return boilergql.IDsToBoiler{{ $field.BoilerField.Type|go }}(a)
 				}
 				

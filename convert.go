@@ -19,22 +19,21 @@ import (
 	pluralize "github.com/web-ridge/go-pluralize"
 )
 
-var pathRegex *regexp.Regexp
-var pluralizer *pluralize.Client
+var (
+	pathRegex  *regexp.Regexp    //nolint:gochecknoglobals
+	pluralizer *pluralize.Client //nolint:gochecknoglobals
+)
 
-func init() {
-	var initError error
+func init() { //nolint:gochecknoinits
 	pluralizer = pluralize.NewClient()
-	pathRegex, initError = regexp.Compile(`src\/(.*)`)
-	if initError != nil {
-		fmt.Println("could not compile the path regex")
-	}
+	pathRegex = regexp.MustCompile(`src/(.*)`)
 }
 
 type ModelBuild struct {
 	Backend             Config
 	Frontend            Config
 	HasStringPrimaryIDs bool
+	PluginConfig        ConvertPluginConfig
 	PackageName         string
 	Interfaces          []*Interface
 	Models              []*Model
@@ -52,10 +51,10 @@ type Preload struct {
 	ColumnSetting ColumnSetting
 }
 
-type Model struct {
+type Model struct { //nolint:maligned
 	Name                  string
 	PluralName            string
-	BoilerModel           BoilerModel
+	BoilerModel           *BoilerModel
 	PrimaryKeyType        string
 	Fields                []*Field
 	IsNormal              bool
@@ -84,8 +83,9 @@ type ColumnSetting struct {
 	IDAvailable           bool
 }
 
-type Field struct {
+type Field struct { //nolint:maligned
 	Name               string
+	JSONName           string
 	PluralName         string
 	Type               string
 	TypeWithoutPointer string
@@ -107,7 +107,6 @@ type Field struct {
 	// Some stuff
 	Description  string
 	OriginalType types.Type
-	Tag          string
 }
 
 type Enum struct {
@@ -123,20 +122,31 @@ type EnumValue struct {
 	NameLower   string
 }
 
-func NewConvertPlugin(output, backend, frontend Config) plugin.Plugin {
-	return &ConvertPlugin{Output: output, Backend: backend, Frontend: frontend, rootImportPath: getRootImportPath()}
+func NewConvertPlugin(output, backend, frontend Config, pluginConfig ConvertPluginConfig) plugin.Plugin {
+	return &ConvertPlugin{
+		Output:         output,
+		Backend:        backend,
+		Frontend:       frontend,
+		PluginConfig:   pluginConfig,
+		rootImportPath: getRootImportPath(),
+	}
 }
 
 type ConvertPlugin struct {
 	Output         Config
 	Backend        Config
 	Frontend       Config
+	PluginConfig   ConvertPluginConfig
 	rootImportPath string
 }
 
 type Config struct {
 	Directory   string
 	PackageName string
+}
+
+type ConvertPluginConfig struct {
+	UseReflectWorkaroundForSubModelFilteringInPostgresIssue25 bool
 }
 
 var _ plugin.ConfigMutator = &ConvertPlugin{}
@@ -150,7 +160,6 @@ func copyConfig(cfg config.Config) *config.Config {
 }
 
 func GetModelsWithInformation(enums []*Enum, cfg *config.Config, boilerModels []*BoilerModel) []*Model {
-
 	// get models based on the schema and sqlboiler structs
 	models := getModelsFromSchema(cfg.Schema, boilerModels)
 
@@ -179,6 +188,7 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 			Directory:   path.Join(m.rootImportPath, m.Frontend.Directory),
 			PackageName: m.Frontend.PackageName,
 		},
+		PluginConfig: m.PluginConfig,
 	}
 
 	cfg := copyConfig(*originalCfg)
@@ -264,7 +274,7 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 
 func getTemplate(filename string) string {
 	// load path relative to calling source file
-	_, callerFile, _, _ := runtime.Caller(1)
+	_, callerFile, _, _ := runtime.Caller(1) //nolint:dogsled
 	rootDir := filepath.Dir(callerFile)
 	content, err := ioutil.ReadFile(path.Join(rootDir, filename))
 	if err != nil {
@@ -273,6 +283,7 @@ func getTemplate(filename string) string {
 	}
 	return string(content)
 }
+
 func HasStringPrimaryIDsInModels(models []*Model) bool {
 	for _, model := range models {
 		if model.HasStringPrimaryID {
@@ -283,7 +294,8 @@ func HasStringPrimaryIDsInModels(models []*Model) bool {
 }
 
 // getFieldType check's if user has defined a
-func getFieldType(binder *config.Binder, schema *ast.Schema, cfg *config.Config, field *ast.FieldDefinition) (types.Type, error) {
+func getFieldType(binder *config.Binder, schema *ast.Schema, cfg *config.Config, field *ast.FieldDefinition) (
+	types.Type, error) {
 	var typ types.Type
 	var err error
 
@@ -335,21 +347,20 @@ func getFieldType(binder *config.Binder, schema *ast.Schema, cfg *config.Config,
 	return typ, err
 }
 
-func getPlularBoilerRelationShipName(modelName string) string {
-	// sqlboiler adds Slice when multiple, we don't want that
-	// since our converts are named plular of model and not Slice
-	// e.g. UsersToGraphQL and not UserSliceToGraphQL
-	modelName = strings.TrimSuffix(modelName, "Slice")
-	return pluralizer.Plural(modelName)
+func getGraphqlFieldName(cfg *config.Config, modelName string, field *ast.FieldDefinition) string {
+	name := field.Name
+	if nameOveride := cfg.Models[modelName].Fields[field.Name].FieldName; nameOveride != "" {
+		// TODO: map overrides to sqlboiler the other way around?
+		name = nameOveride
+	}
+	return name
 }
 
 func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Config, models []*Model) {
-
 	binder := cfg.NewBinder()
 
 	// Generate the basic of the fields
 	for _, m := range models {
-
 		// Let's convert the pure ast fields to something usable for our template
 		for _, field := range m.PureFields {
 			fieldDef := schema.Types[field.Type.Name()]
@@ -359,16 +370,12 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 			if err != nil {
 				fmt.Println("Could not get field type from graphql schema: ", err)
 			}
-
-			name := field.Name
-			if nameOveride := cfg.Models[m.Name].Fields[field.Name].FieldName; nameOveride != "" {
-				// TODO: map overrides to sqlboiler the other way around?
-				name = nameOveride
-			}
+			jsonName := getGraphqlFieldName(cfg, m.Name, field)
+			name := getGoFieldName(jsonName)
 
 			// just some (old) Relay clutter which is not needed anymore + we won't do anything with it
 			// in our database converts.
-			if name == "clientMutationId" {
+			if strings.EqualFold(name, "clientMutationId") {
 				continue
 			}
 
@@ -378,20 +385,17 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 				typ = types.NewPointer(typ)
 			}
 
-			// get golang friendly fieldName because we want to check if boiler name is available
-			golangName := getGoFieldName(name)
-
 			// generate some booleans because these checks will be used a lot
 			isRelation := fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject
 
 			shortType := getShortType(typ.String())
 
-			isPrimaryID := golangName == "ID"
+			isPrimaryID := strings.EqualFold(name, "id")
 
 			// get sqlboiler information of the field
-			boilerField := findBoilerFieldOrForeignKey(m.BoilerModel.Fields, golangName, isRelation)
+			boilerField := findBoilerFieldOrForeignKey(m.BoilerModel.Fields, name, isRelation)
 			isString := strings.Contains(strings.ToLower(boilerField.Type), "string")
-			isNumberID := strings.Contains(golangName, "ID") && !isString
+			isNumberID := strings.HasSuffix(name, "ID") && !isString
 			isPrimaryNumberID := isPrimaryID && !isString
 
 			isPrimaryStringID := isPrimaryID && isString
@@ -407,28 +411,30 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 			// log some warnings when fields could not be converted
 			if boilerField.Type == "" {
 				// TODO: add filter + where here
-				if m.IsPayload {
-					// ignore
-				} else if pluralizer.IsPlural(name) {
-					// ignore
-				} else if (m.IsFilter || m.IsWhere) && (name == "and" || name == "or" || name == "search" ||
-					name == "where") {
-					// ignore
-				} else {
-					fmt.Println("[WARN] boiler type not available for ", name)
+				switch {
+				case m.IsPayload:
+				case pluralizer.IsPlural(name):
+				case (m.IsFilter || m.IsWhere) && (strings.EqualFold(name, "and") ||
+					strings.EqualFold(name, "or") ||
+					strings.EqualFold(name, "search") ||
+					strings.EqualFold(name, "where")):
+				default:
+					{
+						fmt.Println("[WARN] boiler type not available for ", name)
+					}
 				}
 			}
 
 			if boilerField.Name == "" {
 				if m.IsPayload || m.IsFilter || m.IsWhere {
 				} else {
-					fmt.Println("[WARN] boiler name not available for ", m.Name+"."+golangName)
+					fmt.Println("[WARN] boiler name not available for ", m.Name+"."+name)
 					continue
 				}
-
 			}
 			field := &Field{
 				Name:               name,
+				JSONName:           jsonName,
 				Type:               shortType,
 				TypeWithoutPointer: strings.Replace(strings.TrimPrefix(shortType, "*"), ".", "Dot", -1),
 				BoilerField:        boilerField,
@@ -436,17 +442,15 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 				IsPrimaryID:        isPrimaryID,
 				IsPrimaryNumberID:  isPrimaryNumberID,
 				IsRelation:         isRelation,
-				IsOr:               name == "or",
-				IsAnd:              name == "and",
+				IsOr:               strings.EqualFold(name, "or"),
+				IsAnd:              strings.EqualFold(name, "and"),
 				IsPlural:           pluralizer.IsPlural(name),
 				PluralName:         pluralizer.Plural(name),
 				OriginalType:       typ,
 				Description:        field.Description,
-				Tag:                `json:"` + field.Name + `"`,
 			}
 			field.ConvertConfig = getConvertConfig(enums, m, field)
 			m.Fields = append(m.Fields, field)
-
 		}
 	}
 
@@ -455,15 +459,25 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 		m.HasUserOrganizationID = findField(m.Fields, "userOrganizationId") != nil
 		m.HasUserID = findField(m.Fields, "userId") != nil
 		for _, f := range m.Fields {
-			f.Relationship = findModel(models, f.BoilerField.Relationship.Name)
+			if f.BoilerField.Relationship != nil {
+				f.Relationship = findModel(models, f.BoilerField.Relationship.Name)
+			}
 		}
 	}
 }
 
-var ignoreTypePrefixes = []string{"graphql_models", "models", "boilergql"}
+func getGoFieldName(name string) string {
+	goFieldName := strcase.ToCamel(name)
+	// in golang Id = ID
+	goFieldName = strings.Replace(goFieldName, "Id", "ID", -1)
+	// in golang Url = URL
+	goFieldName = strings.Replace(goFieldName, "Url", "URL", -1)
+	return goFieldName
+}
+
+var ignoreTypePrefixes = []string{"graphql_models", "models", "boilergql"} //nolint:gochecknoglobals
 
 func getShortType(longType string) string {
-
 	// longType e.g = gitlab.com/decicify/app/backend/graphql_models.FlowWhere
 	splittedBySlash := strings.Split(longType, "/")
 	// gitlab.com, decicify, app, backend, graphql_models.FlowWhere
@@ -506,44 +520,17 @@ func findField(fields []*Field, search string) *Field {
 	}
 	return nil
 }
-func findRelationModelForForeignKeyAndInput(currentModelName string, foreignKey string, models []*Model) *Field {
-	return findRelationModelForForeignKey(getBaseModelFromName(currentModelName), foreignKey, models)
-}
-
-func findRelationModelForForeignKey(currentModelName string, foreignKey string, models []*Model) *Field {
-
-	model := findModel(models, currentModelName)
-	if model != nil {
-		// Use case
-		// we want a foreignKey of ParentID but the foreign key resolves to Calamity
-		// We could know this based on the boilerType information
-		// withou this function the generated convert is like this
-
-		// r.Parent = ParentToGraphQL(m.R.Parent, m)
-		// but it needs to be
-		// r.Parent = CalamityToGraphQL(m.R.Parent, m)
-		foreignKey = strings.TrimSuffix(foreignKey, "Id")
-
-		field := findField(model.Fields, foreignKey)
-		if field != nil {
-			// fmt.Println("Found graph type", field.Name, "for foreign key", foreignKey)
-			return field
-		}
-	}
-
-	return nil
-}
 
 func findBoilerFieldOrForeignKey(fields []*BoilerField, golangGraphQLName string, isRelation bool) BoilerField {
 	// get database friendly struct for this model
 	for _, field := range fields {
 		if isRelation {
 			// If it a relation check to see if a foreign key is available
-			if field.Name == golangGraphQLName+"ID" {
+			if strings.EqualFold(field.Name, golangGraphQLName+"ID") {
 				return *field
 			}
 		}
-		if field.Name == golangGraphQLName {
+		if strings.EqualFold(field.Name, golangGraphQLName) {
 			return *field
 		}
 	}
@@ -555,15 +542,6 @@ func findBoilerFieldOrForeignKey(fields []*BoilerField, golangGraphQLName string
 	// fmt.Println("???", golangGraphQLName)
 
 	return BoilerField{}
-}
-
-func getGoFieldName(name string) string {
-	goFieldName := strcase.ToCamel(name)
-	// in golang Id = ID
-	goFieldName = strings.Replace(goFieldName, "Id", "ID", -1)
-	// in golang Url = URL
-	goFieldName = strings.Replace(goFieldName, "Url", "URL", -1)
-	return goFieldName
 }
 
 func getExtrasFromSchema(schema *ast.Schema) (interfaces []*Interface, enums []*Enum, scalars []string) {
@@ -600,7 +578,6 @@ func getExtrasFromSchema(schema *ast.Schema) (interfaces []*Interface, enums []*
 
 func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (models []*Model) {
 	for _, schemaType := range schema.Types {
-
 		// skip boiler plate from ggqlgen, we only want the models
 		if strings.HasPrefix(schemaType.Name, "_") {
 			continue
@@ -612,7 +589,6 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 		// }
 
 		switch schemaType.Kind {
-
 		case ast.Object, ast.InputObject:
 			{
 				if schemaType == schema.Query ||
@@ -638,13 +614,13 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 				isPayload := strings.HasSuffix(modelName, "Payload") && modelName != "Payload"
 
 				// if no boiler model is found
-				if boilerModel.Name == "" {
+				if boilerModel == nil || boilerModel.Name == "" {
 					if isInput || isWhere || isFilter || isPayload {
 						// silent continue
 						continue
 					}
 
-					fmt.Println(fmt.Sprintf("[WARN] Skip %v because no database model found", modelName))
+					fmt.Printf("[WARN] Skip %v because no database model found\n", modelName)
 					continue
 				}
 
@@ -675,7 +651,7 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 			}
 		}
 	}
-	return
+	return //nolint:nakedret
 }
 
 func getPreloadMapForModel(model *Model) map[string]ColumnSetting {
@@ -687,7 +663,7 @@ func getPreloadMapForModel(model *Model) map[string]ColumnSetting {
 		}
 		// var key string
 		// if field.IsPlural {
-		key := field.Name
+		key := field.JSONName
 		// } else {
 		// 	key = field.PluralName
 		// }
@@ -695,7 +671,7 @@ func getPreloadMapForModel(model *Model) map[string]ColumnSetting {
 		setting := ColumnSetting{
 			Name:                  name,
 			IDAvailable:           !field.IsPlural,
-			RelationshipModelName: field.BoilerField.Relationship.Name,
+			RelationshipModelName: field.BoilerField.Relationship.TableName,
 		}
 
 		preloadMap[key] = setting
@@ -703,10 +679,7 @@ func getPreloadMapForModel(model *Model) map[string]ColumnSetting {
 	return preloadMap
 }
 
-const maximumLevelOfPreloads = 4
-
 func enhanceModelsWithPreloadArray(models []*Model) {
-
 	// first adding basic first level relations
 	for _, model := range models {
 		if !model.IsPreloadable {
@@ -727,35 +700,6 @@ func enhanceModelsWithPreloadArray(models []*Model) {
 			model.PreloadArray[i] = Preload{
 				Key:           k,
 				ColumnSetting: columnSetting,
-			}
-		}
-	}
-}
-
-func enhancePreloadMapWithNestedRelations(
-	fullMap map[string]map[string]ColumnSetting,
-	preloadMapPerModel map[string]map[string]ColumnSetting,
-	modelName string,
-) {
-
-	for key, value := range preloadMapPerModel[modelName] {
-
-		// check if relation exist
-		if value.RelationshipModelName != "" {
-			nestedPreloads, ok := fullMap[value.RelationshipModelName]
-			if ok {
-				for nestedKey, nestedValue := range nestedPreloads {
-
-					newKey := key + `.` + nestedKey
-
-					if strings.Count(newKey, ".") > maximumLevelOfPreloads {
-						continue
-					}
-					fullMap[modelName][newKey] = ColumnSetting{
-						Name:                  value.Name + `+ "." +` + nestedValue.Name,
-						RelationshipModelName: nestedValue.RelationshipModelName,
-					}
-				}
 			}
 		}
 	}
@@ -808,12 +752,12 @@ func findEnum(enums []*Enum, graphType string) *Enum {
 	return nil
 }
 
-func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConfig) {
+func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConfig) { //nolint:nakedret
 	graphType := field.Type
 	boilType := field.BoilerField.Type
 
 	enum := findEnum(enums, field.TypeWithoutPointer)
-	if enum != nil {
+	if enum != nil { //nolint:nestif
 		cc.IsCustom = true
 		cc.ToBoiler = strings.TrimPrefix(
 			getToBoiler(
@@ -826,12 +770,9 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 				getBoilerTypeAsText(boilType),
 				getGraphTypeAsText(graphType),
 			), "boilergql.")
-
 	} else if graphType != boilType {
 		cc.IsCustom = true
-
-		if field.IsPrimaryNumberID || field.IsNumberID {
-
+		if field.IsPrimaryNumberID || field.IsNumberID && field.BoilerField.IsRelation {
 			cc.ToGraphQL = "VALUE"
 			cc.ToBoiler = "VALUE"
 
@@ -860,7 +801,6 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 				if isInt {
 					cc.ToBoiler = fmt.Sprintf("boilergql.NullUintToNullInt(%v)", cc.ToBoiler)
 				}
-
 			} else {
 				cc.ToBoiler = fmt.Sprintf("boilergql.IDToBoiler(%v)", cc.ToBoiler)
 				if isInt {
@@ -868,22 +808,20 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 				}
 			}
 
-			cc.ToGraphQL = strings.Replace(cc.ToGraphQL, "VALUE", "m."+getGoFieldName(field.BoilerField.Name), -1)
-			cc.ToBoiler = strings.Replace(cc.ToBoiler, "VALUE", "m."+getGoFieldName(field.Name), -1)
-
+			cc.ToGraphQL = strings.Replace(cc.ToGraphQL, "VALUE", "m."+field.BoilerField.Name, -1)
+			cc.ToBoiler = strings.Replace(cc.ToBoiler, "VALUE", "m."+field.Name, -1)
 		} else {
 			// Make these go-friendly for the helper/convert.go package
 			cc.ToBoiler = getToBoiler(getBoilerTypeAsText(boilType), getGraphTypeAsText(graphType))
 			cc.ToGraphQL = getToGraphQL(getBoilerTypeAsText(boilType), getGraphTypeAsText(graphType))
 		}
-
 	}
 	// fmt.Println("boilType for", field.Name, ":", boilType)
 
 	cc.GraphTypeAsText = getGraphTypeAsText(graphType)
 	cc.BoilerTypeAsText = getBoilerTypeAsText(boilType)
 
-	return
+	return //nolint:nakedret
 }
 
 func getToBoiler(boilType, graphType string) string {
@@ -895,7 +833,6 @@ func getToGraphQL(boilType, graphType string) string {
 }
 
 func getBoilerTypeAsText(boilType string) string {
-
 	// backward compatible missed Dot
 	if strings.HasPrefix(boilType, "types.") {
 		boilType = strings.TrimPrefix(boilType, "types.")

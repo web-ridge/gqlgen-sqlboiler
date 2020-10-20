@@ -26,9 +26,9 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-var gopaths []string
+var gopaths []string //nolint:gochecknoglobals
 
-func init() {
+func init() { //nolint:gochecknoinits
 	gopaths = filepath.SplitList(build.Default.GOPATH)
 	for i, p := range gopaths {
 		gopaths[i] = filepath.ToSlash(filepath.Join(p, "src"))
@@ -61,7 +61,7 @@ func NameForDir(dir string) string {
 	return SanitizePackageName(filepath.Base(dir))
 }
 
-var invalidPackageNameChar = regexp.MustCompile(`[^\w]`)
+var invalidPackageNameChar = regexp.MustCompile(`[^\w]`) //nolint:gochecknoglobals
 
 func SanitizePackageName(pkg string) string {
 	return invalidPackageNameChar.ReplaceAllLiteralString(filepath.Base(pkg), "_")
@@ -121,7 +121,6 @@ func (r *Rewriter) getFile(filename string) string {
 		}
 
 		r.files[filename] = string(b)
-
 	}
 
 	return r.files[filename]

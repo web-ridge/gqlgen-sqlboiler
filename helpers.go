@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"golang.org/x/mod/modfile"
@@ -18,16 +17,6 @@ func getRootImportPath() string {
 		return ""
 	}
 	return importPath
-}
-
-func getGoImportFromFile(dir string) string {
-	dir = strings.TrimPrefix(dir, "/")
-	importPath, err := rootImportPath()
-	if err != nil {
-		fmt.Printf("error while getting root import path %v", err)
-		return ""
-	}
-	return path.Join(importPath, dir)
 }
 
 func rootImportPath() (string, error) {
@@ -50,13 +39,6 @@ func rootImportPath() (string, error) {
 	}
 
 	return gopathImport(projectPath), nil
-}
-func getProjectPath(dir string) (string, error) {
-	longPath, err := filepath.Abs(dir)
-	if err != nil {
-		return "", fmt.Errorf("error while trying to convert folder to gopath %w", err)
-	}
-	return strings.TrimSuffix(longPath, dir), nil
 }
 
 // getWorkingPath gets the current working directory
@@ -92,7 +74,7 @@ func getModulePath(projectPath string) (string, error) {
 
 	modPath := modfile.ModulePath(file)
 	if modPath == "" {
-		return "", fmt.Errorf("could not determine mod path \n")
+		return "", fmt.Errorf("could not determine mod path")
 	}
 	return modPath, nil
 }
