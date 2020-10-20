@@ -56,7 +56,7 @@ It's really amazing how fast a generated api with these techniques is!
 
 ## Requirements
 
-- Use unsigned ints for foreign keys + ids. Otherwise converts will give compile errors.
+- Use string id's or use **unsigned** ints for foreign keys + ids. Otherwise converts will give compile errors.
   Unsigned ints for id's is allso recommended since it gives you twice as big id's and id's should not be negative anyway ;)
 
 ## Examples
