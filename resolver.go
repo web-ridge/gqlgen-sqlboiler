@@ -103,7 +103,7 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 				Implementation: `panic("not implemented yet")`,
 			}
 			enhanceResolver(resolver, models)
-			if resolver.Model.BoilerModel.Name != "" {
+			if resolver.Model.BoilerModel != nil && resolver.Model.BoilerModel.Name != "" {
 				file.Resolvers = append(file.Resolvers, resolver)
 			} else {
 				fmt.Println("Skipping resolver since no model found: ", resolver.Object.Name, resolver.Field.GoFieldName)

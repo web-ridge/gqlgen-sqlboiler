@@ -63,6 +63,8 @@ type Model struct { //nolint:maligned
 	IsUpdateInput         bool
 	IsNormalInput         bool
 	IsPayload             bool
+	IsConnection          bool
+	IsEdge                bool
 	IsWhere               bool
 	IsFilter              bool
 	IsPreloadable         bool
@@ -608,16 +610,19 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 				// We will try to find a corresponding boiler struct
 				boilerModel := FindBoilerModel(boilerModels, getBaseModelFromName(modelName))
 
-				isInput := strings.HasSuffix(modelName, "Input") && modelName != "Input"
-				isCreateInput := strings.HasSuffix(modelName, "CreateInput") && modelName != "CreateInput"
-				isUpdateInput := strings.HasSuffix(modelName, "UpdateInput") && modelName != "UpdateInput"
-				isFilter := strings.HasSuffix(modelName, "Filter") && modelName != "Filter"
-				isWhere := strings.HasSuffix(modelName, "Where") && modelName != "Where"
-				isPayload := strings.HasSuffix(modelName, "Payload") && modelName != "Payload"
+				isInput := doesEndWith(modelName, "Input")
+				isCreateInput := doesEndWith(modelName, "CreateInput")
+				isUpdateInput := doesEndWith(modelName, "UpdateInput")
+				isFilter := doesEndWith(modelName, "Filter")
+				isWhere := doesEndWith(modelName, "Where")
+				isPayload := doesEndWith(modelName, "Payload")
+				isEdge := doesEndWith(modelName, "Edge")
+				isConnection := doesEndWith(modelName, "Connection")
+				isPageInfo := modelName == "PageInfo"
 
 				// if no boiler model is found
 				if boilerModel == nil || boilerModel.Name == "" {
-					if isInput || isWhere || isFilter || isPayload {
+					if isInput || isWhere || isFilter || isPayload || isEdge || isConnection || isPageInfo {
 						// silent continue
 						continue
 					}
@@ -639,6 +644,8 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 					IsUpdateInput: isUpdateInput,
 					IsCreateInput: isCreateInput,
 					IsNormalInput: isNormalInput,
+					IsConnection:  isConnection,
+					IsEdge:        isEdge,
 					IsPayload:     isPayload,
 					IsNormal:      !isInput && !isWhere && !isFilter && !isPayload,
 					IsPreloadable: !isInput && !isWhere && !isFilter && !isPayload,
@@ -654,6 +661,10 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 		}
 	}
 	return //nolint:nakedret
+}
+
+func doesEndWith(s string, suffix string) bool {
+	return strings.HasSuffix(s, suffix) && s != suffix
 }
 
 func getPreloadMapForModel(model *Model) map[string]ColumnSetting {

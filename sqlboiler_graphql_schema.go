@@ -78,7 +78,7 @@ func SchemaWrite(config SchemaConfig, outputFile string, merge bool) error {
 func SchemaGet(
 	config SchemaConfig,
 ) string {
-	w := SimpleWriter{}
+	w := &SimpleWriter{}
 
 	// Parse models and their fields based on the sqlboiler model directory
 	boilerModels := GetBoilerModels(config.ModelDirectory)
@@ -107,6 +107,32 @@ func SchemaGet(
 		w.tabLine(`startCursor: String`)
 		w.tabLine(`endCursor: String`)
 		w.line(`}`)
+
+		w.enter()
+	}
+
+	// Generate sorting helpers
+	w.line("enum SortDirection { ASC, DESC }")
+	w.enter()
+
+	for _, model := range models {
+		//	enum UserSort { FIRST_NAME, LAST_NAME }
+		w.line("enum " + model.Name + "Sort {")
+		for _, enum := range fieldAsEnumStrings(model.Fields) {
+			w.line(enum)
+		}
+		w.line("}")
+
+		w.enter()
+
+		//	input UserOrdering {
+		//		sort: UserSort!
+		//		direction: SortDirection! = ASC
+		//	}
+		w.line("input " + model.Name + "Ordering {")
+		w.tabLine("sort: " + model.Name + "Sort!")
+		w.tabLine("direction: SortDirection! = ASC")
+		w.line("}")
 
 		w.enter()
 	}
@@ -295,19 +321,17 @@ func SchemaGet(
 			if config.GenerateBatchCreate {
 				w.line("input " + modelPluralName + "CreateInput {")
 
-				w.tabLine(indent + strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "CreateInput!]!")
+				w.tabLine(strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "CreateInput!]!")
 				w.line("}")
 
 				w.enter()
 			}
 
 			// if batchUpdate {
-			// 	s.WriteString("input " + modelPluralName + "UpdateInput {")
-			// 	s.WriteString(lineBreak)
-			// 	s.WriteString(indent + strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "UpdateInput!]!")
-			// 	s.WriteString("}")
-			// 	s.WriteString(lineBreak)
-			// 	s.WriteString(lineBreak)
+			// 	w.line("input " + modelPluralName + "UpdateInput {")
+			// 	w.tabLine(strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "UpdateInput!]!")
+			// 	w.line("}")
+			// 	w.enter()
 			// }
 
 			// type UserPayload {
@@ -410,6 +434,16 @@ func SchemaGet(
 	}
 
 	return w.s.String()
+}
+
+func fieldAsEnumStrings(fields []*SchemaField) []string {
+	var enums []string
+	for _, field := range fields {
+		if field.BoilerField != nil {
+			enums = append(enums, strcase.ToScreamingSnake(field.Name))
+		}
+	}
+	return enums
 }
 
 func getFullType(fieldType string, isArray bool, isRequired bool) string {
@@ -635,15 +669,15 @@ type SimpleWriter struct {
 	s strings.Builder
 }
 
-func (sw SimpleWriter) line(v string) {
+func (sw *SimpleWriter) line(v string) {
 	sw.s.WriteString(v + lineBreak)
 }
 
-func (sw SimpleWriter) enter() {
+func (sw *SimpleWriter) enter() {
 	sw.s.WriteString(lineBreak)
 }
 
-func (sw SimpleWriter) tabLine(v string) {
+func (sw *SimpleWriter) tabLine(v string) {
 	sw.s.WriteString(indent + v + lineBreak)
 }
 
