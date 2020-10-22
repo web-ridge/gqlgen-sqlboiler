@@ -43,9 +43,9 @@ type SchemaModel struct {
 
 type SchemaField struct {
 	Name             string
+	Type             string // String, ID, Integer
 	RelationName     string // posts
 	RelationType     string // Page, User, Post
-	Type             string // String, ID, Integer
 	FullType         string // e.g String! or if array [String!]
 	RelationFullType string // [Posts!]
 	FullTypeOptional string // e.g. String or if array [String]
@@ -78,7 +78,7 @@ func SchemaWrite(config SchemaConfig, outputFile string, merge bool) error {
 func SchemaGet(
 	config SchemaConfig,
 ) string {
-	var s strings.Builder
+	w := SimpleWriter{}
 
 	// Parse models and their fields based on the sqlboiler model directory
 	boilerModels := GetBoilerModels(config.ModelDirectory)
@@ -87,12 +87,30 @@ func SchemaGet(
 	fullDirectives := make([]string, len(config.Directives))
 	for i, defaultDirective := range config.Directives {
 		fullDirectives[i] = "@" + defaultDirective
-		s.WriteString(fmt.Sprintf("directive @%v on FIELD_DEFINITION", defaultDirective))
-		s.WriteString(lineBreak)
+		w.line(fmt.Sprintf("directive @%v on FIELD_DEFINITION", defaultDirective))
 	}
-	s.WriteString(lineBreak)
+	w.enter()
 
 	joinedDirectives := strings.Join(fullDirectives, " ")
+
+	useConnections := config.Pagination == Paginations.Connections
+	if useConnections {
+		w.line(`interface Node {`)
+		w.tabLine(`id: ID!`)
+		w.line(`}`)
+
+		w.enter()
+
+		w.line(`type PageInfo {`)
+		w.tabLine(`hasNextPage: Boolean!`)
+		w.tabLine(`hasPreviousPage: Boolean!`)
+		w.tabLine(`startCursor: String`)
+		w.tabLine(`endCursor: String`)
+		w.line(`}`)
+
+		w.enter()
+	}
+
 	// Create basic structs e.g.
 	// type User {
 	// 	firstName: String!
@@ -101,33 +119,62 @@ func SchemaGet(
 	// 	organization: Organization!
 	// }
 	for _, model := range models {
-		s.WriteString("type " + model.Name + " {")
-		s.WriteString(lineBreak)
+		if useConnections {
+			w.line("type " + model.Name + " implements Node {")
+		} else {
+			w.line("type " + model.Name + " {")
+		}
+
 		for _, field := range model.Fields {
 			// e.g we have foreign key from user to organization
 			// organizationID is clutter in your scheme
 			// you only want Organization and OrganizationID should be skipped
 			if field.BoilerField.IsRelation {
-				s.WriteString(indent + field.RelationName + ": " + field.RelationFullType)
-				s.WriteString(lineBreak)
+				w.tabLine(field.RelationName + ": " + field.RelationFullType)
 			} else {
-				s.WriteString(indent + field.Name + ": " + field.FullType)
-				s.WriteString(lineBreak)
+				w.tabLine(field.Name + ": " + field.FullType)
 			}
 		}
-		s.WriteString("}")
-		s.WriteString(lineBreak)
-		s.WriteString(lineBreak)
+		w.line("}")
+
+		w.enter()
+	}
+
+	if useConnections {
+		//type UserEdge {
+		//	cursor: String!
+		//	node: User
+		//}
+		for _, model := range models {
+			w.line("type " + model.Name + "Edge {")
+
+			w.tabLine(`cursor: String!`)
+			w.tabLine(`node: ` + model.Name)
+			w.line("}")
+
+			w.enter()
+		}
+
+		//type UserConnection {
+		//	edges: [UserEdge]
+		//	pageInfo: PageInfo!
+		//}
+		for _, model := range models {
+			w.line("type " + model.Name + "Connection {")
+			w.tabLine(`edges: [` + model.Name + `Edge]`)
+			w.tabLine(`pageInfo: PageInfo!`)
+			w.line("}")
+
+			w.enter()
+		}
 	}
 
 	// Add helpers for filtering lists
-	s.WriteString(queryHelperStructs)
-	s.WriteString(lineBreak)
+	w.line(queryHelperStructs)
 
 	// generate filter structs per model
 	for _, model := range models {
 		// Ignore some specified input fields
-
 		// Generate a type safe grapql filter
 
 		// Generate the base filter
@@ -135,31 +182,13 @@ func SchemaGet(
 		// 	search: String
 		// 	where: UserWhere
 		// }
-		s.WriteString("input " + model.Name + "Filter {")
-		s.WriteString(lineBreak)
-		s.WriteString(indent + "search: String")
-		s.WriteString(lineBreak)
-		s.WriteString(indent + "where: " + model.Name + "Where")
-		s.WriteString(lineBreak)
-		s.WriteString("}")
-		s.WriteString(lineBreak)
-		s.WriteString(lineBreak)
-		// Generate a pagination struct
-		if config.Pagination == "offset" {
-			// type UserPagination {
-			// 	limit: Int!
-			// 	page: Int!
-			// }
-			s.WriteString("input " + model.Name + "Pagination {")
-			s.WriteString(lineBreak)
-			s.WriteString(indent + "limit: Int!")
-			s.WriteString(lineBreak)
-			s.WriteString(indent + "page: Int!")
-			s.WriteString(lineBreak)
-			s.WriteString("}")
-			s.WriteString(lineBreak)
-			s.WriteString(lineBreak)
-		}
+		w.line("input " + model.Name + "Filter {")
+		w.tabLine("search: String")
+		w.tabLine("where: " + model.Name + "Where")
+		w.line("}")
+
+		w.enter()
+
 		// Generate a where struct
 		// type UserWhere {
 		// 	id: IDFilter
@@ -168,39 +197,29 @@ func SchemaGet(
 		// 	or: FlowBlockWhere
 		// 	and: FlowBlockWhere
 		// }
-		s.WriteString("input " + model.Name + "Where {")
-		s.WriteString(lineBreak)
+		w.line("input " + model.Name + "Where {")
+
 		for _, field := range model.Fields {
 			if field.BoilerField.IsRelation {
 				// Support filtering in relationships (atleast schema wise)
-				s.WriteString(indent + field.RelationName + ": " + field.RelationType + "Where")
-				s.WriteString(lineBreak)
+				w.tabLine(field.RelationName + ": " + field.RelationType + "Where")
 			} else {
-				s.WriteString(indent + field.Name + ": " + field.Type + "Filter")
-				s.WriteString(lineBreak)
+				w.tabLine(field.Name + ": " + field.Type + "Filter")
 			}
 		}
-		s.WriteString(indent + "or: " + model.Name + "Where")
-		s.WriteString(lineBreak)
+		w.tabLine("or: " + model.Name + "Where")
+		w.tabLine("and: " + model.Name + "Where")
+		w.line("}")
 
-		s.WriteString(indent + "and: " + model.Name + "Where")
-		s.WriteString(lineBreak)
-
-		s.WriteString("}")
-		s.WriteString(lineBreak)
-		s.WriteString(lineBreak)
+		w.enter()
 	}
 
-	s.WriteString("type Query {")
-	s.WriteString(lineBreak)
+	w.line("type Query {")
+	w.tabLine("node(id: ID!): Node")
+
 	for _, model := range models {
 		// single models
-		s.WriteString(indent)
-		s.WriteString(strcase.ToLowerCamel(model.Name) + "(id: ID!)")
-		s.WriteString(": ")
-		s.WriteString(model.Name + "!")
-		s.WriteString(joinedDirectives)
-		s.WriteString(lineBreak)
+		w.tabLine(strcase.ToLowerCamel(model.Name) + "(id: ID!): " + model.Name + "!" + joinedDirectives)
 
 		// lists
 		modelPluralName := pluralizer.Plural(model.Name)
@@ -209,17 +228,13 @@ func SchemaGet(
 			paginationParameter = ", pagination: " + model.Name + "Pagination"
 		}
 
-		s.WriteString(indent)
-		s.WriteString(strcase.ToLowerCamel(modelPluralName) + "(filter: " + model.Name + "Filter" +
-			paginationParameter + ")")
-		s.WriteString(": ")
-		s.WriteString("[" + model.Name + "!]!")
-		s.WriteString(joinedDirectives)
-		s.WriteString(lineBreak)
+		w.tabLine(
+			strcase.ToLowerCamel(modelPluralName) + "(filter: " + model.Name + "Filter" +
+				paginationParameter + "): [" + model.Name + "!]!" + joinedDirectives)
 	}
-	s.WriteString("}")
-	s.WriteString(lineBreak)
-	s.WriteString(lineBreak)
+	w.line("}")
+
+	w.enter()
 
 	// Generate input and payloads for mutatations
 	if config.GenerateMutations { //nolint:nestif
@@ -232,8 +247,8 @@ func SchemaGet(
 			// 	lastName: String
 			//	organizationId: ID!
 			// }
-			s.WriteString("input " + model.Name + "CreateInput {")
-			s.WriteString(lineBreak)
+			w.line("input " + model.Name + "CreateInput {")
+
 			for _, field := range filteredFields {
 				// id is not required in create and will be specified in update resolver
 				if field.Name == "id" {
@@ -246,20 +261,19 @@ func SchemaGet(
 					field.BoilerField.IsRelation && !strings.HasSuffix(field.BoilerField.Name, "ID") {
 					continue
 				}
-				s.WriteString(indent + field.Name + ": " + field.FullType)
-				s.WriteString(lineBreak)
+				w.tabLine(field.Name + ": " + field.FullType)
 			}
-			s.WriteString("}")
-			s.WriteString(lineBreak)
-			s.WriteString(lineBreak)
+			w.line("}")
+
+			w.enter()
 
 			// input UserUpdateInput {
 			// 	firstName: String!
 			// 	lastName: String
 			//	organizationId: ID!
 			// }
-			s.WriteString("input " + model.Name + "UpdateInput {")
-			s.WriteString(lineBreak)
+			w.line("input " + model.Name + "UpdateInput {")
+
 			for _, field := range filteredFields {
 				// id is not required in create and will be specified in update resolver
 				if field.Name == "id" {
@@ -272,20 +286,19 @@ func SchemaGet(
 					field.BoilerField.IsRelation && !strings.HasSuffix(field.BoilerField.Name, "ID") {
 					continue
 				}
-				s.WriteString(indent + field.Name + ": " + field.FullTypeOptional)
-				s.WriteString(lineBreak)
+				w.tabLine(field.Name + ": " + field.FullTypeOptional)
 			}
-			s.WriteString("}")
-			s.WriteString(lineBreak)
-			s.WriteString(lineBreak)
+			w.line("}")
+
+			w.enter()
 
 			if config.GenerateBatchCreate {
-				s.WriteString("input " + modelPluralName + "CreateInput {")
-				s.WriteString(lineBreak)
-				s.WriteString(indent + strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "CreateInput!]!")
-				s.WriteString("}")
-				s.WriteString(lineBreak)
-				s.WriteString(lineBreak)
+				w.line("input " + modelPluralName + "CreateInput {")
+
+				w.tabLine(indent + strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "CreateInput!]!")
+				w.line("}")
+
+				w.enter()
 			}
 
 			// if batchUpdate {
@@ -300,139 +313,103 @@ func SchemaGet(
 			// type UserPayload {
 			// 	user: User!
 			// }
-			s.WriteString("type " + model.Name + "Payload {")
-			s.WriteString(lineBreak)
-			s.WriteString(indent + strcase.ToLowerCamel(model.Name) + ": " + model.Name + "!")
-			s.WriteString(lineBreak)
-			s.WriteString("}")
-			s.WriteString(lineBreak)
-			s.WriteString(lineBreak)
+			w.line("type " + model.Name + "Payload {")
+			w.tabLine(strcase.ToLowerCamel(model.Name) + ": " + model.Name + "!")
+			w.line("}")
+
+			w.enter()
 
 			// TODO batch, delete input and payloads
 
 			// type UserDeletePayload {
 			// 	id: ID!
 			// }
-			s.WriteString("type " + model.Name + "DeletePayload {")
-			s.WriteString(lineBreak)
-			s.WriteString(indent + "id: ID!")
-			s.WriteString(lineBreak)
-			s.WriteString("}")
-			s.WriteString(lineBreak)
-			s.WriteString(lineBreak)
+			w.line("type " + model.Name + "DeletePayload {")
+			w.tabLine("id: ID!")
+			w.line("}")
+
+			w.enter()
 
 			// type UsersPayload {
 			// 	ids: [ID!]!
 			// }
 			if config.GenerateBatchCreate {
-				s.WriteString("type " + modelPluralName + "Payload {")
-				s.WriteString(lineBreak)
-				s.WriteString(indent + strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "!]!")
-				s.WriteString(lineBreak)
-				s.WriteString("}")
-				s.WriteString(lineBreak)
-				s.WriteString(lineBreak)
+				w.line("type " + modelPluralName + "Payload {")
+				w.tabLine(strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "!]!")
+				w.line("}")
+
+				w.enter()
 			}
 
 			// type UsersDeletePayload {
 			// 	ids: [ID!]!
 			// }
 			if config.GenerateBatchDelete {
-				s.WriteString("type " + modelPluralName + "DeletePayload {")
-				s.WriteString(lineBreak)
-				s.WriteString(indent + "ids: [ID!]!")
-				s.WriteString(lineBreak)
-				s.WriteString("}")
-				s.WriteString(lineBreak)
-				s.WriteString(lineBreak)
+				w.line("type " + modelPluralName + "DeletePayload {")
+				w.tabLine("ids: [ID!]!")
+				w.line("}")
+
+				w.enter()
 			}
 			// type UsersUpdatePayload {
 			// 	ok: Boolean!
 			// }
 			if config.GenerateBatchUpdate {
-				s.WriteString("type " + modelPluralName + "UpdatePayload {")
-				s.WriteString(lineBreak)
-				s.WriteString(indent + "ok: Boolean!")
-				s.WriteString(lineBreak)
-				s.WriteString("}")
-				s.WriteString(lineBreak)
-				s.WriteString(lineBreak)
+				w.line("type " + modelPluralName + "UpdatePayload {")
+				w.tabLine("ok: Boolean!")
+				w.line("}")
+
+				w.enter()
 			}
 		}
 
 		// Generate mutation queries
-		s.WriteString("type Mutation {")
-		s.WriteString(lineBreak)
+		w.line("type Mutation {")
+
 		for _, model := range models {
 			modelPluralName := pluralizer.Plural(model.Name)
 
 			// create single
 			// e.g createUser(input: UserInput!): UserPayload!
-			s.WriteString(indent)
-			s.WriteString("create" + model.Name + "(input: " + model.Name + "CreateInput!)")
-			s.WriteString(": ")
-			s.WriteString(model.Name + "Payload!")
-			s.WriteString(joinedDirectives)
-			s.WriteString(lineBreak)
+			w.tabLine("create" + model.Name + "(input: " + model.Name + "CreateInput!): " +
+				model.Name + "Payload!" + joinedDirectives)
 
 			// create multiple
 			// e.g createUsers(input: [UsersInput!]!): UsersPayload!
 			if config.GenerateBatchCreate {
-				s.WriteString(indent)
-				s.WriteString("create" + modelPluralName + "(input: " + modelPluralName + "CreateInput!)")
-				s.WriteString(": ")
-				s.WriteString(modelPluralName + "Payload!")
-				s.WriteString(joinedDirectives)
-				s.WriteString(lineBreak)
+				w.tabLine("create" + modelPluralName + "(input: " + modelPluralName + "CreateInput!): " +
+					modelPluralName + "Payload!" + joinedDirectives)
 			}
 
 			// update single
 			// e.g updateUser(id: ID!, input: UserInput!): UserPayload!
-			s.WriteString(indent)
-			s.WriteString("update" + model.Name + "(id: ID!, input: " + model.Name + "UpdateInput!)")
-			s.WriteString(": ")
-			s.WriteString(model.Name + "Payload!")
-			s.WriteString(joinedDirectives)
-			s.WriteString(lineBreak)
+			w.tabLine("update" + model.Name + "(id: ID!, input: " + model.Name + "UpdateInput!): " +
+				model.Name + "Payload!" + joinedDirectives)
 
 			// update multiple (batch update)
 			// e.g updateUsers(filter: UserFilter, input: UsersInput!): UsersPayload!
 			if config.GenerateBatchUpdate {
-				s.WriteString(indent)
-				s.WriteString("update" + modelPluralName + "(filter: " + model.Name + "Filter, input: " +
-					model.Name + "UpdateInput!)")
-				s.WriteString(": ")
-				s.WriteString(modelPluralName + "UpdatePayload!")
-				s.WriteString(joinedDirectives)
-				s.WriteString(lineBreak)
+				w.tabLine("update" + modelPluralName + "(filter: " + model.Name + "Filter, input: " +
+					model.Name + "UpdateInput!): " + modelPluralName + "UpdatePayload!" + joinedDirectives)
 			}
 
 			// delete single
 			// e.g deleteUser(id: ID!): UserPayload!
-			s.WriteString(indent)
-			s.WriteString("delete" + model.Name + "(id: ID!)")
-			s.WriteString(": ")
-			s.WriteString(model.Name + "DeletePayload!")
-			s.WriteString(joinedDirectives)
-			s.WriteString(lineBreak)
+			w.tabLine("delete" + model.Name + "(id: ID!): " + model.Name + "DeletePayload!" + joinedDirectives)
 
 			// delete multiple
 			// e.g deleteUsers(filter: UserFilter, input: [UsersInput!]!): UsersPayload!
 			if config.GenerateBatchDelete {
-				s.WriteString(indent)
-				s.WriteString("delete" + modelPluralName + "(filter: " + model.Name + "Filter)")
-				s.WriteString(": ")
-				s.WriteString(modelPluralName + "DeletePayload!")
-				s.WriteString(joinedDirectives)
-				s.WriteString(lineBreak)
+				w.tabLine("delete" + modelPluralName + "(filter: " + model.Name + "Filter): " +
+					modelPluralName + "DeletePayload!" + joinedDirectives)
 			}
 		}
-		s.WriteString("}")
-		s.WriteString(lineBreak)
-		s.WriteString(lineBreak)
+		w.line("}")
+
+		w.enter()
 	}
 
-	return s.String()
+	return w.s.String()
 }
 
 func getFullType(fieldType string, isArray bool, isRequired bool) string {
@@ -652,6 +629,22 @@ func writeContentToFile(content string, filename string) error {
 	}
 
 	return nil
+}
+
+type SimpleWriter struct {
+	s strings.Builder
+}
+
+func (sw SimpleWriter) line(v string) {
+	sw.s.WriteString(v + lineBreak)
+}
+
+func (sw SimpleWriter) enter() {
+	sw.s.WriteString(lineBreak)
+}
+
+func (sw SimpleWriter) tabLine(v string) {
+	sw.s.WriteString(indent + v + lineBreak)
 }
 
 // TODO: only generate these if they are set
