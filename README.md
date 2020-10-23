@@ -40,24 +40,17 @@ It's really amazing how fast a generated api with these techniques is!
 - [x] public errors in resolvers + logging via zerolog. (feel free for PR for configurable logging!)
 
 ## Roadmap
-
-- [ ] Batch create generation in resolvers (based on https://github.com/web-ridge/contact-tracing/blob/master/backend/helpers/convert_batch.go)
+- [ ] Edges/connections (in development)
+- [ ] Type safe sorting (in development)
 - [ ] Support gqlgen multiple .graphql files
-- [ ] Edges/connections
-- [ ] Generate tests
-- [ ] Run automatic tests in Github CI/CD in https://github.com/web-ridge/gqlgen-sqlboiler-examples
-- [ ] Crud of adding/removing relationships from many-to-many on edges
-- [ ] Support more relationships inside input types
-- [ ] Do a three-way-diff merge for changes and let user choose parts of code which should not take over generated code.
-- [ ] Custom templates for resolvers (?)
 - [ ] Support for opting out of standard generation if functions exist in {resolverName}_custom.go
 - [ ] Adding automatic database migrations and integration with https://github.com/web-ridge/dbifier so faster iteration is possible
 
-
-## Requirements
-
-- Use string id's or use **unsigned** ints for foreign keys + ids. Otherwise converts will give compile errors.
-  Unsigned ints for id's is allso recommended since it gives you twice as big id's and id's should not be negative anyway ;)
+- [ ] Crud of adding/removing relationships from many-to-many on edges
+- [ ] Support more relationships inside input types
+- [ ] Generate tests
+- [ ] Run automatic tests in Github CI/CD in https://github.com/web-ridge/gqlgen-sqlboiler-examples
+- [ ] Batch create generation in resolvers (based on https://github.com/web-ridge/contact-tracing/blob/master/backend/helpers/convert_batch.go)
 
 ## Examples
 
