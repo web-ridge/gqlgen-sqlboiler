@@ -6,6 +6,7 @@
 {{ reserveImport "sync"  }}
 {{ reserveImport "errors"  }}
 {{ reserveImport "bytes"  }}
+{{ reserveImport "strings"  }}
 
 {{ reserveImport "github.com/ericlagergren/decimal" }}
 {{ reserveImport "github.com/volatiletech/sqlboiler/v4/boil" }}
@@ -34,13 +35,14 @@
 const inputKey = "input"
 
 {{ range $resolver := .Resolvers -}}
+
 	{{- if  .IsBatchCreate -}}
 	//
 	{{- end -}}
 	const {{ $resolver.PublicErrorKey }} = "{{ $resolver.PublicErrorMessage }}"
 
 	func (r *{{lcFirst $resolver.Object.Name}}{{ucFirst $.ResolverType}}) {{$resolver.Field.GoFieldName}} {{ $resolver.Field.ShortResolverDeclaration }} {
-	
+
 
 		{{- if .IsSingle }}
 
@@ -99,13 +101,49 @@ const inputKey = "input"
 				{{- end }}
 			{{ end }}
 
+
+			// TODO: use these if no connection is used
+            // return {{ .Model.PluralName }}ToGraphQL(a), nil
+
+
+
+
 			mods = append(mods, {{.Model.Name}}FilterToMods(filter)...)
+
+            {{/*if after != "" {*/}}
+            {{/*    parsedCursor := strings.Split(after, "-")*/}}
+            {{/*    mods = append(mods, dm.LikeWhere.ID.GTE(parsedCursor[0]))*/}}
+            {{/*}*/}}
+
+            {{/*if first > 0 {*/}}
+            {{/*    mods = append(mods, qm.Limit(first+1))*/}}
+            {{/*}*/}}
+
 			a, err := dm.{{ .Model.PluralName }}(mods...).All(ctx, r.db)
 			if err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
-			return {{ .Model.PluralName }}ToGraphQL(a), nil
+
+            edges := make([]*fm.{{.Model.Name}}Edge, len(a))
+            for i, row := range a {
+                edges[i] = &fm.{{.Model.Name}}Edge{
+                    Cursor: "",
+                    Node:   {{.Model.Name}}ToGraphQL(row),
+                }
+            }
+
+            return &fm.{{.Model.Name}}Connection{
+                Edges: edges,
+                PageInfo: &fm.PageInfo{
+                HasNextPage:     false,
+                HasPreviousPage: false,
+                StartCursor:     nil,
+                EndCursor:       nil,
+            },
+            }, nil
+
+
 
 		{{- end -}}
 
@@ -151,7 +189,7 @@ const inputKey = "input"
 						}
 						m.{{ $field.Name }}ID = {{ $field.Name }}.ID
 					}
-					
+
 				{{ end -}}
 			{{ end -}}
 			{{ if $.HasAuth }}
@@ -232,7 +270,7 @@ const inputKey = "input"
 						{{- end }}
 
 						nestedM := {{ $field.BoilerField.Relationship.Name }}UpdateInputToModelM(
-							boilergql.GetInputFromContext(ctx, "input.{{ $field.JSONName }}"), 
+							boilergql.GetInputFromContext(ctx, "input.{{ $field.JSONName }}"),
 							*input.{{ $field.Name }},
 						)
 						if _, err := dm.{{ $field.BoilerField.Relationship.PluralName }}(
@@ -259,7 +297,7 @@ const inputKey = "input"
 							return nil, errors.New({{ $resolver.PublicErrorKey }})
 						}
 					}
-					
+
 				{{ end -}}
 			{{ end -}}
 
@@ -269,7 +307,7 @@ const inputKey = "input"
 			dbID := {{ .Model.Name }}ID(id)
 			{{- end }}
 
-		
+
 			if _, err := dm.{{ .Model.PluralName }}(
 				dm.{{ .Model.Name }}Where.ID.EQ(dbID),
 				{{ if $.HasAuth }}
@@ -320,7 +358,7 @@ const inputKey = "input"
 			{{- else }}
 			dbID := {{ .Model.Name }}ID(id)
 			{{- end }}
-			
+
 			mods := []qm.QueryMod{
 				dm.{{ .Model.Name }}Where.ID.EQ(dbID),
 				{{ if $.HasAuth }}
@@ -339,7 +377,7 @@ const inputKey = "input"
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
-	
+
 			return &fm.{{ .Model.Name }}DeletePayload{
 				ID: id,
 			}, nil
@@ -432,12 +470,33 @@ const inputKey = "input"
 				Ids: boilergql.{{.Model.PrimaryKeyType|go}}IDsToGraphQL(boilerIDs, dm.TableNames.{{ .Model.BoilerModel.TableName }}),
 			}, nil
 			{{- end }}
-		
+
 
 		{{- end }}
 	}
 
 {{ end }}
+
+func (r *queryResolver) Node(ctx context.Context, globalGraphID string) (fm.Node, error) {
+	splitID := strings.SplitN(globalGraphID, "-", 1)
+	if len(splitID) != 2 {
+		return nil, errors.New("could not parse id")
+	}
+
+	model := splitID[0]
+	switch model {
+		{{ range $model := .Models -}}
+		{{ if .IsNormal  -}}
+		case "{{$model.Name}}":
+			return r.{{$model.Name}}(ctx, globalGraphID)
+		{{ end -}}
+		{{ end -}}
+
+		default:
+			return nil, errors.New("could not find corresponding model for id")
+	}
+}
+
 
 {{ range $object := .Objects -}}
 	func (r *{{$.ResolverType}}) {{$object.Name}}() {{ $object.ResolverInterface | ref }} { return &{{lcFirst $object.Name}}{{ucFirst $.ResolverType}}{r} }
@@ -446,6 +505,7 @@ const inputKey = "input"
 {{ range $object := .Objects -}}
 	type {{lcFirst $object.Name}}{{ucFirst $.ResolverType}} struct { *{{$.ResolverType}} }
 {{ end }}
+
 
 {{ if (ne .RemainingSource "") }}
     // !!! WARNING !!!

@@ -117,6 +117,7 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 		ResolverType: data.Config.Resolver.Type,
 		HasRoot:      true,
 		HasAuth:      hasAuth,
+		Models:       models,
 	}
 	templates.CurrentImports = nil
 	return templates.Render(templates.Options{
@@ -226,6 +227,7 @@ type ResolverBuild struct {
 	HasRoot      bool
 	PackageName  string
 	ResolverType string
+	Models       []*Model
 }
 
 type File struct {
@@ -263,9 +265,9 @@ type Resolver struct {
 	IsBatchUpdate             bool
 	IsBatchDelete             bool
 	BoilerWhiteList           string
-	ResolveOrganizationID     bool
-	ResolveUserOrganizationID bool
-	ResolveUserID             bool
+	ResolveOrganizationID     bool // TODO: something more pluggable
+	ResolveUserOrganizationID bool // TODO: something more pluggable
+	ResolveUserID             bool // TODO: something more pluggable
 	Model                     Model
 	InputModel                Model
 

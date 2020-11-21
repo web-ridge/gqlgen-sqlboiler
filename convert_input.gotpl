@@ -52,7 +52,7 @@
 			r := &models.{{ .BoilerModel.Name }}{
 			{{ range $field := .Fields -}}
 				{{- if $field.ConvertConfig.IsCustom -}}
-					{{- if $field.IsPrimaryNumberID -}}
+					{{- if $field.IsPrimaryID -}}
 						{{- $field.BoilerField.Name }} : {{ $field.ConvertConfig.ToBoiler }},
 					{{- else if and $field.IsNumberID $field.BoilerField.IsRelation -}}
 						{{- $field.BoilerField.Name }} : {{ $field.ConvertConfig.ToBoiler }},
@@ -79,7 +79,7 @@
 					{{ range $field := .Fields -}}
 					case "{{ $field.JSONName }}":
 						{{- if $field.ConvertConfig.IsCustom }}
-							{{- if $field.IsPrimaryNumberID }}
+							{{- if $field.IsPrimaryID }}
 								modelM[models.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = {{ $field.ConvertConfig.ToBoiler }}
 							{{- else if and $field.IsNumberID $field.BoilerField.IsRelation }}
 								modelM[models.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = {{ $field.ConvertConfig.ToBoiler }}

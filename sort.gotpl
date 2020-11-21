@@ -1,0 +1,311 @@
+
+{{ reserveImport "context"  }}
+{{ reserveImport "fmt"  }}
+{{ reserveImport "io"  }}
+{{ reserveImport "strconv"  }}
+{{ reserveImport "time"  }}
+{{ reserveImport "sync"  }}
+{{ reserveImport "errors"  }}
+{{ reserveImport "bytes"  }}
+{{ reserveImport "strings"  }}
+
+{{ reserveImport "github.com/web-ridge/utils-go/boilergql" }}
+{{ reserveImport "github.com/vektah/gqlparser/v2" }}
+{{ reserveImport "github.com/vektah/gqlparser/v2/ast" }}
+{{ reserveImport "github.com/99designs/gqlgen/graphql" }}
+{{ reserveImport "github.com/99designs/gqlgen/graphql/introspection" }}
+
+
+{{ reserveImport "github.com/ericlagergren/decimal" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/boil" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/queries" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/queries/qm" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/queries/qmhelper" }}
+{{ reserveImport "github.com/volatiletech/sqlboiler/v4/types" }}
+{{ reserveImport "github.com/volatiletech/null/v8" }}
+
+{{ reserveImport "database/sql" }}
+{{ reserveImport  $.Backend.Directory }}
+{{ reserveImport  $.Frontend.Directory }}
+
+
+{{ range $model := .Models }}
+    {{with .Description }} {{.|prefixLines "// "}} {{end}}
+        {{- if .IsOrdering -}}
+
+
+
+		{{- range $field := .Fields -}}
+			{{- if eq $field.Name "Sort" -}}
+				var {{$field.Enum.Name}}Column = map[{{ $.Frontend.PackageName }}.{{$field.Enum.Name}}]string{
+					{{- range $value := $field.Enum.Values}}
+						graphql_models.{{ $field.Enum.Name|go }}{{ .Name|go }}: models.{{ $model.BoilerModel.Name }}Columns.{{ $value.Name|go }},
+					{{- end }}
+				}
+
+				func {{ $model.BoilerModel.Name }}SortValueFromCursorValue(cursorValue string) (string, interface{}) {
+					key, value := boilergql.FromCursorValue(cursorValue)
+					column := {{ $model.BoilerModel.Name }}SortColumn[graphql_models.{{ $model.BoilerModel.Name }}Sort(key)]
+					{{ range $value := $field.Enum.Values}}
+						{{- if eq $value.Name "ID" -}}
+						if graphql_models.{{ $field.Enum.Name|go }}(key) == graphql_models.{{ $field.Enum.Name|go }}{{ .Name|go }} {
+							return column, boilergql.GetIDFromCursor(value)
+						}
+						{{- end -}}
+					{{ end }}
+					return column, boilergql.StringToInterface(value)
+				}
+
+				func {{ $model.BoilerModel.Name }}SortCursorValue(sort graphql_models.{{ $model.BoilerModel.Name }}Sort, m *graphql_models.{{ $model.BoilerModel.Name }}) interface{} {
+					switch sort {
+					{{- range $value := $field.Enum.Values }}
+						case graphql_models.{{ $field.Enum.Name|go }}{{ .Name|go }}:
+						return m.{{ .Name|go }}
+					{{- end }}
+					}
+					return nil
+				}
+			{{ end }}
+		{{- end }}
+
+
+        func {{ .BoilerModel.Name }}SortDirection(ordering []*graphql_models.{{ .BoilerModel.Name }}Ordering) boilergql.SortDirection {
+            for _, o := range ordering {
+                return o.Direction
+            }
+            return boilergql.SortDirectionAsc
+        }
+
+
+		func From{{ .BoilerModel.Name }}Cursor(cursor string, comparisonSign boilergql.ComparisonSign) []qm.QueryMod {
+			// b, _ := base64.StdEncoding.DecodeString(cursor)
+
+			var columns []string
+			var values []interface{}
+
+			for _, cursorValue := range boilergql.CursorStringToValues(cursor) {
+				column, value := {{ .BoilerModel.Name }}SortValueFromCursorValue(cursorValue)
+				if column != "" && value != nil {
+					columns = append(columns, column)
+					values = append(values, value)
+				}
+			}
+
+			if len(columns) > 0 {
+				return []qm.QueryMod{
+					qm.Where(boilergql.GetCursorWhere(comparisonSign, columns, values), values...),
+				}
+			}
+			return nil
+		}
+
+		func To{{ .BoilerModel.Name }}Cursor(ordering []*graphql_models.{{ .BoilerModel.Name }}Ordering, m *graphql_models.{{ .BoilerModel.Name }}) string {
+			var a []string
+			var handledID bool
+
+			for _, order := range ordering {
+				{{- range $field := .Fields -}}
+					{{- if eq $field.Name "Sort" -}}
+						{{- range $value := $field.Enum.Values -}}
+							{{ if eq $value.Name "ID" }}
+							if order.Sort == graphql_models.{{ $field.Enum.Name|go }}{{ .Name|go }} {
+								handledID = true
+							}
+							{{ end }}
+						{{- end -}}
+					{{- end -}}
+				{{- end -}}
+				value := {{ .BoilerModel.Name }}SortCursorValue(order.Sort, m)
+				if value != nil {
+					a = append(a, boilergql.ToCursorValue(string(order.Sort), value))
+				}
+			}
+
+			{{- range $field := .Fields -}}
+				{{- if eq $field.Name "Sort" -}}
+					{{- range $value := $field.Enum.Values}}
+						{{ if eq $value.Name "ID" }}
+							if !handledID {
+								a = append(a, boilergql.ToCursorValue(string(graphql_models.{{ $field.Enum.Name|go }}{{ .Name|go }}), m.ID))
+							}
+						{{ end }}
+				{{- end -}}
+				{{- end -}}
+			{{- end -}}
+
+		
+			return boilergql.CursorValuesToString(a)
+		}
+
+		func {{ .BoilerModel.Name }}CursorType(ordering []*graphql_models.{{ .BoilerModel.Name }}Ordering) boilergql.CursorType {
+			countDirection, result := boilergql.CursorTypeCounter()
+			for _, o := range ordering {
+				countDirection(o.Direction)
+			}
+			return result()
+		}
+
+		func {{ .BoilerModel.Name }}CursorMods(ordering []*graphql_models.{{ .BoilerModel.Name }}Ordering, cursor *string, sign boilergql.ComparisonSign) []qm.QueryMod {
+			if cursor != nil {
+				if {{ .BoilerModel.Name }}CursorType(ordering) == boilergql.CursorTypeCursor {
+					return From{{ .BoilerModel.Name }}Cursor(*cursor, sign)
+				}
+				return boilergql.FromOffsetCursor(*cursor)
+			}
+			return nil
+		}
+
+		func {{ .BoilerModel.Name }}SortMods(ordering []*graphql_models.{{ .BoilerModel.Name }}Ordering, reverse bool, defaultDirection boilergql.SortDirection) []qm.QueryMod {
+			var a []qm.QueryMod
+
+			var handledID bool
+			for _, order := range ordering {
+				{{- range $field := .Fields -}}
+					{{- if eq $field.Name "Sort" -}}
+						{{- range $value := $field.Enum.Values -}}
+							{{ if eq $value.Name "ID" }}
+								if order.Sort == graphql_models.{{ $field.Enum.Name|go }}{{ .Name|go }} {
+									handledID = true
+								}
+							{{ end }}
+						{{- end -}}
+					{{- end -}}
+				{{- end -}}
+
+				column := {{ .BoilerModel.Name }}SortColumn[order.Sort]
+				if column != "" {
+					a = append(a, qm.OrderBy(boilergql.GetOrderBy(
+						column,
+						boilergql.GetDirection(order.Direction, reverse),
+					)))
+				}
+			}
+			if !handledID {
+				a = append(a, qm.OrderBy(boilergql.GetOrderBy(
+					models.{{ $model.BoilerModel.Name }}Columns.ID,
+					boilergql.GetDirection(defaultDirection, reverse),
+				)))
+			}
+			return a
+		}
+
+
+		func {{ .BoilerModel.Name }}PaginationModsBase(pagination boilergql.ConnectionPagination, ordering []*graphql_models.{{ .BoilerModel.Name }}Ordering, reverse bool, limit int) (*string, []qm.QueryMod) {
+			direction := {{ .BoilerModel.Name }}SortDirection(ordering)
+			cursor := boilergql.GetCursor(pagination.Forward, pagination.Backward)
+			sign := boilergql.GetComparison(pagination.Forward, pagination.Backward, reverse, direction)
+		
+			var mods []qm.QueryMod
+			mods = append(mods, {{ .BoilerModel.Name }}CursorMods(ordering, cursor, sign)...)
+			mods = append(mods, {{ .BoilerModel.Name }}SortMods(ordering, reverse, direction)...)
+			mods = append(mods, qm.Limit(limit))
+			return cursor, mods
+		}
+		
+		func {{ .BoilerModel.Name }}PaginationMods(pagination boilergql.ConnectionPagination, ordering []*graphql_models.{{ .BoilerModel.Name }}Ordering) ([]qm.QueryMod, error) {
+			if pagination.Forward != nil && pagination.Backward != nil {
+				return nil, errors.New("can not use forward and backward pagination at once")
+			}
+			if pagination.Forward == nil && pagination.Backward == nil {
+				return nil, errors.New("no forward or backward pagination provided")
+			}
+		
+			reverse := pagination.Backward != nil
+			limit := boilergql.GetLimit(pagination.Forward, pagination.Backward)
+			_, mods := {{ .BoilerModel.Name }}PaginationModsBase(pagination, ordering, reverse, limit)
+			return mods, nil
+		}
+		
+		func To{{ .BoilerModel.Name }}CursorSwitch(ordering []*graphql_models.{{ .BoilerModel.Name }}Ordering, m *graphql_models.{{ .BoilerModel.Name }}, cursorType boilergql.CursorType, offset int, index int) string {
+			switch cursorType {
+			case boilergql.CursorTypeOffset:
+				return boilergql.ToOffsetCursor(offset + index)
+			case boilergql.CursorTypeCursor:
+				return To{{ .BoilerModel.Name }}Cursor(ordering, m)
+			}
+			return ""
+		}
+		
+		func {{ .BoilerModel.Name }}ReversePageInformation(
+			ctx context.Context,
+			db *sql.DB,
+			pagination boilergql.ConnectionPagination,
+			ordering []*graphql_models.{{ .BoilerModel.Name }}Ordering,
+		) (bool, error) {
+			reverse := pagination.Forward != nil
+			cursor, reverseMods := {{ .BoilerModel.Name }}PaginationModsBase(pagination, ordering, reverse, 1)
+			cursorType := {{ .BoilerModel.Name }}CursorType(ordering)
+			return boilergql.HasReversePage(cursor, pagination, cursorType, func() (int64, error) {
+				return models.{{ .BoilerModel.PluralName }}(reverseMods...).Count(ctx, db)
+			})
+		}
+		
+		func {{ .BoilerModel.Name }}EdgeConverter(pagination boilergql.ConnectionPagination, ordering []*graphql_models.{{ .BoilerModel.Name }}Ordering) func(*models.{{ .BoilerModel.Name }}, int) *graphql_models.{{ .BoilerModel.Name }}Edge {
+			cursor, cursorType := boilergql.GetCursor(pagination.Forward, pagination.Backward), {{ .BoilerModel.Name }}CursorType(ordering)
+			offset := boilergql.GetOffsetFromCursor(cursor)
+			return func(m *models.{{ .BoilerModel.Name }}, i int) *graphql_models.{{ .BoilerModel.Name }}Edge {
+				n := {{ .BoilerModel.Name }}ToGraphQL(m)
+				return &graphql_models.{{ .BoilerModel.Name }}Edge{
+					Cursor: To{{ .BoilerModel.Name }}CursorSwitch(ordering, n, cursorType, offset, i),
+					Node:   n,
+				}
+			}
+		}
+		
+		func {{ .BoilerModel.Name }}StartEndCursor(edges []*graphql_models.{{ .BoilerModel.Name }}Edge) (*string, *string) {
+			var startCursor, endCursor *string
+			if len(edges) >= 2 {
+				s, e := edges[0].Cursor, edges[len(edges)-1].Cursor
+				startCursor = &s
+				endCursor = &e
+			} else if len(edges) == 1 {
+				c := edges[0].Cursor
+				startCursor = &c
+				endCursor = &c
+			}
+			return startCursor, endCursor
+		}
+		
+		func {{ .BoilerModel.Name }}Connection(
+			ctx context.Context,
+			db *sql.DB,
+			originalMods []qm.QueryMod,
+			pagination boilergql.ConnectionPagination,
+			ordering []*graphql_models.{{ .BoilerModel.Name }}Ordering,
+		) (*graphql_models.{{ .BoilerModel.Name }}Connection, error) {
+			paginationMods, err := {{ .BoilerModel.Name }}PaginationMods(pagination, ordering)
+			if err != nil {
+				return nil, err
+			}
+		
+			hasMoreReversed, err := {{ .BoilerModel.Name }}ReversePageInformation(ctx, db, pagination, ordering)
+			if err != nil {
+				return nil, err
+			}
+		
+			a, err := models.{{ .BoilerModel.PluralName }}(append(originalMods, paginationMods...)...).All(ctx, db)
+			if err != nil {
+				return nil, err
+			}
+			edges := make([]*graphql_models.{{ .BoilerModel.Name }}Edge, 0, boilergql.EdgeLength(pagination, len(a)))
+			edgeConverter := {{ .BoilerModel.Name }}EdgeConverter(pagination, ordering)
+			hasMore := boilergql.BaseConnection(pagination, len(a), func(i int) {
+				edges = append(edges, edgeConverter(a[i], i))
+			})
+			startCursor, endCursor := {{ .BoilerModel.Name }}StartEndCursor(edges)
+			hasNextPage, hasPreviousPage := boilergql.HasNextAndPreviousPage(pagination, hasMore, hasMoreReversed)
+			return &graphql_models.{{ .BoilerModel.Name }}Connection{
+				Edges: edges,
+				PageInfo: &graphql_models.PageInfo{
+					HasNextPage:     hasNextPage,
+					HasPreviousPage: hasPreviousPage,
+					StartCursor:     startCursor,
+					EndCursor:       endCursor,
+				},
+			}, nil
+		}
+		
+		
+
+    {{ end }}
+{{ end }}

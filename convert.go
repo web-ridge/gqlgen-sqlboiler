@@ -65,13 +65,14 @@ type Model struct { //nolint:maligned
 	IsPayload             bool
 	IsConnection          bool
 	IsEdge                bool
+	IsOrdering            bool
 	IsWhere               bool
 	IsFilter              bool
 	IsPreloadable         bool
 	PreloadArray          []Preload
-	HasOrganizationID     bool
-	HasUserOrganizationID bool
-	HasUserID             bool
+	HasOrganizationID     bool // TODO: something more pluggable
+	HasUserOrganizationID bool // TODO: something more pluggable
+	HasUserID             bool // TODO: something more pluggable
 	HasStringPrimaryID    bool
 	// other stuff
 	Description string
@@ -93,10 +94,12 @@ type Field struct { //nolint:maligned
 	TypeWithoutPointer string
 	IsNumberID         bool
 	IsPrimaryNumberID  bool
+	IsPrimaryStringID  bool
 	IsPrimaryID        bool
 	IsRequired         bool
 	IsPlural           bool
 	ConvertConfig      ConvertConfig
+	Enum               *Enum
 	// relation stuff
 	IsRelation bool
 	// boiler relation stuff is inside this field
@@ -207,7 +210,7 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	b.Models = models
 	b.HasStringPrimaryIDs = HasStringPrimaryIDsInModels(models)
 	b.Interfaces = interfaces
-	b.Enums = enums
+	b.Enums = enumsWithout(enums, []string{"SortDirection"})
 	b.Scalars = scalars
 	if len(b.Models) == 0 {
 		fmt.Println("No models found in graphql so skipping generation")
@@ -271,7 +274,37 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 		fmt.Println("renderError", renderError)
 	}
 
+	templates.CurrentImports = nil
+	fmt.Println("[convert] render sort.gotpl")
+	if renderError := templates.Render(templates.Options{
+		Template:        getTemplate("sort.gotpl"),
+		PackageName:     m.Output.PackageName,
+		Filename:        m.Output.Directory + "/" + "sort.go",
+		Data:            b,
+		GeneratedHeader: true,
+		Packages:        cfg.Packages,
+	}); renderError != nil {
+		fmt.Println("renderError", renderError)
+	}
+
 	return nil
+}
+
+func enumsWithout(enums []*Enum, skip []string) []*Enum {
+	// lol: cleanup xD
+	var a []*Enum
+	for _, e := range enums {
+		var skipped bool
+		for _, skip := range skip {
+			if skip == e.Name {
+				skipped = true
+			}
+		}
+		if !skipped {
+			a = append(a, e)
+		}
+	}
+	return a
 }
 
 func getTemplate(filename string) string {
@@ -403,8 +436,8 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 			isPrimaryNumberID := isPrimaryID && !isString
 
 			isPrimaryStringID := isPrimaryID && isString
-			// enable simpler code in resolvers
 
+			// enable simpler code in resolvers
 			if isPrimaryStringID {
 				m.HasStringPrimaryID = isPrimaryStringID
 			}
@@ -430,12 +463,15 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 			}
 
 			if boilerField.Name == "" {
-				if m.IsPayload || m.IsFilter || m.IsWhere {
+				if m.IsPayload || m.IsFilter || m.IsWhere || m.IsOrdering {
 				} else {
 					fmt.Println("[WARN] boiler name not available for ", m.Name+"."+name)
 					continue
 				}
 			}
+
+			enum := findEnum(enums, shortType)
+
 			field := &Field{
 				Name:               name,
 				JSONName:           jsonName,
@@ -445,6 +481,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 				IsNumberID:         isNumberID,
 				IsPrimaryID:        isPrimaryID,
 				IsPrimaryNumberID:  isPrimaryNumberID,
+				IsPrimaryStringID:  isPrimaryStringID,
 				IsRelation:         isRelation,
 				IsOr:               strings.EqualFold(name, "or"),
 				IsAnd:              strings.EqualFold(name, "and"),
@@ -452,6 +489,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 				PluralName:         pluralizer.Plural(name),
 				OriginalType:       typ,
 				Description:        field.Description,
+				Enum:               enum,
 			}
 			field.ConvertConfig = getConvertConfig(enums, m, field)
 			m.Fields = append(m.Fields, field)
@@ -459,6 +497,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 	}
 
 	for _, m := range models {
+		// TODO: this should be customized
 		m.HasOrganizationID = findField(m.Fields, "organizationId") != nil
 		m.HasUserOrganizationID = findField(m.Fields, "userOrganizationId") != nil
 		m.HasUserID = findField(m.Fields, "userId") != nil
@@ -558,8 +597,7 @@ func getExtrasFromSchema(schema *ast.Schema) (interfaces []*Interface, enums []*
 			})
 		case ast.Enum:
 			it := &Enum{
-				Name: schemaType.Name,
-
+				Name:        schemaType.Name,
 				Description: schemaType.Description,
 			}
 			for _, v := range schemaType.EnumValues {
@@ -619,10 +657,11 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 				isEdge := doesEndWith(modelName, "Edge")
 				isConnection := doesEndWith(modelName, "Connection")
 				isPageInfo := modelName == "PageInfo"
+				isOrdering := doesEndWith(modelName, "Ordering")
 
 				// if no boiler model is found
 				if boilerModel == nil || boilerModel.Name == "" {
-					if isInput || isWhere || isFilter || isPayload || isEdge || isConnection || isPageInfo {
+					if isInput || isWhere || isFilter || isPayload || isPageInfo {
 						// silent continue
 						continue
 					}
@@ -632,7 +671,7 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 				}
 
 				isNormalInput := isInput && !isCreateInput && !isUpdateInput
-
+				isNormal := !isInput && !isWhere && !isFilter && !isPayload && !isEdge && !isConnection && !isOrdering
 				m := &Model{
 					Name:          modelName,
 					Description:   schemaType.Description,
@@ -647,8 +686,9 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 					IsConnection:  isConnection,
 					IsEdge:        isEdge,
 					IsPayload:     isPayload,
-					IsNormal:      !isInput && !isWhere && !isFilter && !isPayload,
-					IsPreloadable: !isInput && !isWhere && !isFilter && !isPayload,
+					IsOrdering:    isOrdering,
+					IsNormal:      isNormal,
+					IsPreloadable: isNormal,
 				}
 
 				for _, implementor := range schema.GetImplements(schemaType) {
@@ -727,6 +767,10 @@ func getBaseModelFromName(v string) string {
 	v = safeTrim(v, "Payload")
 	v = safeTrim(v, "Where")
 	v = safeTrim(v, "Filter")
+	v = safeTrim(v, "Ordering")
+	v = safeTrim(v, "Edge")
+	v = safeTrim(v, "Connection")
+
 	return v
 }
 
@@ -785,7 +829,7 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 			), "boilergql.")
 	} else if graphType != boilType {
 		cc.IsCustom = true
-		if field.IsPrimaryNumberID || field.IsNumberID && field.BoilerField.IsRelation {
+		if field.IsPrimaryID || field.IsNumberID && field.BoilerField.IsRelation {
 			cc.ToGraphQL = "VALUE"
 			cc.ToBoiler = "VALUE"
 
@@ -801,7 +845,7 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 				cc.ToGraphQL = "boilergql." + goToUint + "(VALUE)"
 			}
 
-			if field.IsPrimaryNumberID {
+			if field.IsPrimaryID {
 				cc.ToGraphQL = model.Name + "IDToGraphQL(" + cc.ToGraphQL + ")"
 			} else if field.IsNumberID {
 				cc.ToGraphQL = field.BoilerField.Relationship.Name + "IDToGraphQL(" + cc.ToGraphQL + ")"

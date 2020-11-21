@@ -75,20 +75,6 @@ func IDFilterToMods(m *{{ $.Frontend.PackageName }}.IDFilter, column string) []q
 		return nil
 	}
 	var queryMods []qm.QueryMod
-	{{- if .HasStringPrimaryIDs }}
-	if m.EqualTo != nil {
-		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, *m.EqualTo))
-	}
-	if m.NotEqualTo != nil {
-		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.NEQ, *m.NotEqualTo))
-	}
-	if len(m.In) > 0 {
-		queryMods = append(queryMods, qm.WhereIn(column + in, boilergql.StringsToInterfaces(m.In)...))
-	}
-	if len(m.NotIn) > 0 {
-		queryMods = append(queryMods, qm.WhereIn(column + notIn, boilergql.StringsToInterfaces(m.NotIn)...))
-	}
-	{{- else }}
 	if m.EqualTo != nil {
 		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, boilergql.IDToBoiler(*m.EqualTo)))
 	}
@@ -101,7 +87,6 @@ func IDFilterToMods(m *{{ $.Frontend.PackageName }}.IDFilter, column string) []q
 	if len(m.NotIn) > 0 {
 		queryMods = append(queryMods, qm.WhereIn(column + notIn, boilergql.IDsToBoilerInterfaces(m.NotIn)...))
 	}
-	{{- end }}
 	return queryMods
 }
 

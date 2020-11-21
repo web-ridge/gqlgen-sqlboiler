@@ -109,6 +109,27 @@ func SchemaGet(
 		w.line(`}`)
 
 		w.enter()
+
+		w.line(`input ConnectionForwardPagination {`)
+		w.tabLine(`first: Int!`)
+		w.tabLine(`after: ID`)
+		w.line(`}`)
+
+		w.enter()
+
+		w.line(`input ConnectionBackwardPagination {`)
+		w.tabLine(`last: Int!`)
+		w.tabLine(`before: ID`)
+		w.line(`}`)
+
+		w.enter()
+
+		w.line(`input ConnectionPagination {`)
+		w.tabLine(`forward: ConnectionForwardPagination`)
+		w.tabLine(`backward: ConnectionBackwardPagination`)
+		w.line(`}`)
+
+		w.enter()
 	}
 
 	// Generate sorting helpers
@@ -249,14 +270,15 @@ func SchemaGet(
 
 		// lists
 		modelPluralName := pluralizer.Plural(model.Name)
-		var paginationParameter string
-		if config.Pagination == "offset" {
-			paginationParameter = ", pagination: " + model.Name + "Pagination"
-		}
 
+		arguments := []string{
+			"pagination: ConnectionPagination!",
+			"ordering: [" + model.Name + "Ordering!]",
+			"filter: " + model.Name + "Filter",
+		}
 		w.tabLine(
-			strcase.ToLowerCamel(modelPluralName) + "(filter: " + model.Name + "Filter" +
-				paginationParameter + "): [" + model.Name + "!]!" + joinedDirectives)
+			strcase.ToLowerCamel(modelPluralName) + "(" + strings.Join(arguments, ", ") + "): " +
+				model.Name + "Connection!" + joinedDirectives)
 	}
 	w.line("}")
 
@@ -439,7 +461,7 @@ func SchemaGet(
 func fieldAsEnumStrings(fields []*SchemaField) []string {
 	var enums []string
 	for _, field := range fields {
-		if field.BoilerField != nil {
+		if field.BoilerField != nil && (!field.BoilerField.IsRelation && !field.BoilerField.IsForeignKey) {
 			enums = append(enums, strcase.ToScreamingSnake(field.Name))
 		}
 	}

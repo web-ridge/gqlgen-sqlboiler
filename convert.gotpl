@@ -28,6 +28,26 @@
 {{ reserveImport  $.Frontend.Directory }}
 
 {{ range $enum := .Enums }}
+
+	type {{$enum.Name}} string
+	const (
+	{{- range $value := .Values }}
+		{{$enum.Name|go}}{{ .Name|go }}        UserSort = "{{ .NameLower }}"
+	{{- end }}
+	)
+
+	var {{$enum.Name}}DBValue = map[{{ $.Frontend.PackageName }}.{{ .Name }}]{{$enum.Name}}{
+		{{- range $value := .Values }}
+			{{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }}: {{$enum.Name|go}}{{ .Name|go }},
+		{{- end }}
+	}
+	var {{$enum.Name}}APIValue = map[{{$enum.Name}}]{{ $.Frontend.PackageName }}.{{ .Name }}{
+		{{- range $value := .Values }}
+			{{$enum.Name|go}}{{ .Name|go }}: {{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }},
+		{{- end }}
+	}
+
+
 	func NullDotStringToPointer{{ .Name }}(v null.String) *{{ $.Frontend.PackageName }}.{{ .Name }} {
 		s := StringTo{{ .Name }}(v.String)
 		if s == "" {
@@ -44,12 +64,8 @@
 	}
 
 	func StringTo{{ .Name }}(v string) {{ $.Frontend.PackageName }}.{{ .Name }} {
-		{{- range $value := .Values }}
-			if v == "{{ .NameLower }}" {
-				return {{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }}
-			}
-		{{- end }}
-		return ""
+		s := {{$enum.Name}}APIValue[{{ .Name }}(v)]
+		return s
 	}
 
 	func StringToPointer{{ .Name }}(v string) *{{ $.Frontend.PackageName }}.{{ .Name }} {
@@ -80,12 +96,8 @@
 	}
 
 	func {{ .Name }}ToString(v {{ $.Frontend.PackageName }}.{{ .Name }}) string {
-		{{- range $value := .Values }}
-			if v == {{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }} {
-				return "{{ .NameLower }}"
-			}
-		{{- end }}
-		return ""
+		s := {{$enum.Name}}DBValue[v]
+		return string(s)
 	}
 {{ end }}
 
@@ -138,6 +150,11 @@
 					return boilergql.IDToGraphQL(v, models.TableNames.{{ $model.BoilerModel.TableName }})
 				}
 			{{- end -}}
+			{{- if $field.IsPrimaryStringID -}}
+				func {{ $model.Name }}IDToGraphQL(v string) string {
+					return boilergql.IDToGraphQL(v, models.TableNames.{{ $model.BoilerModel.TableName }})
+				}
+			{{- end -}}
 		{{- end }}
 
 
@@ -152,7 +169,7 @@
 					{{.|prefixLines "// "}}
 				{{- end}}
 				{{- if $field.ConvertConfig.IsCustom -}}
-					{{- if $field.IsPrimaryNumberID -}}
+					{{- if $field.IsPrimaryID -}}
 						{{- $field.Name }}: {{ $field.ConvertConfig.ToGraphQL }},
 					{{- else if and $field.IsNumberID $field.BoilerField.IsRelation -}}
 						{{- $field.Name }}: {{ $field.ConvertConfig.ToGraphQL }},
@@ -206,6 +223,16 @@
 					return boilergql.IDsToBoiler{{ $field.BoilerField.Type|go }}(a)
 				}
 				
+			{{- end -}}
+			{{- if $field.IsPrimaryStringID }}
+				func {{ $model.Name }}ID(v string) {{ $field.BoilerField.Type }} {
+					return boilergql.StringIDToBoiler{{ $field.BoilerField.Type|go }}(v)
+				}
+
+				func {{ $model.Name }}IDs(a []string) []{{ $field.BoilerField.Type }} {
+					return boilergql.StringIDsToBoiler{{ $field.BoilerField.Type|go }}(a)
+				}
+
 			{{- end -}}
 		{{- end }}
 	{{ end }}
