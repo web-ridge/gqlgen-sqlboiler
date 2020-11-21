@@ -7,13 +7,16 @@ import (
 	"path"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"golang.org/x/mod/modfile"
 )
 
 func getRootImportPath() string {
 	importPath, err := rootImportPath()
 	if err != nil {
-		fmt.Printf("error while getting root import path %v", err)
+		log.Err(err).Msg(
+			"could not detect root import path %v")
 		return ""
 	}
 	return importPath

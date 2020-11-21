@@ -1,11 +1,12 @@
 package gbgen
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/iancoleman/strcase"
 
@@ -46,21 +47,18 @@ func (m *ResolverPlugin) GenerateCode(data *codegen.Data) error {
 	}
 
 	// Get all models information
-	fmt.Println("[resolver] get boiler models")
+	log.Debug().Msg("[resolver] get boiler models")
 	boilerModels := GetBoilerModels(m.backend.Directory)
-
-	fmt.Println("[resolver] get models with information")
+	log.Debug().Msg("[resolver] get models with information")
 	models := GetModelsWithInformation(nil, data.Config, boilerModels)
-
-	fmt.Println("[resolver] generate file")
+	log.Debug().Msg("[resolver] generate file")
 	switch data.Config.Resolver.Layout {
 	case config.LayoutSingleFile:
 		return m.generateSingleFile(data, models, boilerModels)
 	case config.LayoutFollowSchema:
 		return m.generatePerSchema(data, models, boilerModels)
 	}
-	fmt.Println("[resolver] generated files")
-
+	log.Debug().Msg("[resolver] generated files")
 	return nil
 }
 
@@ -106,7 +104,8 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 			if resolver.Model.BoilerModel != nil && resolver.Model.BoilerModel.Name != "" {
 				file.Resolvers = append(file.Resolvers, resolver)
 			} else {
-				fmt.Println("Skipping resolver since no model found: ", resolver.Object.Name, resolver.Field.GoFieldName)
+				log.Debug().Str("resolver", resolver.Object.Name).Str("field", resolver.Field.GoFieldName).Msg(
+					"skipping resolver since no model found")
 			}
 		}
 	}
@@ -297,23 +296,18 @@ func enhanceResolver(r *Resolver, models []*Model) { //nolint:gocyclo
 
 	switch r.Object.Name {
 	case "Mutation":
-		{
-			r.IsCreate = containsPrefixAndPartAfterThatIsSingle(nameOfResolver, "Create")
-			r.IsUpdate = containsPrefixAndPartAfterThatIsSingle(nameOfResolver, "Update")
-			r.IsDelete = containsPrefixAndPartAfterThatIsSingle(nameOfResolver, "Delete")
-			r.IsBatchCreate = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Create")
-			r.IsBatchUpdate = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Update")
-			r.IsBatchDelete = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Delete")
-		}
+		r.IsCreate = containsPrefixAndPartAfterThatIsSingle(nameOfResolver, "Create")
+		r.IsUpdate = containsPrefixAndPartAfterThatIsSingle(nameOfResolver, "Update")
+		r.IsDelete = containsPrefixAndPartAfterThatIsSingle(nameOfResolver, "Delete")
+		r.IsBatchCreate = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Create")
+		r.IsBatchUpdate = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Update")
+		r.IsBatchDelete = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Delete")
 	case "Query":
-		{
-			r.IsList = pluralizer.IsPlural(nameOfResolver)
-			r.IsSingle = !r.IsList
-		}
+		r.IsList = pluralizer.IsPlural(nameOfResolver)
+		r.IsSingle = !r.IsList
 	default:
-		{
-			fmt.Println("[WARN] Only Query and Mutation are handled we don't recognize the following: ", r.Object.Name)
-		}
+		log.Warn().Str("unknown", r.Object.Name).Msg(
+			"only Query and Mutation are handled we don't recognize the following")
 	}
 
 	lmName := strcase.ToLowerCamel(model.Name)

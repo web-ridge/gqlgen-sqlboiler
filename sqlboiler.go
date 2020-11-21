@@ -1,7 +1,6 @@
 package gbgen
 
 import (
-	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -10,6 +9,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/iancoleman/strcase"
 )
@@ -158,9 +159,10 @@ func GetBoilerModels(dir string) []*BoilerModel { //nolint:gocognit,gocyclo
 	for _, model := range models {
 		for _, field := range model.Fields {
 			if field.IsRelation && field.Relationship == nil {
-				fmt.Printf("[warn] We could not find the relationship in the generated "+
-					"boiler structs for %v.%v this could result in unexpected behavior, we marked this field as "+
-					"non-relational \n", model.Name, field.Name)
+				log.Warn().Str("model", model.Name).Str("field", field.Name).Msg(
+					"We could not find the relationship in the generated " +
+						"boiler structs this could result in unexpected behavior, we marked this field as " +
+						"non-relational \n")
 				field.IsRelation = false
 			}
 		}
@@ -261,15 +263,15 @@ var tableNameRegex = regexp.MustCompile(`\s*(.*[^ ])\s*string`) //nolint:gocheck
 
 func parseTableNames(dir string) []string {
 	dir, err := filepath.Abs(dir)
-	errMessage := "[WARN] could not open boiler table names file, this could not lead to problems if you're " +
+	errMessage := "could not open boiler table names file, this could not lead to problems if you're " +
 		"using plural table names"
 	if err != nil {
-		fmt.Println(errMessage, err)
+		log.Warn().Err(err).Msg(errMessage)
 		return nil
 	}
 	content, err := ioutil.ReadFile(filepath.Join(dir, "boil_table_names.go"))
 	if err != nil {
-		fmt.Println(errMessage, err)
+		log.Warn().Err(err).Msg(errMessage)
 		return nil
 	}
 	tableNamesMatches := tableNameRegex.FindAllStringSubmatch(string(content), -1)
@@ -293,12 +295,12 @@ func parseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 
 	dir, err := filepath.Abs(dir)
 	if err != nil {
-		fmt.Println("abs error", err)
+		log.Err(err).Msg("parseBoilerFile filepath.Abs error")
 		return fieldsMap, structsMap, fieldsOrder
 	}
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		fmt.Println("readdir error", err)
+		log.Err(err).Msg("parseBoilerFile ioutil.ReadDir error")
 		return fieldsMap, structsMap, fieldsOrder
 	}
 

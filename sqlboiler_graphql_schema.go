@@ -9,6 +9,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/iancoleman/strcase"
 )
 
@@ -61,12 +63,12 @@ func SchemaWrite(config SchemaConfig, outputFile string, merge bool) error {
 	// TODO: Write schema to the configured location
 	if fileExists(outputFile) && merge {
 		if err := mergeContentInFile(outputFile, schema); err != nil {
-			fmt.Println("Could not write schema to disk: ", err)
+			log.Err(err).Msg("Could not write schema to disk")
 		}
 	} else {
-		fmt.Printf("Write schema of %v bytes to %v \n", len(schema), outputFile)
+		log.Debug().Int("bytes", len(schema)).Str("file", outputFile).Msg("write GraphQL schema to disk")
 		if err := writeContentToFile(schema, outputFile); err != nil {
-			fmt.Println("Could not write schema to disk: ", err)
+			log.Err(err).Msg("Could not write schema to disk")
 		}
 		return formatFile(outputFile)
 	}
@@ -623,7 +625,7 @@ func mergeContentInFile(content, outputFile string) error {
 	args := []string{baseFile}
 	out, err := exec.Command(name, args...).Output()
 	if err != nil {
-		fmt.Println("Executing command failed: ", name, strings.Join(args, " "))
+		log.Err(err).Str("name", name).Str("args", strings.Join(args, " ")).Msg("merging failed")
 		return fmt.Errorf("merging failed %v: %v", err, out)
 	}
 
@@ -632,13 +634,13 @@ func mergeContentInFile(content, outputFile string) error {
 	args = []string{"merge-file", outputFile, baseFile, newOutputFile}
 	out, err = exec.Command(name, args...).Output()
 	if err != nil {
-		fmt.Println("Executing command failed: ", name, strings.Join(args, " "))
+		log.Err(err).Str("name", name).Str("args", strings.Join(args, " ")).Msg("executing command failed")
+
 		// remove base file
 		_ = os.Remove(baseFile)
 		return fmt.Errorf("merging failed or had conflicts %v: %v", err, out)
 	}
-
-	fmt.Println("Merging done without conflicts: ", out)
+	log.Info().Msg("merging done without conflicts")
 
 	// remove files
 	_ = os.Remove(baseFile)
@@ -676,7 +678,7 @@ func writeContentToFile(content string, filename string) error {
 	defer func() {
 		closeErr := file.Close()
 		if closeErr != nil {
-			fmt.Println("Error while closing file: ", closeErr)
+			log.Err(closeErr).Msg("error while closing file")
 		}
 	}()
 

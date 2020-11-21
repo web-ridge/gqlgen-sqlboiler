@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/types"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -15,6 +16,9 @@ import (
 	"github.com/99designs/gqlgen/codegen/templates"
 	"github.com/99designs/gqlgen/plugin"
 	"github.com/iancoleman/strcase"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+
 	"github.com/vektah/gqlparser/v2/ast"
 	pluralize "github.com/web-ridge/go-pluralize"
 )
@@ -25,8 +29,21 @@ var (
 )
 
 func init() { //nolint:gochecknoinits
+
+	fmt.Println("               _     _____  _     _            \n              | |   |  __ \\(_)   | |           \n __      _____| |__ | |__) |_  __| | __ _  ___ \n \\ \\ /\\ / / _ \\ '_ \\|  _  /| |/ _` |/ _` |/ _ \\\n  \\ V  V /  __/ |_) | | \\ \\| | (_| | (_| |  __/\n   \\_/\\_/ \\___|_.__/|_|  \\_\\_|\\__,_|\\__, |\\___|\n                                     __/ |     \n                                    |___/   ") //nolint:lll
+	fmt.Println("")
+	fmt.Println("  Please help us with feedback, stars and PR's to improve this plugin.")
+	fmt.Println("  If you don't have time for that, please donate if you like this project.")
+	fmt.Println("  Click the sponsor button (PayPal) on https://github.com/web-ridge/gqlgen-sqlboiler")
+	fmt.Println("")
+
 	pluralizer = pluralize.NewClient()
 	pathRegex = regexp.MustCompile(`src/(.*)`)
+
+	// Default level for this example is info, unless debug flag is present
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
 
 type ModelBuild struct {
@@ -198,13 +215,15 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 
 	cfg := copyConfig(*originalCfg)
 
-	fmt.Println("[convert] get boiler models")
+	// log.Debug().Msg("[customization] looking for *_customized files")
+
+	log.Debug().Msg("[convert] get boiler models")
 	boilerModels := GetBoilerModels(m.Backend.Directory)
 
-	fmt.Println("[convert] get extra's from schema")
+	log.Debug().Msg("[convert] get extra's from schema")
 	interfaces, enums, scalars := getExtrasFromSchema(cfg.Schema)
 
-	fmt.Println("[convert] get model with information")
+	log.Debug().Msg("[convert] get model with information")
 	models := GetModelsWithInformation(enums, originalCfg, boilerModels)
 
 	b.Models = models
@@ -213,7 +232,7 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	b.Enums = enumsWithout(enums, []string{"SortDirection"})
 	b.Scalars = scalars
 	if len(b.Models) == 0 {
-		fmt.Println("No models found in graphql so skipping generation")
+		log.Warn().Msg("no models found in graphql so skipping generation")
 		return nil
 	}
 
@@ -225,7 +244,7 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	// 	}
 	// }
 
-	fmt.Println("[convert] render preload.gotpl")
+	log.Debug().Msg("[convert] render preload.gotpl")
 	templates.CurrentImports = nil
 	if renderError := templates.Render(templates.Options{
 		Template:        getTemplate("preload.gotpl"),
@@ -235,10 +254,10 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 		GeneratedHeader: true,
 		Packages:        cfg.Packages,
 	}); renderError != nil {
-		fmt.Println("renderError", renderError)
+		log.Err(renderError).Msg("error while rendering preload.gotpl")
 	}
 	templates.CurrentImports = nil
-	fmt.Println("[convert] render convert.gotpl")
+	log.Debug().Msg("[convert] render convert.gotpl")
 	if renderError := templates.Render(templates.Options{
 		Template:        getTemplate("convert.gotpl"),
 		PackageName:     m.Output.PackageName,
@@ -247,10 +266,10 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 		GeneratedHeader: true,
 		Packages:        cfg.Packages,
 	}); renderError != nil {
-		fmt.Println("renderError", renderError)
+		log.Err(renderError).Msg("error while rendering convert.gotpl")
 	}
 	templates.CurrentImports = nil
-	fmt.Println("[convert] render convert_input.gotpl")
+	log.Debug().Msg("[convert] render convert_input.gotpl")
 	if renderError := templates.Render(templates.Options{
 		Template:        getTemplate("convert_input.gotpl"),
 		PackageName:     m.Output.PackageName,
@@ -259,10 +278,10 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 		GeneratedHeader: true,
 		Packages:        cfg.Packages,
 	}); renderError != nil {
-		fmt.Println("renderError", renderError)
+		log.Err(renderError).Msg("error while rendering convert_input.gotpl")
 	}
 	templates.CurrentImports = nil
-	fmt.Println("[convert] render filter.gotpl")
+	log.Debug().Msg("[convert] render filter.gotpl")
 	if renderError := templates.Render(templates.Options{
 		Template:        getTemplate("filter.gotpl"),
 		PackageName:     m.Output.PackageName,
@@ -271,11 +290,11 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 		GeneratedHeader: true,
 		Packages:        cfg.Packages,
 	}); renderError != nil {
-		fmt.Println("renderError", renderError)
+		log.Err(renderError).Msg("error while rendering filter.gotpl")
 	}
 
 	templates.CurrentImports = nil
-	fmt.Println("[convert] render sort.gotpl")
+	log.Debug().Msg("[convert] render sort.gotpl")
 	if renderError := templates.Render(templates.Options{
 		Template:        getTemplate("sort.gotpl"),
 		PackageName:     m.Output.PackageName,
@@ -284,7 +303,7 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 		GeneratedHeader: true,
 		Packages:        cfg.Packages,
 	}); renderError != nil {
-		fmt.Println("renderError", renderError)
+		log.Err(renderError).Msg("error while rendering sort.gotpl")
 	}
 
 	return nil
@@ -313,7 +332,7 @@ func getTemplate(filename string) string {
 	rootDir := filepath.Dir(callerFile)
 	content, err := ioutil.ReadFile(path.Join(rootDir, filename))
 	if err != nil {
-		fmt.Println("Could not read .gotpl file", err)
+		log.Err(err).Msg("could not read .gotpl file")
 		return "Could not read .gotpl file"
 	}
 	return string(content)
@@ -405,7 +424,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 			// This calls some qglgen boilerType which gets the gqlgen type
 			typ, err := getFieldType(binder, schema, cfg, field)
 			if err != nil {
-				fmt.Println("Could not get field type from graphql schema: ", err)
+				log.Err(err).Msg("could not get field type from graphql schema")
 			}
 			jsonName := getGraphqlFieldName(cfg, m.Name, field)
 			name := getGoFieldName(jsonName)
@@ -456,16 +475,14 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 					strings.EqualFold(name, "search") ||
 					strings.EqualFold(name, "where")):
 				default:
-					{
-						fmt.Println("[WARN] boiler type not available for ", name)
-					}
+					log.Warn().Str("name", name).Msg("boiler type not available")
 				}
 			}
 
 			if boilerField.Name == "" {
-				if m.IsPayload || m.IsFilter || m.IsWhere || m.IsOrdering {
+				if m.IsPayload || m.IsFilter || m.IsWhere || m.IsOrdering || m.IsEdge || m.Name == "Node" || m.Name == "Cursor" {
 				} else {
-					fmt.Println("[WARN] boiler name not available for ", m.Name+"."+name)
+					log.Warn().Str("model.field", m.Name+"."+name).Msg("boiler type not available")
 					continue
 				}
 			}
@@ -665,8 +682,7 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 						// silent continue
 						continue
 					}
-
-					fmt.Printf("[WARN] Skip %v because no database model found\n", modelName)
+					log.Warn().Str("model", modelName).Msg("skipped because no database model found")
 					continue
 				}
 
