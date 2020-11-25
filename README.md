@@ -40,12 +40,11 @@ It's really amazing how fast a generated api with these techniques is!
 - [x] public errors in resolvers + logging via zerolog. (feel free for PR for configurable logging!)
 
 ## Roadmap
-- [ ] Edges/connections (in development)
-- [ ] Type safe sorting (in development)
+- [ ] Edges/connections (done in #development)
+- [ ] Type safe sorting (done in #development)
 - [ ] Support gqlgen multiple .graphql files
 - [ ] Support for opting out of standard generation if functions exist in {resolverName}_custom.go
 - [ ] Adding automatic database migrations and integration with https://github.com/web-ridge/dbifier so faster iteration is possible
-
 - [ ] Crud of adding/removing relationships from many-to-many on edges
 - [ ] Support more relationships inside input types
 - [ ] Generate tests
