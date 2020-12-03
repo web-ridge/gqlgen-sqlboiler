@@ -16,7 +16,7 @@
 {{ reserveImport "github.com/volatiletech/sqlboiler/v4/types" }}
 {{ reserveImport "github.com/volatiletech/null/v8" }}
 
-{{ reserveImport "github.com/web-ridge/utils-go/boilergql" }}
+{{ reserveImport "github.com/web-ridge/utils-go/boilergql/v3" }}
 
 {{ reserveImport "database/sql" }}
 {{ reserveImport "github.com/vektah/gqlparser/v2" }}

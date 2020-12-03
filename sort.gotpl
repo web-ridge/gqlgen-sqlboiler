@@ -9,7 +9,7 @@
 {{ reserveImport "bytes"  }}
 {{ reserveImport "strings"  }}
 
-{{ reserveImport "github.com/web-ridge/utils-go/boilergql" }}
+{{ reserveImport "github.com/web-ridge/utils-go/boilergql/v3" }}
 {{ reserveImport "github.com/vektah/gqlparser/v2" }}
 {{ reserveImport "github.com/vektah/gqlparser/v2/ast" }}
 {{ reserveImport "github.com/99designs/gqlgen/graphql" }}
