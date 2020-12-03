@@ -22,7 +22,7 @@ It's really amazing how fast a generated api with these techniques is!
 2. Generate gqlgen structs + converts between gqlgen and sqlboiler with this program  
    e.g. `go run convert_plugin.go` for file contents of that program see bottom of this readme you can chose whether to generate the graphql schema itself too
 
-## Done
+## Features
 
 - [x] Generate graphql.schema based on sqlboiler structs
 - [x] Generate converts between sqlboiler structs and graphql (with relations included)
@@ -37,10 +37,13 @@ It's really amazing how fast a generated api with these techniques is!
 - [x] Enum support.
 - [x] public errors in resolvers + logging via zerolog. (feel free for PR for configurable logging!)
 
-## Roadmap
+## v3.0
 
-- [ ] Edges/connections (done in #development)
-- [ ] Type safe sorting (done in #development)
+- [x] Edges/connections
+- [x] Type safe sorting
+
+## Roadmap v3.1
+
 - [ ] Support gqlgen multiple .graphql files
 - [ ] Support for opting out of standard generation if functions exist in {resolverName}\_custom.go
 
