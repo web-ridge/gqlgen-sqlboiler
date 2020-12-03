@@ -135,13 +135,13 @@ resolver:
   type: Resolver
 models:
   ConnectionBackwardPagination:
-    model: github.com/web-ridge/utils-go/boilergql.ConnectionBackwardPagination
+    model: github.com/web-ridge/utils-go/boilergql/v3.ConnectionBackwardPagination
   ConnectionForwardPagination:
-    model: github.com/web-ridge/utils-go/boilergql.ConnectionForwardPagination
+    model: github.com/web-ridge/utils-go/boilergql/v3.ConnectionForwardPagination
   ConnectionPagination:
-    model: github.com/web-ridge/utils-go/boilergql.ConnectionPagination
+    model: github.com/web-ridge/utils-go/boilergql/v3.ConnectionPagination
   SortDirection:
-    model: github.com/web-ridge/utils-go/boilergql.SortDirection
+    model: github.com/web-ridge/utils-go/boilergql/v3.SortDirection
 ```
 
 Put this in your program convert_plugin.go e.g.
