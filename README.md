@@ -23,6 +23,7 @@ It's really amazing how fast a generated api with these techniques is!
    e.g. `go run convert_plugin.go` for file contents of that program see bottom of this readme you can chose whether to generate the graphql schema itself too
 
 ## Done
+
 - [x] Generate graphql.schema based on sqlboiler structs
 - [x] Generate converts between sqlboiler structs and graphql (with relations included)
 - [x] Generate converts between input models and sqlboiler
@@ -36,25 +37,21 @@ It's really amazing how fast a generated api with these techniques is!
 - [x] Enum support.
 - [x] public errors in resolvers + logging via zerolog. (feel free for PR for configurable logging!)
 
-## Roadmap v3.0
+## Roadmap
+
 - [ ] Edges/connections (done in #development)
 - [ ] Type safe sorting (done in #development)
-## Roadmap v3.1
 - [ ] Support gqlgen multiple .graphql files
-- [ ] Support for opting out of standard generation if functions exist in {resolverName}_custom.go
+- [ ] Support for opting out of standard generation if functions exist in {resolverName}\_custom.go
+
 ## Roadmap v3.2
+
 - [ ] Adding automatic database migrations and integration with https://github.com/web-ridge/dbifier so faster iteration is possible
-## Roadmap v4.0
 - [ ] Crud of adding/removing relationships from many-to-many on edges
 - [ ] Support more relationships inside input types
 - [ ] Generate tests
 - [ ] Run automatic tests in Github CI/CD in https://github.com/web-ridge/gqlgen-sqlboiler-examples
 - [ ] Batch create generation in resolvers (based on https://github.com/web-ridge/contact-tracing/blob/master/backend/helpers/convert_batch.go)
-
-## Requirements
-
-- Use string id's or use **unsigned** ints for foreign keys + ids. Otherwise converts will give compile errors.
-  Unsigned ints for id's is allso recommended since it gives you twice as big id's and id's should not be negative anyway ;)
 
 ## Examples
 
@@ -180,24 +177,38 @@ func main() {
 		PackageName: "graphql_models",
 	}
 
-	gbgen.SchemaWrite(&gbgen.GraphQLSchemaConfig{})
+if err = gbgen.SchemaWrite(gbgen.SchemaConfig{
+		BoilerModelDirectory: backend,
+		// Directives:           []string{"IsAuthenticated"},
+		// GenerateBatchCreate:  false, // Not implemented yet
+		GenerateMutations:    true,
+		GenerateBatchDelete:  true,
+		GenerateBatchUpdate:  true,
+	}, "schema.graphql", gbgen.SchemaGenerateConfig{
+		MergeSchema: false, // uses three way merge to keep your customization
+	}); err != nil {
+		fmt.Println("error while trying to generate schema.graphql")
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(3)
+	}
 
-
-	err = api.Generate(cfg,
+	if err = api.Generate(cfg,
 		api.AddPlugin(gbgen.NewConvertPlugin(
 			output,   // directory where convert.go, convert_input.go and preload.go should live
 			backend,  // directory where sqlboiler files are put
 			frontend, // directory where gqlgen models live
+			gbgen.ConvertPluginConfig{
+				// UseReflectWorkaroundForSubModelFilteringInPostgresIssue25: true, // see issue #25 on GitHub
+			},
 		)),
 		api.AddPlugin(gbgen.NewResolverPlugin(
 			output,
 			backend,
 			frontend,
-			"github.com/web-ridge/yourapp/yourauth", // leave empty if you don't have auth
+			"", // leave empty if you don't have auth
 		)),
-	)
-	if err != nil {
-		fmt.Println("error!!")
+	); err != nil {
+		fmt.Println("error while trying generate resolver and converts")
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(3)
 	}
@@ -207,6 +218,7 @@ func main() {
 `go run convert_plugin.go`
 
 ## Help us
+
 We're the most happy with your time investments and/or pull request to improve this plugin. Feedback is also highly appreciated.
 
 If you don't have time or knowledge to contribute and we did save you a lot of time, please consider a donation so we can invest more time in this library: [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7B9KKQLXTEW9Q&source=url)
