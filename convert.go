@@ -463,6 +463,13 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 				m.PrimaryKeyType = boilerField.Type
 			}
 
+			isEdges := strings.HasSuffix(m.Name, "Connection") && name == "Edges"
+			isPageInfo := strings.HasSuffix(m.Name, "Connection") && name == "PageInfo"
+			isSort := strings.HasSuffix(m.Name, "Ordering") && name == "Sort"
+			isSortDirection := strings.HasSuffix(m.Name, "Ordering") && name == "Direction"
+			isCursor := strings.HasSuffix(m.Name, "Edge") && name == "Cursor"
+			isNode := strings.HasSuffix(m.Name, "Edge") && name == "Node"
+
 			// log some warnings when fields could not be converted
 			if boilerField.Type == "" {
 				// TODO: add filter + where here
@@ -472,14 +479,21 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 				case (m.IsFilter || m.IsWhere) && (strings.EqualFold(name, "and") ||
 					strings.EqualFold(name, "or") ||
 					strings.EqualFold(name, "search") ||
-					strings.EqualFold(name, "where")):
+					strings.EqualFold(name, "where")) ||
+					isEdges ||
+					isSort ||
+					isSortDirection ||
+					isPageInfo ||
+					isCursor ||
+					isNode:
+					// ignore
 				default:
-					log.Warn().Str("name", name).Msg("boiler type not available")
+					log.Warn().Str("model.field", m.Name+"."+name).Msg("boiler type not available (empty type)")
 				}
 			}
 
 			if boilerField.Name == "" {
-				if m.IsPayload || m.IsFilter || m.IsWhere || m.IsOrdering || m.IsEdge || m.Name == "Node" || m.Name == "Cursor" {
+				if m.IsPayload || m.IsFilter || m.IsWhere || m.IsOrdering || m.IsEdge || isPageInfo || isEdges {
 				} else {
 					log.Warn().Str("model.field", m.Name+"."+name).Msg("boiler type not available")
 					continue
@@ -675,9 +689,21 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 				isPageInfo := modelName == "PageInfo"
 				isOrdering := doesEndWith(modelName, "Ordering")
 
+				var isPagination bool
+				paginationTriggers := []string{
+					"ConnectionBackwardPagination",
+					"ConnectionPagination",
+					"ConnectionForwardPagination",
+				}
+				for _, p := range paginationTriggers {
+					if modelName == p {
+						isPagination = true
+					}
+				}
+
 				// if no boiler model is found
 				if boilerModel == nil || boilerModel.Name == "" {
-					if isInput || isWhere || isFilter || isPayload || isPageInfo {
+					if isInput || isWhere || isFilter || isPayload || isPageInfo || isPagination {
 						// silent continue
 						continue
 					}
