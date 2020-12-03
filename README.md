@@ -19,14 +19,11 @@ It's really amazing how fast a generated api with these techniques is!
 
 1. Generate database structs with: https://github.com/volatiletech/sqlboiler (--no-back-referencing is IMPORTANT!)
    e.g. `sqlboiler mysql --no-back-referencing`
-2. (optional, but recommended) Generate GrapQL scheme from sqlboiler structs: https://github.com/web-ridge/sqlboiler-graphql-schema  
-   e.g. `go run github.com/web-ridge/sqlboiler-graphql-schema --output=schema.graphql --skip-input-fields=userId --directives=isAuthenticated --pagination=no`
-3. Install: https://github.com/99designs/gqlgen
-4. Generate gqlgen structs + converts between gqlgen and sqlboiler with this program  
-   e.g. `go run convert_plugin.go` for file contents of that program see bottom of this readme
+2. Generate gqlgen structs + converts between gqlgen and sqlboiler with this program  
+   e.g. `go run convert_plugin.go` for file contents of that program see bottom of this readme you can chose whether to generate the graphql schema itself too
 
 ## Done
-
+- [x] Generate graphql.schema based on sqlboiler structs
 - [x] Generate converts between sqlboiler structs and graphql (with relations included)
 - [x] Generate converts between input models and sqlboiler
 - [x] Genarated code understands the difference between empty and null for update inputs so you can set things empty if you explicicitly set them in your mutation!
@@ -39,20 +36,20 @@ It's really amazing how fast a generated api with these techniques is!
 - [x] Enum support.
 - [x] public errors in resolvers + logging via zerolog. (feel free for PR for configurable logging!)
 
-## Roadmap
-
-- [ ] Batch create generation in resolvers (based on https://github.com/web-ridge/contact-tracing/blob/master/backend/helpers/convert_batch.go)
+## Roadmap v3.0
+- [ ] Edges/connections (done in #development)
+- [ ] Type safe sorting (done in #development)
+## Roadmap v3.1
 - [ ] Support gqlgen multiple .graphql files
-- [ ] Edges/connections
-- [ ] Generate tests
-- [ ] Run automatic tests in Github CI/CD in https://github.com/web-ridge/gqlgen-sqlboiler-examples
+- [ ] Support for opting out of standard generation if functions exist in {resolverName}_custom.go
+## Roadmap v3.2
+- [ ] Adding automatic database migrations and integration with https://github.com/web-ridge/dbifier so faster iteration is possible
+## Roadmap v4.0
 - [ ] Crud of adding/removing relationships from many-to-many on edges
 - [ ] Support more relationships inside input types
-- [ ] Do a three-way-diff merge for changes and let user choose parts of code which should not take over generated code.
-- [ ] Custom templates for resolvers (?)
-- [ ] Support for opting out of standard generation if functions exist in {resolverName}_custom.go
-- [ ] Adding automatic database migrations and integration with https://github.com/web-ridge/dbifier so faster iteration is possible
-
+- [ ] Generate tests
+- [ ] Run automatic tests in Github CI/CD in https://github.com/web-ridge/gqlgen-sqlboiler-examples
+- [ ] Batch create generation in resolvers (based on https://github.com/web-ridge/contact-tracing/blob/master/backend/helpers/convert_batch.go)
 
 ## Requirements
 
@@ -136,10 +133,16 @@ model:
 resolver:
   filename: resolver.go
   type: Resolver
+models:
+  ConnectionBackwardPagination:
+    model: github.com/web-ridge/utils-go/boilergql.ConnectionBackwardPagination
+  ConnectionForwardPagination:
+    model: github.com/web-ridge/utils-go/boilergql.ConnectionForwardPagination
+  ConnectionPagination:
+    model: github.com/web-ridge/utils-go/boilergql.ConnectionPagination
+  SortDirection:
+    model: github.com/web-ridge/utils-go/boilergql.SortDirection
 ```
-
-Run normal generator
-`go run github.com/99designs/gqlgen -v`
 
 Put this in your program convert_plugin.go e.g.
 
@@ -176,6 +179,9 @@ func main() {
 		Directory:   "graphql_models",
 		PackageName: "graphql_models",
 	}
+
+	gbgen.SchemaWrite(&gbgen.GraphQLSchemaConfig{})
+
 
 	err = api.Generate(cfg,
 		api.AddPlugin(gbgen.NewConvertPlugin(

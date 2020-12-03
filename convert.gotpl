@@ -32,7 +32,7 @@
 	type {{$enum.Name}} string
 	const (
 	{{- range $value := .Values }}
-		{{$enum.Name|go}}{{ .Name|go }}        UserSort = "{{ .NameLower }}"
+		{{$enum.Name|go}}{{ .Name|go }}        {{$enum.Name}} = "{{ .NameLower }}"
 	{{- end }}
 	)
 

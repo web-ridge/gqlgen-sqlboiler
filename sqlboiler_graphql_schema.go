@@ -19,23 +19,18 @@ const (
 	lineBreak = "\n"
 )
 
-var Paginations = struct { //nolint:gochecknoglobals
-	Connections string
-	None        string
-}{
-	Connections: "connections",
-	None:        "none",
+type SchemaConfig struct {
+	BoilerModelDirectory Config
+	Directives           []string
+	SkipInputFields      []string
+	GenerateBatchCreate  bool
+	GenerateMutations    bool
+	GenerateBatchDelete  bool
+	GenerateBatchUpdate  bool
 }
 
-type SchemaConfig struct {
-	ModelDirectory      string
-	Directives          []string
-	SkipInputFields     []string
-	Pagination          string
-	GenerateBatchCreate bool
-	GenerateMutations   bool
-	GenerateBatchDelete bool
-	GenerateBatchUpdate bool
+type SchemaGenerateConfig struct {
+	MergeSchema bool
 }
 
 type SchemaModel struct {
@@ -54,15 +49,15 @@ type SchemaField struct {
 	BoilerField      *BoilerField
 }
 
-func SchemaWrite(config SchemaConfig, outputFile string, merge bool) error {
+func SchemaWrite(config SchemaConfig, outputFile string, generateOptions SchemaGenerateConfig) error {
 	// Generate schema based on config
 	schema := SchemaGet(
 		config,
 	)
 
 	// TODO: Write schema to the configured location
-	if fileExists(outputFile) && merge {
-		if err := mergeContentInFile(outputFile, schema); err != nil {
+	if fileExists(outputFile) && generateOptions.MergeSchema {
+		if err := mergeContentInFile(schema, outputFile); err != nil {
 			log.Err(err).Msg("Could not write schema to disk")
 		}
 	} else {
@@ -83,7 +78,7 @@ func SchemaGet(
 	w := &SimpleWriter{}
 
 	// Parse models and their fields based on the sqlboiler model directory
-	boilerModels := GetBoilerModels(config.ModelDirectory)
+	boilerModels := GetBoilerModels(config.BoilerModelDirectory.Directory)
 	models := boilerModelsToModels(boilerModels)
 
 	fullDirectives := make([]string, len(config.Directives))
@@ -95,44 +90,41 @@ func SchemaGet(
 
 	joinedDirectives := strings.Join(fullDirectives, " ")
 
-	useConnections := config.Pagination == Paginations.Connections
-	if useConnections {
-		w.line(`interface Node {`)
-		w.tabLine(`id: ID!`)
-		w.line(`}`)
+	w.line(`interface Node {`)
+	w.tabLine(`id: ID!`)
+	w.line(`}`)
 
-		w.enter()
+	w.enter()
 
-		w.line(`type PageInfo {`)
-		w.tabLine(`hasNextPage: Boolean!`)
-		w.tabLine(`hasPreviousPage: Boolean!`)
-		w.tabLine(`startCursor: String`)
-		w.tabLine(`endCursor: String`)
-		w.line(`}`)
+	w.line(`type PageInfo {`)
+	w.tabLine(`hasNextPage: Boolean!`)
+	w.tabLine(`hasPreviousPage: Boolean!`)
+	w.tabLine(`startCursor: String`)
+	w.tabLine(`endCursor: String`)
+	w.line(`}`)
 
-		w.enter()
+	w.enter()
 
-		w.line(`input ConnectionForwardPagination {`)
-		w.tabLine(`first: Int!`)
-		w.tabLine(`after: ID`)
-		w.line(`}`)
+	w.line(`input ConnectionForwardPagination {`)
+	w.tabLine(`first: Int!`)
+	w.tabLine(`after: ID`)
+	w.line(`}`)
 
-		w.enter()
+	w.enter()
 
-		w.line(`input ConnectionBackwardPagination {`)
-		w.tabLine(`last: Int!`)
-		w.tabLine(`before: ID`)
-		w.line(`}`)
+	w.line(`input ConnectionBackwardPagination {`)
+	w.tabLine(`last: Int!`)
+	w.tabLine(`before: ID`)
+	w.line(`}`)
 
-		w.enter()
+	w.enter()
 
-		w.line(`input ConnectionPagination {`)
-		w.tabLine(`forward: ConnectionForwardPagination`)
-		w.tabLine(`backward: ConnectionBackwardPagination`)
-		w.line(`}`)
+	w.line(`input ConnectionPagination {`)
+	w.tabLine(`forward: ConnectionForwardPagination`)
+	w.tabLine(`backward: ConnectionBackwardPagination`)
+	w.line(`}`)
 
-		w.enter()
-	}
+	w.enter()
 
 	// Generate sorting helpers
 	w.line("enum SortDirection { ASC, DESC }")
@@ -168,11 +160,7 @@ func SchemaGet(
 	// 	organization: Organization!
 	// }
 	for _, model := range models {
-		if useConnections {
-			w.line("type " + model.Name + " implements Node {")
-		} else {
-			w.line("type " + model.Name + " {")
-		}
+		w.line("type " + model.Name + " implements Node {")
 
 		for _, field := range model.Fields {
 			// e.g we have foreign key from user to organization
@@ -189,33 +177,31 @@ func SchemaGet(
 		w.enter()
 	}
 
-	if useConnections {
-		//type UserEdge {
-		//	cursor: String!
-		//	node: User
-		//}
-		for _, model := range models {
-			w.line("type " + model.Name + "Edge {")
+	//type UserEdge {
+	//	cursor: String!
+	//	node: User
+	//}
+	for _, model := range models {
+		w.line("type " + model.Name + "Edge {")
 
-			w.tabLine(`cursor: String!`)
-			w.tabLine(`node: ` + model.Name)
-			w.line("}")
+		w.tabLine(`cursor: String!`)
+		w.tabLine(`node: ` + model.Name)
+		w.line("}")
 
-			w.enter()
-		}
+		w.enter()
+	}
 
-		//type UserConnection {
-		//	edges: [UserEdge]
-		//	pageInfo: PageInfo!
-		//}
-		for _, model := range models {
-			w.line("type " + model.Name + "Connection {")
-			w.tabLine(`edges: [` + model.Name + `Edge]`)
-			w.tabLine(`pageInfo: PageInfo!`)
-			w.line("}")
+	//type UserConnection {
+	//	edges: [UserEdge]
+	//	pageInfo: PageInfo!
+	//}
+	for _, model := range models {
+		w.line("type " + model.Name + "Connection {")
+		w.tabLine(`edges: [` + model.Name + `Edge]`)
+		w.tabLine(`pageInfo: PageInfo!`)
+		w.line("}")
 
-			w.enter()
-		}
+		w.enter()
 	}
 
 	// Add helpers for filtering lists
@@ -379,7 +365,7 @@ func SchemaGet(
 			w.enter()
 
 			// type UsersPayload {
-			// 	ids: [ID!]!
+			// 	users: [User!]!
 			// }
 			if config.GenerateBatchCreate {
 				w.line("type " + modelPluralName + "Payload {")
@@ -611,10 +597,10 @@ func mergeContentInFile(content, outputFile string) error {
 		return fmt.Errorf("could not write schema to disk: %v", err)
 	}
 	if err := formatFile(outputFile); err != nil {
-		return fmt.Errorf("could not format with prettier %v: %v", outputFile, err)
+		return fmt.Errorf("could not format with prettier %v", err)
 	}
 	if err := formatFile(newOutputFile); err != nil {
-		return fmt.Errorf("could not format with prettier %v: %v", newOutputFile, err)
+		return fmt.Errorf("could not format with prettier%v", err)
 	}
 
 	// Three way merging done based on this answer
