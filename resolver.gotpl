@@ -46,7 +46,7 @@ const inputKey = "input"
 
 		{{- if .IsSingle }}
 
-			{{- if .Model.HasStringPrimaryID }}
+			{{- if .Model.HasPrimaryStringID }}
 			dbID := id
 			{{- else }}
 			dbID := {{ .Model.Name }}ID(id)
@@ -262,13 +262,7 @@ const inputKey = "input"
 			{{ range $field := .InputModel.Fields -}}
 				{{ if $field.IsRelation -}}
 					if input.{{ $field.Name }} != nil && input.{{ $field.Name }}ID != nil {
-
-						{{- if $model.HasStringPrimaryID }}
-						dbID := *input.{{ $field.Name }}ID
-						{{- else }}
 						dbID := {{ $field.BoilerField.Relationship.Name }}ID(*input.{{ $field.Name }}ID)
-						{{- end }}
-
 						nestedM := {{ $field.BoilerField.Relationship.Name }}UpdateInputToModelM(
 							boilergql.GetInputFromContext(ctx, "input.{{ $field.JSONName }}"),
 							*input.{{ $field.Name }},
@@ -301,13 +295,7 @@ const inputKey = "input"
 				{{ end -}}
 			{{ end -}}
 
-			{{- if .Model.HasStringPrimaryID }}
-			dbID := id
-			{{- else }}
 			dbID := {{ .Model.Name }}ID(id)
-			{{- end }}
-
-
 			if _, err := dm.{{ .Model.PluralName }}(
 				dm.{{ .Model.Name }}Where.ID.EQ(dbID),
 				{{ if $.HasAuth }}
@@ -353,7 +341,7 @@ const inputKey = "input"
 
 		{{- if .IsDelete }}
 
-			{{- if .Model.HasStringPrimaryID }}
+			{{- if .Model.HasPrimaryStringID }}
 			dbID := id
 			{{- else }}
 			dbID := {{ .Model.Name }}ID(id)
@@ -445,7 +433,7 @@ const inputKey = "input"
 			mods = append(mods, qm.Select(dm.{{ .Model.Name }}Columns.ID))
 			mods = append(mods, qm.From(dm.TableNames.{{ .Model.BoilerModel.TableName }}))
 
-			{{- if .Model.HasStringPrimaryID }}
+			{{- if .Model.HasPrimaryStringID }}
 			var IDsToRemove []boilergql.RemovedStringID
 			{{- else }}
 			var IDsToRemove []boilergql.RemovedID
@@ -461,17 +449,9 @@ const inputKey = "input"
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
 
-			{{- if .Model.HasStringPrimaryID }}
-			return &fm.{{ .Model.PluralName }}DeletePayload{
-				Ids: boilerIDs,
-			}, nil
-			{{- else }}
 			return &fm.{{ .Model.PluralName }}DeletePayload{
 				Ids: boilergql.{{.Model.PrimaryKeyType|go}}IDsToGraphQL(boilerIDs, dm.TableNames.{{ .Model.BoilerModel.TableName }}),
 			}, nil
-			{{- end }}
-
-
 		{{- end }}
 	}
 

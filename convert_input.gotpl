@@ -32,8 +32,8 @@
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 	{{- if .IsInput }}
 				
-		func {{ .PluralName }}ToBoiler(am []*{{ $.Frontend.PackageName }}.{{ .Name }})( []*models.{{ .BoilerModel.Name }}) {
-			ar := make([]*models.{{ .BoilerModel.Name }}, len(am))
+		func {{ .PluralName }}ToBoiler(am []*{{ $.Frontend.PackageName }}.{{ .Name }})( []*{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}) {
+			ar := make([]*{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}, len(am))
 			for i,m := range am {
 				ar[i] = {{ .Name }}ToBoiler(
 					m,
@@ -44,12 +44,12 @@
 		
 		func {{ .Name }}ToBoiler(
 				m *{{ $.Frontend.PackageName }}.{{ .Name }},
-			)( *models.{{ .BoilerModel.Name }}) {
+			)( *{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}) {
 			if m == nil {
 				return nil
 			}
 
-			r := &models.{{ .BoilerModel.Name }}{
+			r := &{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}{
 			{{ range $field := .Fields -}}
 				{{- if $field.ConvertConfig.IsCustom -}}
 					{{- if $field.IsPrimaryID -}}
@@ -72,24 +72,24 @@
 		func {{ .Name }}ToModelM(
 			input map[string]interface{},
 			m {{ $.Frontend.PackageName }}.{{ .Name }},
-		) models.M {
-			modelM := models.M{}
+		) {{ $.Backend.PackageName }}.M {
+			modelM := {{ $.Backend.PackageName }}.M{}
 			for key := range input {
 				switch key {
 					{{ range $field := .Fields -}}
 					case "{{ $field.JSONName }}":
 						{{- if $field.ConvertConfig.IsCustom }}
 							{{- if $field.IsPrimaryID }}
-								modelM[models.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = {{ $field.ConvertConfig.ToBoiler }}
+								modelM[{{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = {{ $field.ConvertConfig.ToBoiler }}
 							{{- else if and $field.IsNumberID $field.BoilerField.IsRelation }}
-								modelM[models.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = {{ $field.ConvertConfig.ToBoiler }}
+								modelM[{{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = {{ $field.ConvertConfig.ToBoiler }}
 							{{- else if $field.IsRelation -}}
 							{{- else }}
-								modelM[models.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = {{ $field.ConvertConfig.ToBoiler }}(m.{{ $field.Name }})
+								modelM[{{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = {{ $field.ConvertConfig.ToBoiler }}(m.{{ $field.Name }})
 							{{- end }}
 						{{- else if $field.IsRelation -}}
 						{{- else }}
-							modelM[models.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = m.{{ $field.Name }}
+							modelM[{{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = m.{{ $field.Name }}
 						{{- end }}
 					{{ end -}}
 				}
@@ -103,7 +103,7 @@
 				switch key {
 					{{ range $field := .Fields -}}
 						case "{{ $field.JSONName }}":
-							columnsWhichAreSet = append(columnsWhichAreSet, models.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }})
+							columnsWhichAreSet = append(columnsWhichAreSet, {{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }})
 					{{ end -}}
 				}
 			}

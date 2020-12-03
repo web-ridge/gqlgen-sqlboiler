@@ -105,10 +105,10 @@
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
 	{{- if .IsNormal  -}}
 
-		{{- if .HasStringPrimaryID }}
+		{{- if .HasPrimaryStringID }}
 			func {{ .Name }}WithStringID(id string) *{{ $.Frontend.PackageName }}.{{ .Name }} {
 				return &{{ $.Frontend.PackageName }}.{{ .Name }}{
-					ID: id,
+					ID: {{ $model.Name }}IDToGraphQL(id),
 				}
 			}
 
@@ -136,7 +136,7 @@
 			
 		{{- end }}
 
-		func {{ .PluralName }}ToGraphQL(am []*models.{{ .Name }})( []*{{ $.Frontend.PackageName }}.{{ .Name }}) {
+		func {{ .PluralName }}ToGraphQL(am []*{{ $.Backend.PackageName }}.{{ .Name }})( []*{{ $.Frontend.PackageName }}.{{ .Name }}) {
 			ar := make([]*{{ $.Frontend.PackageName }}.{{ .Name }}, len(am))
 			for i,m := range am {
 				ar[i] = {{ .Name }}ToGraphQL(m)
@@ -147,18 +147,18 @@
 		{{ range $field := .Fields }}
 			{{- if $field.IsPrimaryNumberID -}}
 				func {{ $model.Name }}IDToGraphQL(v uint) string {
-					return boilergql.IDToGraphQL(v, models.TableNames.{{ $model.BoilerModel.TableName }})
+					return boilergql.IDToGraphQL(v, {{ $.Backend.PackageName }}.TableNames.{{ $model.BoilerModel.TableName }})
 				}
 			{{- end -}}
 			{{- if $field.IsPrimaryStringID -}}
 				func {{ $model.Name }}IDToGraphQL(v string) string {
-					return boilergql.IDToGraphQL(v, models.TableNames.{{ $model.BoilerModel.TableName }})
+					return boilergql.StringIDToGraphQL(v, {{ $.Backend.PackageName }}.TableNames.{{ $model.BoilerModel.TableName }})
 				}
 			{{- end -}}
 		{{- end }}
 
 
-	func {{ .Name }}ToGraphQL(m *models.{{ .BoilerModel.Name }})( *{{ $.Frontend.PackageName }}.{{ .Name }}) {
+	func {{ .Name }}ToGraphQL(m *{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }})( *{{ $.Frontend.PackageName }}.{{ .Name }}) {
 		if m == nil {
 			return nil
 		}

@@ -46,15 +46,14 @@ func init() { //nolint:gochecknoinits
 }
 
 type ModelBuild struct {
-	Backend             Config
-	Frontend            Config
-	HasStringPrimaryIDs bool
-	PluginConfig        ConvertPluginConfig
-	PackageName         string
-	Interfaces          []*Interface
-	Models              []*Model
-	Enums               []*Enum
-	Scalars             []string
+	Backend      Config
+	Frontend     Config
+	PluginConfig ConvertPluginConfig
+	PackageName  string
+	Interfaces   []*Interface
+	Models       []*Model
+	Enums        []*Enum
+	Scalars      []string
 }
 
 type Interface struct {
@@ -89,7 +88,7 @@ type Model struct { //nolint:maligned
 	HasOrganizationID     bool // TODO: something more pluggable
 	HasUserOrganizationID bool // TODO: something more pluggable
 	HasUserID             bool // TODO: something more pluggable
-	HasStringPrimaryID    bool
+	HasPrimaryStringID    bool
 	// other stuff
 	Description string
 	PureFields  []*ast.FieldDefinition
@@ -180,7 +179,7 @@ func copyConfig(cfg config.Config) *config.Config {
 	return &cfg
 }
 
-func GetModelsWithInformation(enums []*Enum, cfg *config.Config, boilerModels []*BoilerModel) []*Model {
+func GetModelsWithInformation(backend Config, enums []*Enum, cfg *config.Config, boilerModels []*BoilerModel) []*Model {
 	// get models based on the schema and sqlboiler structs
 	models := getModelsFromSchema(cfg.Schema, boilerModels)
 
@@ -188,7 +187,7 @@ func GetModelsWithInformation(enums []*Enum, cfg *config.Config, boilerModels []
 	enhanceModelsWithFields(enums, cfg.Schema, cfg, models)
 
 	// Add preload maps
-	enhanceModelsWithPreloadArray(models)
+	enhanceModelsWithPreloadArray(backend, models)
 
 	// Sort in same order
 	sort.Slice(models, func(i, j int) bool { return models[i].Name < models[j].Name })
@@ -223,10 +222,9 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	interfaces, enums, scalars := getExtrasFromSchema(cfg.Schema)
 
 	log.Debug().Msg("[convert] get model with information")
-	models := GetModelsWithInformation(enums, originalCfg, boilerModels)
+	models := GetModelsWithInformation(b.Backend, enums, originalCfg, boilerModels)
 
 	b.Models = models
-	b.HasStringPrimaryIDs = HasStringPrimaryIDsInModels(models)
 	b.Interfaces = interfaces
 	b.Enums = enumsWithout(enums, []string{"SortDirection"})
 	b.Scalars = scalars
@@ -335,15 +333,6 @@ func getTemplate(filename string) string {
 		return "Could not read .gotpl file"
 	}
 	return string(content)
-}
-
-func HasStringPrimaryIDsInModels(models []*Model) bool {
-	for _, model := range models {
-		if model.HasStringPrimaryID {
-			return true
-		}
-	}
-	return false
 }
 
 // getFieldType check's if user has defined a
@@ -457,7 +446,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 
 			// enable simpler code in resolvers
 			if isPrimaryStringID {
-				m.HasStringPrimaryID = isPrimaryStringID
+				m.HasPrimaryStringID = isPrimaryStringID
 			}
 			if isPrimaryNumberID || isPrimaryStringID {
 				m.PrimaryKeyType = boilerField.Type
@@ -607,13 +596,6 @@ func findBoilerFieldOrForeignKey(fields []*BoilerField, golangGraphQLName string
 			return *field
 		}
 	}
-
-	// // fallback on foreignKey
-
-	// }
-
-	// fmt.Println("???", golangGraphQLName)
-
 	return BoilerField{}
 }
 
@@ -748,7 +730,7 @@ func doesEndWith(s string, suffix string) bool {
 	return strings.HasSuffix(s, suffix) && s != suffix
 }
 
-func getPreloadMapForModel(model *Model) map[string]ColumnSetting {
+func getPreloadMapForModel(backend Config, model *Model) map[string]ColumnSetting {
 	preloadMap := map[string]ColumnSetting{}
 	for _, field := range model.Fields {
 		// only relations are preloadable
@@ -761,7 +743,7 @@ func getPreloadMapForModel(model *Model) map[string]ColumnSetting {
 		// } else {
 		// 	key = field.PluralName
 		// }
-		name := fmt.Sprintf("models.%vRels.%v", model.Name, foreignKeyToRel(field.BoilerField.Name))
+		name := fmt.Sprintf("%v.%vRels.%v", backend.PackageName, model.Name, foreignKeyToRel(field.BoilerField.Name))
 		setting := ColumnSetting{
 			Name:                  name,
 			IDAvailable:           !field.IsPlural,
@@ -773,14 +755,14 @@ func getPreloadMapForModel(model *Model) map[string]ColumnSetting {
 	return preloadMap
 }
 
-func enhanceModelsWithPreloadArray(models []*Model) {
+func enhanceModelsWithPreloadArray(backend Config, models []*Model) {
 	// first adding basic first level relations
 	for _, model := range models {
 		if !model.IsPreloadable {
 			continue
 		}
 
-		modelPreloadMap := getPreloadMapForModel(model)
+		modelPreloadMap := getPreloadMapForModel(backend, model)
 
 		sortedPreloadKeys := make([]string, 0, len(modelPreloadMap))
 		for k := range modelPreloadMap {

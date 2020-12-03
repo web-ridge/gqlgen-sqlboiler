@@ -23,6 +23,7 @@ type BoilerModel struct {
 	HasOrganizationID     bool
 	HasUserOrganizationID bool
 	HasUserID             bool
+	HasPrimaryStringID    bool
 }
 
 type BoilerField struct {
@@ -126,6 +127,13 @@ func GetBoilerModels(dir string) []*BoilerModel { //nolint:gocognit,gocyclo
 	for i, modelName := range modelNames {
 		fields := fieldsPerModelName[modelName]
 		tableName := findTableName(tableNames, modelName)
+
+		var hasPrimaryStringID bool
+		IDField := findBoilerField(fields, "ID")
+		if IDField != nil && IDField.Type == "string" {
+			hasPrimaryStringID = true
+		}
+
 		models[i] = &BoilerModel{
 			Name:                  modelName,
 			TableName:             tableName,
@@ -134,6 +142,7 @@ func GetBoilerModels(dir string) []*BoilerModel { //nolint:gocognit,gocyclo
 			HasOrganizationID:     findBoilerField(fields, "OrganizationID") != nil,
 			HasUserOrganizationID: findBoilerField(fields, "UserOrganizationID") != nil,
 			HasUserID:             findBoilerField(fields, "UserID") != nil,
+			HasPrimaryStringID:    hasPrimaryStringID,
 		}
 	}
 

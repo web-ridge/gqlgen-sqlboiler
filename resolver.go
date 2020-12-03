@@ -50,7 +50,7 @@ func (m *ResolverPlugin) GenerateCode(data *codegen.Data) error {
 	log.Debug().Msg("[resolver] get boiler models")
 	boilerModels := GetBoilerModels(m.backend.Directory)
 	log.Debug().Msg("[resolver] get models with information")
-	models := GetModelsWithInformation(nil, data.Config, boilerModels)
+	models := GetModelsWithInformation(m.backend, nil, data.Config, boilerModels)
 	log.Debug().Msg("[resolver] generate file")
 	switch data.Config.Resolver.Layout {
 	case config.LayoutSingleFile:
@@ -103,10 +103,11 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 			enhanceResolver(resolver, models)
 			if resolver.Model.BoilerModel != nil && resolver.Model.BoilerModel.Name != "" {
 				file.Resolvers = append(file.Resolvers, resolver)
-			} else {
+			} else if resolver.Field.GoFieldName != "Node" {
 				log.Debug().Str("resolver", resolver.Object.Name).Str("field", resolver.Field.GoFieldName).Msg(
 					"skipping resolver since no model found")
 			}
+
 		}
 	}
 
