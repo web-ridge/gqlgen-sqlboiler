@@ -101,50 +101,13 @@ const inputKey = "input"
 				{{- end }}
 			{{ end }}
 
-
-			// TODO: use these if no connection is used
-            // return {{ .Model.PluralName }}ToGraphQL(a), nil
-
-
-
-
 			mods = append(mods, {{.Model.Name}}FilterToMods(filter)...)
-
-            {{/*if after != "" {*/}}
-            {{/*    parsedCursor := strings.Split(after, "-")*/}}
-            {{/*    mods = append(mods, dm.LikeWhere.ID.GTE(parsedCursor[0]))*/}}
-            {{/*}*/}}
-
-            {{/*if first > 0 {*/}}
-            {{/*    mods = append(mods, qm.Limit(first+1))*/}}
-            {{/*}*/}}
-
-			a, err := dm.{{ .Model.PluralName }}(mods...).All(ctx, r.db)
+			connection, err := {{.Model.Name}}Connection(ctx, r.db, mods, pagination, ordering)
 			if err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
-
-            edges := make([]*fm.{{.Model.Name}}Edge, len(a))
-            for i, row := range a {
-                edges[i] = &fm.{{.Model.Name}}Edge{
-                    Cursor: "",
-                    Node:   {{.Model.Name}}ToGraphQL(row),
-                }
-            }
-
-            return &fm.{{.Model.Name}}Connection{
-                Edges: edges,
-                PageInfo: &fm.PageInfo{
-                HasNextPage:     false,
-                HasPreviousPage: false,
-                StartCursor:     nil,
-                EndCursor:       nil,
-            },
-            }, nil
-
-
-
+			return connection, nil
 		{{- end -}}
 
 		{{- if .IsCreate }}
