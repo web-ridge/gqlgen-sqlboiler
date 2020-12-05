@@ -44,6 +44,7 @@ const inputKey = "input"
 	func (r *{{lcFirst $resolver.Object.Name}}{{ucFirst $.ResolverType}}) {{$resolver.Field.GoFieldName}} {{ $resolver.Field.ShortResolverDeclaration }} {
 
 
+
 		{{- if .IsSingle }}
 
 			{{- if .Model.HasPrimaryStringID }}
@@ -102,7 +103,11 @@ const inputKey = "input"
 			{{ end }}
 
 			mods = append(mods, {{.Model.Name}}FilterToMods(filter)...)
-			connection, err := {{.Model.Name}}Connection(ctx, r.db, mods, pagination, ordering)
+			{{- if .IsListBackward }}
+				connection, err := {{.Model.Name}}Connection(ctx, r.db, mods, boilergql.NewBackwardPagination(last, before), ordering)
+			{{- else }}
+				connection, err := {{.Model.Name}}Connection(ctx, r.db, mods, boilergql.NewForwardPagination(first, after), ordering)
+			{{- end }}
 			if err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})

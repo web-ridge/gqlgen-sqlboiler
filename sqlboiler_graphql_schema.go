@@ -90,6 +90,13 @@ func SchemaGet(
 
 	joinedDirectives := strings.Join(fullDirectives, " ")
 
+	w.line(`schema {`)
+	w.tabLine(`query: Query`)
+	w.tabLine(`mutation: Mutation`)
+	w.line(`}`)
+
+	w.enter()
+
 	w.line(`interface Node {`)
 	w.tabLine(`id: ID!`)
 	w.line(`}`)
@@ -101,27 +108,6 @@ func SchemaGet(
 	w.tabLine(`hasPreviousPage: Boolean!`)
 	w.tabLine(`startCursor: String`)
 	w.tabLine(`endCursor: String`)
-	w.line(`}`)
-
-	w.enter()
-
-	w.line(`input ConnectionForwardPagination {`)
-	w.tabLine(`first: Int!`)
-	w.tabLine(`after: ID`)
-	w.line(`}`)
-
-	w.enter()
-
-	w.line(`input ConnectionBackwardPagination {`)
-	w.tabLine(`last: Int!`)
-	w.tabLine(`before: ID`)
-	w.line(`}`)
-
-	w.enter()
-
-	w.line(`input ConnectionPagination {`)
-	w.tabLine(`forward: ConnectionForwardPagination`)
-	w.tabLine(`backward: ConnectionBackwardPagination`)
 	w.line(`}`)
 
 	w.enter()
@@ -260,7 +246,8 @@ func SchemaGet(
 		modelPluralName := pluralizer.Plural(model.Name)
 
 		arguments := []string{
-			"pagination: ConnectionPagination!",
+			"first: Int!",
+			"after: String",
 			"ordering: [" + model.Name + "Ordering!]",
 			"filter: " + model.Name + "Filter",
 		}

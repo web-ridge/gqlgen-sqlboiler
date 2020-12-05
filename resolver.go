@@ -107,7 +107,6 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 				log.Debug().Str("resolver", resolver.Object.Name).Str("field", resolver.Field.GoFieldName).Msg(
 					"skipping resolver since no model found")
 			}
-
 		}
 	}
 
@@ -258,21 +257,22 @@ type Resolver struct {
 	Implementation            string
 	IsSingle                  bool
 	IsList                    bool
+	IsListForward             bool
+	IsListBackward            bool
 	IsCreate                  bool
 	IsUpdate                  bool
 	IsDelete                  bool
 	IsBatchCreate             bool
 	IsBatchUpdate             bool
 	IsBatchDelete             bool
-	BoilerWhiteList           string
 	ResolveOrganizationID     bool // TODO: something more pluggable
 	ResolveUserOrganizationID bool // TODO: something more pluggable
 	ResolveUserID             bool // TODO: something more pluggable
 	Model                     Model
 	InputModel                Model
-
-	PublicErrorKey     string
-	PublicErrorMessage string
+	BoilerWhiteList           string
+	PublicErrorKey            string
+	PublicErrorMessage        string
 }
 
 func gqlToResolverName(base string, gqlname string) string {
@@ -304,7 +304,15 @@ func enhanceResolver(r *Resolver, models []*Model) { //nolint:gocyclo
 		r.IsBatchUpdate = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Update")
 		r.IsBatchDelete = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Delete")
 	case "Query":
-		r.IsList = pluralizer.IsPlural(nameOfResolver)
+		isPlural := pluralizer.IsPlural(nameOfResolver)
+		if isPlural {
+			r.IsList = isPlural
+			r.IsListBackward = strings.Contains(r.Field.GoFieldName, "first int") &&
+				strings.Contains(r.Field.GoFieldName, "after *string")
+			r.IsListBackward = strings.Contains(r.Field.GoFieldName, "last int") &&
+				strings.Contains(r.Field.GoFieldName, "before *string")
+		}
+
 		r.IsSingle = !r.IsList
 	default:
 		log.Warn().Str("unknown", r.Object.Name).Msg(

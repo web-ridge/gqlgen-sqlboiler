@@ -248,10 +248,10 @@ func getSortedBoilerTypes(boilerTypeMap map[string]string, boilerTypeOrder map[s
 		higherOrders := []string{"createdat", "updatedat", "deletedat"}
 		for i, higherOrder := range higherOrders {
 			if strings.HasSuffix(strings.ToLower(aKey), higherOrder) {
-				aOrder += 1000000 + i
+				aOrder += 1000000 * i
 			}
 			if strings.HasSuffix(strings.ToLower(bKey), higherOrder) {
-				bOrder += 10000000 + i
+				bOrder += 10000000 * i
 			}
 		}
 
