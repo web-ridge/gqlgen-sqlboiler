@@ -56,10 +56,23 @@ var TablePreloadMap = map[string]map[string]boilergql.ColumnSetting{
 	}
 	{{ end -}}
 {{- end }}
+{{ range $model := .Models }}
+	{{ if .IsPayload -}}
+	var {{ .Name }}PreloadLevels = struct {
+		{{ range $field := .Fields }}
+		{{- if $field.IsRelation -}}
+		{{- $field.Name }} string
+		{{- end }}
+		{{- end }}
+	}{
+		{{ range $field := .Fields }}
+		{{- if $field.IsRelation -}}
+		{{- $field.Name }}: "{{- $field.JSONName }}",
+		{{- end }}
+		{{- end }}
+	}
+	{{ end }}
 
-var MutationPreloadLevels = struct {
-	EdgeNode string
-}{
-	EdgeNode: "edge.node",
-}
 
+
+{{- end }}

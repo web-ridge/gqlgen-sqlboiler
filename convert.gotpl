@@ -103,18 +103,6 @@
 
 {{ range $model := .Models }}
 	{{with .Description }} {{.|prefixLines "// "}} {{end}}
-
-	{{ if .IsPayload -}}
-	func {{ .BoilerModel.Name }}ToGraphQLPayload(m *{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }})( *{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Payload) {
-		return &{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Payload{
-			Edge: &{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Edge{
-				Cursor: nil,
-				Node: {{ .BoilerModel.Name }}ToGraphQL(m),
-			},
-		}
-	}
-	{{ end }}
-
 	{{- if .IsNormal  -}}
 
 		{{- if .HasPrimaryStringID }}
