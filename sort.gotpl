@@ -246,8 +246,9 @@
 			offset := boilergql.GetOffsetFromCursor(cursor)
 			return func(m *{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}, i int) *{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Edge {
 				n := {{ .BoilerModel.Name }}ToGraphQL(m)
+				c := To{{ .BoilerModel.Name }}CursorSwitch(ordering, n, cursorType, offset, i)
 				return &{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Edge{
-					Cursor: To{{ .BoilerModel.Name }}CursorSwitch(ordering, n, cursorType, offset, i),
+					Cursor: &c,
 					Node:   n,
 				}
 			}
@@ -257,12 +258,12 @@
 			var startCursor, endCursor *string
 			if len(edges) >= 2 {
 				s, e := edges[0].Cursor, edges[len(edges)-1].Cursor
-				startCursor = &s
-				endCursor = &e
+				startCursor = s
+				endCursor = e
 			} else if len(edges) == 1 {
 				c := edges[0].Cursor
-				startCursor = &c
-				endCursor = &c
+				startCursor = c
+				endCursor = c
 			}
 			return startCursor, endCursor
 		}

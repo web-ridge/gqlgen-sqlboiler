@@ -164,13 +164,13 @@ func SchemaGet(
 	}
 
 	//type UserEdge {
-	//	cursor: String!
+	//	cursor: String
 	//	node: User
 	//}
 	for _, model := range models {
 		w.line("type " + model.Name + "Edge {")
 
-		w.tabLine(`cursor: String!`)
+		w.tabLine(`cursor: String`)
 		w.tabLine(`node: ` + model.Name)
 		w.line("}")
 
