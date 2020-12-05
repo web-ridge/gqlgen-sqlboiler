@@ -332,10 +332,10 @@ func SchemaGet(
 			// }
 
 			// type UserPayload {
-			// 	user: User!
+			//  edge: UserEdge
 			// }
 			w.line("type " + model.Name + "Payload {")
-			w.tabLine(strcase.ToLowerCamel(model.Name) + ": " + model.Name + "!")
+			w.tabLine("edge: " + model.Name + "Edge")
 			w.line("}")
 
 			w.enter()

@@ -192,7 +192,7 @@ const inputKey = "input"
 			}
 
 			// resolve requested fields after creating
-			mods := Get{{ .Model.Name }}PreloadModsWithLevel(ctx, {{ .Model.Name }}PayloadPreloadLevels.{{ .Model.Name }})
+			mods := Get{{ .Model.Name }}PreloadModsWithLevel(ctx, MutationPreloadLevels.EdgeNode)
 			mods = append(mods, dm.{{ .Model.Name }}Where.ID.EQ(m.ID))
 			{{ if $.HasAuth }}
 				{{- if .Model.BoilerModel.HasOrganizationID  }}
@@ -216,9 +216,7 @@ const inputKey = "input"
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
-			return &fm.{{ .Model.Name }}Payload{
-				{{ .Model.Name }}: {{ .Model.Name }}ToGraphQL(pM),
-			}, nil
+			return {{ .Model.Name }}ToGraphQLPayload(pM), nil
 
 		{{- end -}}
 
@@ -283,7 +281,7 @@ const inputKey = "input"
 			}
 
 			// resolve requested fields after updating
-			mods := Get{{ .Model.Name }}PreloadModsWithLevel(ctx, {{ .Model.Name }}PayloadPreloadLevels.{{ .Model.Name }})
+			mods := Get{{ .Model.Name }}PreloadModsWithLevel(ctx, MutationPreloadLevels.EdgeNode)
 			mods = append(mods, dm.{{ .Model.Name }}Where.ID.EQ(dbID))
 			{{ if $.HasAuth }}
 				{{- if .Model.BoilerModel.HasOrganizationID  }}
@@ -301,9 +299,7 @@ const inputKey = "input"
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
-			return &fm.{{ .Model.Name }}Payload{
-				{{ .Model.Name }}: {{ .Model.Name }}ToGraphQL(pM),
-			}, nil
+			return {{ .Model.Name }}ToGraphQLPayload(pM), nil
 
 		{{- end -}}
 
