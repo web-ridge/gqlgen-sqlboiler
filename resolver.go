@@ -17,21 +17,33 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewResolverPlugin(output, backend, frontend Config, authImport string) plugin.Plugin {
+func NewResolverPlugin(output, backend, frontend Config, resolverPluginConfig ResolverPluginConfig) plugin.Plugin {
 	return &ResolverPlugin{
 		output:         output,
 		backend:        backend,
 		frontend:       frontend,
-		authImport:     authImport,
+		pluginConfig:   resolverPluginConfig,
 		rootImportPath: getRootImportPath(),
 	}
+}
+
+type AuthorizationScope struct {
+	ImportPath        string
+	ImportAlias       string
+	ScopeResolverName string
+	BoilerColumnName  string
+	AddHook           func(model *BoilerModel, resolver *Resolver, templateKey string) bool
+}
+
+type ResolverPluginConfig struct {
+	AuthorizationScopes []AuthorizationScope
 }
 
 type ResolverPlugin struct {
 	output         Config
 	backend        Config
 	frontend       Config
-	authImport     string
+	pluginConfig   ResolverPluginConfig
 	rootImportPath string
 }
 
@@ -79,11 +91,10 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 		ImportPath: path.Join(m.rootImportPath, m.frontend.Directory),
 	})
 
-	hasAuth := m.authImport != ""
-	if hasAuth {
+	for _, scope := range m.pluginConfig.AuthorizationScopes {
 		file.imports = append(file.imports, Import{
-			Alias:      "auth",
-			ImportPath: m.authImport,
+			Alias:      scope.ImportAlias,
+			ImportPath: scope.ImportPath,
 		})
 	}
 
@@ -111,12 +122,12 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 	}
 
 	resolverBuild := &ResolverBuild{
-		File:         &file,
-		PackageName:  data.Config.Resolver.Package,
-		ResolverType: data.Config.Resolver.Type,
-		HasRoot:      true,
-		HasAuth:      hasAuth,
-		Models:       models,
+		File:                &file,
+		PackageName:         data.Config.Resolver.Package,
+		ResolverType:        data.Config.Resolver.Type,
+		HasRoot:             true,
+		Models:              models,
+		AuthorizationScopes: m.pluginConfig.AuthorizationScopes,
 	}
 	templates.CurrentImports = nil
 	return templates.Render(templates.Options{
@@ -222,11 +233,11 @@ func (m *ResolverPlugin) generatePerSchema(data *codegen.Data, _ []*Model, _ []*
 
 type ResolverBuild struct {
 	*File
-	HasAuth      bool
-	HasRoot      bool
-	PackageName  string
-	ResolverType string
-	Models       []*Model
+	HasRoot             bool
+	PackageName         string
+	ResolverType        string
+	Models              []*Model
+	AuthorizationScopes []AuthorizationScope
 }
 
 type File struct {

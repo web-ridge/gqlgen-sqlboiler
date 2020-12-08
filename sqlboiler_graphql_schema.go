@@ -59,11 +59,13 @@ func SchemaWrite(config SchemaConfig, outputFile string, generateOptions SchemaG
 	if fileExists(outputFile) && generateOptions.MergeSchema {
 		if err := mergeContentInFile(schema, outputFile); err != nil {
 			log.Err(err).Msg("Could not write schema to disk")
+			return err
 		}
 	} else {
 		log.Debug().Int("bytes", len(schema)).Str("file", outputFile).Msg("write GraphQL schema to disk")
 		if err := writeContentToFile(schema, outputFile); err != nil {
 			log.Err(err).Msg("Could not write schema to disk")
+			return err
 		}
 		return formatFile(outputFile)
 	}

@@ -1,6 +1,7 @@
 package gbgen
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -16,14 +17,11 @@ import (
 )
 
 type BoilerModel struct {
-	Name                  string
-	TableName             string
-	PluralName            string
-	Fields                []*BoilerField
-	HasOrganizationID     bool
-	HasUserOrganizationID bool
-	HasUserID             bool
-	HasPrimaryStringID    bool
+	Name               string
+	TableName          string
+	PluralName         string
+	Fields             []*BoilerField
+	HasPrimaryStringID bool
 }
 
 type BoilerField struct {
@@ -135,14 +133,12 @@ func GetBoilerModels(dir string) []*BoilerModel { //nolint:gocognit,gocyclo
 		}
 
 		models[i] = &BoilerModel{
-			Name:                  modelName,
-			TableName:             tableName,
-			PluralName:            pluralizer.Plural(modelName),
-			Fields:                fields,
-			HasOrganizationID:     findBoilerField(fields, "OrganizationID") != nil,
-			HasUserOrganizationID: findBoilerField(fields, "UserOrganizationID") != nil,
-			HasUserID:             findBoilerField(fields, "UserID") != nil,
-			HasPrimaryStringID:    hasPrimaryStringID,
+			Name:       modelName,
+			TableName:  tableName,
+			PluralName: pluralizer.Plural(modelName),
+			Fields:     fields,
+
+			HasPrimaryStringID: hasPrimaryStringID,
 		}
 	}
 
@@ -359,6 +355,17 @@ func parseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 							} // else {
 							// fmt.Println("len(field.Names) == 0", field)
 						//	}
+						case *ast.ArrayType:
+
+							name := field.Names[0].Name
+							fmt.Println(name)
+							if !isFirstCharacterLowerCase(name) {
+								fmt.Println("add", name)
+								k := safeTypeSpec.Name.String() + "." + name
+
+								fieldsMap[k] = "unknown"
+								fieldsOrder[k] = i
+							}
 
 						case *ast.SelectorExpr:
 							//nolint:errcheck //TODO: handle errors
@@ -381,7 +388,7 @@ func parseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 							fieldsOrder[k] = i
 
 						default:
-							// fmt.Println("ignoring....", field.Names)
+							fmt.Println("ignoring....", field.Names, field)
 						}
 						i++
 					}

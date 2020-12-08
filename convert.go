@@ -67,28 +67,26 @@ type Preload struct {
 }
 
 type Model struct { //nolint:maligned
-	Name                  string
-	PluralName            string
-	BoilerModel           *BoilerModel
-	PrimaryKeyType        string
-	Fields                []*Field
-	IsNormal              bool
-	IsInput               bool
-	IsCreateInput         bool
-	IsUpdateInput         bool
-	IsNormalInput         bool
-	IsPayload             bool
-	IsConnection          bool
-	IsEdge                bool
-	IsOrdering            bool
-	IsWhere               bool
-	IsFilter              bool
-	IsPreloadable         bool
-	PreloadArray          []Preload
-	HasOrganizationID     bool // TODO: something more pluggable
-	HasUserOrganizationID bool // TODO: something more pluggable
-	HasUserID             bool // TODO: something more pluggable
-	HasPrimaryStringID    bool
+	Name           string
+	PluralName     string
+	BoilerModel    *BoilerModel
+	PrimaryKeyType string
+	Fields         []*Field
+	IsNormal       bool
+	IsInput        bool
+	IsCreateInput  bool
+	IsUpdateInput  bool
+	IsNormalInput  bool
+	IsPayload      bool
+	IsConnection   bool
+	IsEdge         bool
+	IsOrdering     bool
+	IsWhere        bool
+	IsFilter       bool
+	IsPreloadable  bool
+	PreloadArray   []Preload
+
+	HasPrimaryStringID bool
 	// other stuff
 	Description string
 	PureFields  []*ast.FieldDefinition
@@ -516,10 +514,6 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 	}
 
 	for _, m := range models {
-		// TODO: this should be customized
-		m.HasOrganizationID = findField(m.Fields, "organizationId") != nil
-		m.HasUserOrganizationID = findField(m.Fields, "userOrganizationId") != nil
-		m.HasUserID = findField(m.Fields, "userId") != nil
 		for _, f := range m.Fields {
 			if f.BoilerField.Relationship != nil {
 				f.Relationship = findModel(models, f.BoilerField.Relationship.Name)
