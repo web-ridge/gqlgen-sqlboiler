@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"text/template"
 
+	"golang.org/x/tools/imports"
+
 	gqlgenTemplates "github.com/99designs/gqlgen/codegen/templates"
 )
 
@@ -28,11 +30,13 @@ type Options struct {
 
 func WriteTemplateFile(fileName string, cfg Options) error {
 	content, contentError := GetTemplateContent(cfg)
-	writeError := ioutil.WriteFile(fileName, []byte(content), 0o600)
+	importFixedContent, importsError := imports.Process(fileName, []byte(content), nil)
+	writeError := ioutil.WriteFile(fileName, importFixedContent, 0o600)
 
-	if contentError != nil || writeError != nil {
-		return fmt.Errorf("errors while writing template to %v writeError: %v, contentError: %v", fileName, writeError, contentError)
+	if contentError != nil || writeError != nil || importsError != nil {
+		return fmt.Errorf("errors while writing template to %v writeError: %v, contentError: %v, importError: %v", fileName, writeError, contentError, importsError)
 	}
+
 	return nil
 }
 

@@ -5,8 +5,6 @@ import (
 	"path"
 	"strings"
 
-	gqlgenTemplates "github.com/99designs/gqlgen/codegen/templates"
-
 	"github.com/rs/zerolog/log"
 
 	"github.com/iancoleman/strcase"
@@ -57,7 +55,7 @@ func (m *ResolverPlugin) GenerateCode(data *codegen.Data) error {
 		return nil
 	}
 
-	gqlgenTemplates.CurrentImports = &gqlgenTemplates.Imports{}
+	// gqlgenTemplates.CurrentImports = &gqlgenTemplates.Imports{}
 
 	// Get all models information
 	log.Debug().Msg("[resolver] get boiler models")
@@ -160,8 +158,9 @@ type File struct {
 }
 
 type Resolver struct {
-	Object                    *codegen.Object
-	Field                     *codegen.Field
+	Object *codegen.Object
+	Field  *codegen.Field
+
 	Implementation            string
 	IsSingle                  bool
 	IsList                    bool
@@ -181,6 +180,38 @@ type Resolver struct {
 	BoilerWhiteList           string
 	PublicErrorKey            string
 	PublicErrorMessage        string
+}
+
+func (rb *ResolverBuild) getResolverType(ty string) string {
+	for _, imp := range rb.Imports {
+		if strings.Contains(ty, imp.ImportPath) {
+			if imp.Alias != "" {
+				ty = strings.Replace(ty, imp.ImportPath, imp.Alias, -1)
+			} else {
+				ty = strings.Replace(ty, imp.ImportPath, "", -1)
+			}
+		}
+	}
+	return ty
+}
+
+func (rb *ResolverBuild) ShortResolverDeclaration(r *Resolver) string {
+	res := "(ctx context.Context"
+
+	if !r.Field.Object.Root {
+		res += fmt.Sprintf(", obj %s", rb.getResolverType(r.Field.Object.Reference().String()))
+	}
+	for _, arg := range r.Field.Args {
+		res += fmt.Sprintf(", %s %s", arg.VarName, rb.getResolverType(arg.TypeReference.GO.String()))
+	}
+
+	result := rb.getResolverType(r.Field.TypeReference.GO.String())
+	if r.Field.Object.Stream {
+		result = "<-chan " + result
+	}
+
+	res += fmt.Sprintf(") (%s, error)", result)
+	return res
 }
 
 func enhanceResolver(r *Resolver, models []*Model) { //nolint:gocyclo

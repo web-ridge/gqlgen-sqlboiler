@@ -49,7 +49,7 @@ const inputKey = "input"
 	{{- end -}}
 	const {{ $resolver.PublicErrorKey }} = "{{ $resolver.PublicErrorMessage }}"
 
-	func (r *{{lcFirst $resolver.Object.Name}}{{ucFirst $.ResolverType}}) {{$resolver.Field.GoFieldName}}{{ $resolver.Field.ShortResolverDeclaration }}  {
+	func (r *{{lcFirst $resolver.Object.Name}}{{ucFirst $.ResolverType}}) {{$resolver.Field.GoFieldName}}{{ $.ShortResolverDeclaration  $resolver }}  {
 
 
 
@@ -129,7 +129,7 @@ const inputKey = "input"
 
 			{{ range $scope := $.AuthorizationScopes -}}
 				{{- if (call $scope.AddHook $resolver.Model.BoilerModel $resolver "createInput")   }}
-					m.{{$scope.BoilerColumnName}}ID = {{$scope.ImportAlias}}.{{$scope.ScopeResolverName}}(ctx)
+					m.{{$scope.BoilerColumnName}} = {{$scope.ImportAlias}}.{{$scope.ScopeResolverName}}(ctx)
 				{{- end }}
 			{{- end }}
 
@@ -330,7 +330,7 @@ func (r *queryResolver) Node(ctx context.Context, globalGraphID string) (fm.Node
 
 
 {{ range $object := .Objects -}}
-	func (r *{{$.ResolverType}}) {{$object.Name}}() {{ $object.ResolverInterface }} { return &{{lcFirst $object.Name}}{{ucFirst $.ResolverType}}{r} }
+	func (r *{{$.ResolverType}}) {{$object.Name}}() fm.{{ $object.Name }}Resolver { return &{{lcFirst $object.Name}}{{ucFirst $.ResolverType}}{r} }
 {{ end }}
 
 {{ range $object := .Objects -}}
