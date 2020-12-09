@@ -13,14 +13,14 @@ import (
 	"strings"
 
 	"github.com/99designs/gqlgen/codegen/config"
-	"github.com/99designs/gqlgen/codegen/templates"
+	gqlgenTemplates "github.com/99designs/gqlgen/codegen/templates"
 	"github.com/99designs/gqlgen/plugin"
 	"github.com/iancoleman/strcase"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-
 	"github.com/vektah/gqlparser/v2/ast"
 	pluralize "github.com/web-ridge/go-pluralize"
+	"github.com/web-ridge/gqlgen-sqlboiler/v3/templates"
 )
 
 var (
@@ -190,7 +190,7 @@ func GetModelsWithInformation(backend Config, enums []*Enum, cfg *config.Config,
 	// Sort in same order
 	sort.Slice(models, func(i, j int) bool { return models[i].Name < models[j].Name })
 	for _, m := range models {
-		cfg.Models.Add(m.Name, cfg.Model.ImportPath()+"."+templates.ToGo(m.Name))
+		cfg.Models.Add(m.Name, cfg.Model.ImportPath()+"."+gqlgenTemplates.ToGo(m.Name))
 	}
 	return models
 }
@@ -240,67 +240,65 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	// }
 
 	log.Debug().Msg("[convert] render preload.gotpl")
-	templates.CurrentImports = nil
-	if renderError := templates.Render(templates.Options{
-		Template:        getTemplate("preload.gotpl"),
-		PackageName:     m.Output.PackageName,
-		Filename:        m.Output.Directory + "/" + "preload.go",
-		Data:            b,
-		GeneratedHeader: true,
-		Packages:        cfg.Packages,
-	}); renderError != nil {
+	if renderError := templates.WriteTemplateFile(
+		m.Output.Directory+"/"+"preload.go",
+		templates.Options{
+			Template:    getTemplate("preload.gotpl"),
+			PackageName: m.Output.PackageName,
+			Data:        b,
+		}); renderError != nil {
 		log.Err(renderError).Msg("error while rendering preload.gotpl")
 	}
-	templates.CurrentImports = nil
+	log.Debug().Msg("[convert] rendered preload.gotpl")
+
 	log.Debug().Msg("[convert] render convert.gotpl")
-	if renderError := templates.Render(templates.Options{
-		Template:        getTemplate("convert.gotpl"),
-		PackageName:     m.Output.PackageName,
-		Filename:        m.Output.Directory + "/" + "convert.go",
-		Data:            b,
-		GeneratedHeader: true,
-		Packages:        cfg.Packages,
-	}); renderError != nil {
+	if renderError := templates.WriteTemplateFile(
+		m.Output.Directory+"/"+"convert.go",
+		templates.Options{
+			Template:    getTemplate("convert.gotpl"),
+			PackageName: m.Output.PackageName,
+			Data:        b,
+		}); renderError != nil {
 		log.Err(renderError).Msg("error while rendering convert.gotpl")
 	}
-	templates.CurrentImports = nil
+	log.Debug().Msg("[convert] rendered convert.gotpl")
+
 	log.Debug().Msg("[convert] render convert_input.gotpl")
-	if renderError := templates.Render(templates.Options{
-		Template:        getTemplate("convert_input.gotpl"),
-		PackageName:     m.Output.PackageName,
-		Filename:        m.Output.Directory + "/" + "convert_input.go",
-		Data:            b,
-		GeneratedHeader: true,
-		Packages:        cfg.Packages,
-	}); renderError != nil {
+	if renderError := templates.WriteTemplateFile(
+		m.Output.Directory+"/"+"convert_input.go",
+		templates.Options{
+			Template:    getTemplate("convert_input.gotpl"),
+			PackageName: m.Output.PackageName,
+			Data:        b,
+		}); renderError != nil {
 		log.Err(renderError).Msg("error while rendering convert_input.gotpl")
 	}
-	templates.CurrentImports = nil
+	log.Debug().Msg("[convert] convert_input sort.gotpl")
+
 	log.Debug().Msg("[convert] render filter.gotpl")
-	if renderError := templates.Render(templates.Options{
-		Template:        getTemplate("filter.gotpl"),
-		PackageName:     m.Output.PackageName,
-		Filename:        m.Output.Directory + "/" + "filter.go",
-		Data:            b,
-		GeneratedHeader: true,
-		Packages:        cfg.Packages,
-	}); renderError != nil {
+	if renderError := templates.WriteTemplateFile(
+		m.Output.Directory+"/"+"filter.go",
+		templates.Options{
+			Template:    getTemplate("filter.gotpl"),
+			PackageName: m.Output.PackageName,
+
+			Data: b,
+		}); renderError != nil {
 		log.Err(renderError).Msg("error while rendering filter.gotpl")
 	}
+	log.Debug().Msg("[convert] rendered filter.gotpl")
 
-	templates.CurrentImports = nil
 	log.Debug().Msg("[convert] render sort.gotpl")
-	if renderError := templates.Render(templates.Options{
-		Template:        getTemplate("sort.gotpl"),
-		PackageName:     m.Output.PackageName,
-		Filename:        m.Output.Directory + "/" + "sort.go",
-		Data:            b,
-		GeneratedHeader: true,
-		Packages:        cfg.Packages,
-	}); renderError != nil {
+	if renderError := templates.WriteTemplateFile(
+		m.Output.Directory+"/"+"sort.go",
+		templates.Options{
+			Template:    getTemplate("sort.gotpl"),
+			PackageName: m.Output.PackageName,
+			Data:        b,
+		}); renderError != nil {
 		log.Err(renderError).Msg("error while rendering sort.gotpl")
 	}
-
+	log.Debug().Msg("[convert] rendered sort.gotpl")
 	return nil
 }
 
@@ -358,7 +356,7 @@ func getFieldType(binder *config.Binder, schema *ast.Schema, cfg *config.Config,
 		case ast.Interface, ast.Union:
 			// no user defined model, referencing a generated interface type
 			typ = types.NewNamed(
-				types.NewTypeName(0, cfg.Model.Pkg(), templates.ToGo(field.Type.Name()), nil),
+				types.NewTypeName(0, cfg.Model.Pkg(), gqlgenTemplates.ToGo(field.Type.Name()), nil),
 				types.NewInterfaceType([]*types.Func{}, []types.Type{}),
 				nil,
 			)
@@ -366,7 +364,7 @@ func getFieldType(binder *config.Binder, schema *ast.Schema, cfg *config.Config,
 		case ast.Enum:
 			// no user defined model, must reference a generated enum
 			typ = types.NewNamed(
-				types.NewTypeName(0, cfg.Model.Pkg(), templates.ToGo(field.Type.Name()), nil),
+				types.NewTypeName(0, cfg.Model.Pkg(), gqlgenTemplates.ToGo(field.Type.Name()), nil),
 				nil,
 				nil,
 			)
@@ -374,7 +372,7 @@ func getFieldType(binder *config.Binder, schema *ast.Schema, cfg *config.Config,
 		case ast.Object, ast.InputObject:
 			// no user defined model, must reference a generated struct
 			typ = types.NewNamed(
-				types.NewTypeName(0, cfg.Model.Pkg(), templates.ToGo(field.Type.Name()), nil),
+				types.NewTypeName(0, cfg.Model.Pkg(), gqlgenTemplates.ToGo(field.Type.Name()), nil),
 				types.NewStruct(nil, nil),
 				nil,
 			)
@@ -403,7 +401,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 
 	// Generate the basic of the fields
 	for _, m := range models {
-		// Let's convert the pure ast fields to something usable for our template
+		// Let's convert the pure ast fields to something usable for our templates
 		for _, field := range m.PureFields {
 			fieldDef := schema.Types[field.Type.Name()]
 
@@ -413,7 +411,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 				log.Err(err).Msg("could not get field type from graphql schema")
 			}
 			jsonName := getGraphqlFieldName(cfg, m.Name, field)
-			name := getGoFieldName(jsonName)
+			name := gqlgenTemplates.ToGo(jsonName)
 
 			// just some (old) Relay clutter which is not needed anymore + we won't do anything with it
 			// in our database converts.
@@ -522,15 +520,6 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 	}
 }
 
-func getGoFieldName(name string) string {
-	goFieldName := strcase.ToCamel(name)
-	// in golang Id = ID
-	goFieldName = strings.Replace(goFieldName, "Id", "ID", -1)
-	// in golang Url = URL
-	goFieldName = strings.Replace(goFieldName, "Url", "URL", -1)
-	return goFieldName
-}
-
 var ignoreTypePrefixes = []string{"graphql_models", "models", "boilergql"} //nolint:gochecknoglobals
 
 func getShortType(longType string) string {
@@ -568,14 +557,14 @@ func findModel(models []*Model, search string) *Model {
 	return nil
 }
 
-func findField(fields []*Field, search string) *Field {
-	for _, f := range fields {
-		if f.Name == search {
-			return f
-		}
-	}
-	return nil
-}
+//func findField(fields []*Field, search string) *Field {
+//	for _, f := range fields {
+//		if f.Name == search {
+//			return f
+//		}
+//	}
+//	return nil
+//}
 
 func findBoilerFieldOrForeignKey(fields []*BoilerField, golangGraphQLName string, isRelation bool) BoilerField {
 	// get database friendly struct for this model

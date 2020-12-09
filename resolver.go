@@ -1,20 +1,19 @@
 package gbgen
 
 import (
-	"os"
+	"fmt"
 	"path"
-	"path/filepath"
 	"strings"
+
+	gqlgenTemplates "github.com/99designs/gqlgen/codegen/templates"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/iancoleman/strcase"
 
 	"github.com/99designs/gqlgen/codegen"
-	"github.com/99designs/gqlgen/codegen/config"
-	"github.com/99designs/gqlgen/codegen/templates"
 	"github.com/99designs/gqlgen/plugin"
-	"github.com/pkg/errors"
+	"github.com/web-ridge/gqlgen-sqlboiler/v3/templates"
 )
 
 func NewResolverPlugin(output, backend, frontend Config, resolverPluginConfig ResolverPluginConfig) plugin.Plugin {
@@ -36,7 +35,7 @@ type AuthorizationScope struct {
 }
 
 type ResolverPluginConfig struct {
-	AuthorizationScopes []AuthorizationScope
+	AuthorizationScopes []*AuthorizationScope
 }
 
 type ResolverPlugin struct {
@@ -50,7 +49,7 @@ type ResolverPlugin struct {
 var _ plugin.CodeGenerator = &ResolverPlugin{}
 
 func (m *ResolverPlugin) Name() string {
-	return "resolvergen"
+	return "resolver-webridge"
 }
 
 func (m *ResolverPlugin) GenerateCode(data *codegen.Data) error {
@@ -58,41 +57,45 @@ func (m *ResolverPlugin) GenerateCode(data *codegen.Data) error {
 		return nil
 	}
 
+	gqlgenTemplates.CurrentImports = &gqlgenTemplates.Imports{}
+
 	// Get all models information
 	log.Debug().Msg("[resolver] get boiler models")
 	boilerModels := GetBoilerModels(m.backend.Directory)
 	log.Debug().Msg("[resolver] get models with information")
 	models := GetModelsWithInformation(m.backend, nil, data.Config, boilerModels)
 	log.Debug().Msg("[resolver] generate file")
-	switch data.Config.Resolver.Layout {
-	case config.LayoutSingleFile:
-		return m.generateSingleFile(data, models, boilerModels)
-	case config.LayoutFollowSchema:
-		return m.generatePerSchema(data, models, boilerModels)
-	}
-	log.Debug().Msg("[resolver] generated files")
-	return nil
+	// switch data.Config.Resolver.Layout {
+	// case config.LayoutSingleFile:
+	err := m.generateSingleFile(data, models, boilerModels)
+	fmt.Println("error: ", err)
+	return err
+	//case config.LayoutFollowSchema:
+	//	return m.generatePerSchema(data, models, boilerModels)
+	//}
+	//log.Debug().Msg("[resolver] generated files")
+	//return nil
 }
 
 func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model, _ []*BoilerModel) error {
 	file := File{}
 
-	file.imports = append(file.imports, Import{
+	file.Imports = append(file.Imports, Import{
 		Alias:      ".",
 		ImportPath: path.Join(m.rootImportPath, m.output.Directory),
 	})
 
-	file.imports = append(file.imports, Import{
+	file.Imports = append(file.Imports, Import{
 		Alias:      "dm",
 		ImportPath: path.Join(m.rootImportPath, m.backend.Directory),
 	})
-	file.imports = append(file.imports, Import{
+	file.Imports = append(file.Imports, Import{
 		Alias:      "fm",
 		ImportPath: path.Join(m.rootImportPath, m.frontend.Directory),
 	})
 
 	for _, scope := range m.pluginConfig.AuthorizationScopes {
-		file.imports = append(file.imports, Import{
+		file.Imports = append(file.Imports, Import{
 			Alias:      scope.ImportAlias,
 			ImportPath: scope.ImportPath,
 		})
@@ -129,106 +132,12 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 		Models:              models,
 		AuthorizationScopes: m.pluginConfig.AuthorizationScopes,
 	}
-	templates.CurrentImports = nil
-	return templates.Render(templates.Options{
+
+	return templates.WriteTemplateFile(data.Config.Resolver.Filename, templates.Options{
 		Template:    getTemplate("resolver.gotpl"),
 		PackageName: data.Config.Resolver.Package,
-		PackageDoc:  `// Generated with https://github.com/web-ridge/gqlgen-sqlboiler.`,
-		Filename:    data.Config.Resolver.Filename,
 		Data:        resolverBuild,
-		Packages:    data.Config.Packages,
 	})
-}
-
-//nolint:gocyclo
-func (m *ResolverPlugin) generatePerSchema(data *codegen.Data, _ []*Model, _ []*BoilerModel) error {
-	rewriter, err := NewRewriter(data.Config.Resolver.ImportPath())
-	if err != nil {
-		return err
-	}
-
-	files := map[string]*File{}
-
-	for _, o := range data.Objects {
-		if o.HasResolvers() {
-			fn := gqlToResolverName(data.Config.Resolver.Dir(), o.Position.Src.Name)
-			if files[fn] == nil {
-				files[fn] = &File{}
-			}
-
-			rewriter.MarkStructCopied(templates.LcFirst(o.Name) + templates.UcFirst(data.Config.Resolver.Type))
-			rewriter.GetMethodBody(data.Config.Resolver.Type, o.Name)
-			files[fn].Objects = append(files[fn].Objects, o)
-		}
-		for _, f := range o.Fields {
-			if !f.IsResolver {
-				continue
-			}
-
-			structName := templates.LcFirst(o.Name) + templates.UcFirst(data.Config.Resolver.Type)
-			implementation := strings.TrimSpace(rewriter.GetMethodBody(structName, f.GoFieldName))
-			// enhanceResolverWithBools(f)
-			if implementation == "" {
-				implementation = `panic(fmt.Errorf("not implemented"))`
-			}
-
-			resolver := &Resolver{
-				Object:         o,
-				Field:          f,
-				Implementation: implementation,
-			}
-			fn := gqlToResolverName(data.Config.Resolver.Dir(), f.Position.Src.Name)
-			if files[fn] == nil {
-				files[fn] = &File{}
-			}
-
-			files[fn].Resolvers = append(files[fn].Resolvers, resolver)
-		}
-	}
-
-	for filename, file := range files {
-		file.imports = rewriter.ExistingImports(filename)
-		file.RemainingSource = rewriter.RemainingSource(filename)
-	}
-
-	for filename, file := range files {
-		resolverBuild := &ResolverBuild{
-			File:         file,
-			PackageName:  data.Config.Resolver.Package,
-			ResolverType: data.Config.Resolver.Type,
-		}
-
-		err := templates.Render(templates.Options{
-			PackageName: data.Config.Resolver.Package,
-			PackageDoc: `
-				// This file will be automatically regenerated based on the schema, any resolver implementations
-				// will be copied through when generating and any unknown code will be moved to the end.`,
-			Filename: filename,
-			Data:     resolverBuild,
-			Packages: data.Config.Packages,
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	if _, err := os.Stat(data.Config.Resolver.Filename); os.IsNotExist(errors.Cause(err)) {
-		err := templates.Render(templates.Options{
-			PackageName: data.Config.Resolver.Package,
-			PackageDoc: `
-				// This file will not be regenerated automatically.
-				//
-				// It serves as dependency injection for your app, add any dependencies you require here.`,
-			Template: `type {{.}} struct {}`,
-			Filename: data.Config.Resolver.Filename,
-			Data:     data.Config.Resolver.Type,
-			Packages: data.Config.Packages,
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 type ResolverBuild struct {
@@ -237,7 +146,8 @@ type ResolverBuild struct {
 	PackageName         string
 	ResolverType        string
 	Models              []*Model
-	AuthorizationScopes []AuthorizationScope
+	AuthorizationScopes []*AuthorizationScope
+	TryHook             func(string) bool
 }
 
 type File struct {
@@ -245,21 +155,8 @@ type File struct {
 	// resolver method implementations, for example when extending a type in a different graphql schema file
 	Objects         []*codegen.Object
 	Resolvers       []*Resolver
-	imports         []Import
+	Imports         []Import
 	RemainingSource string
-}
-
-func (f *File) Imports() string {
-	for _, imp := range f.imports {
-		if imp.Alias == "" {
-			//nolint:errcheck //TODO: handle errors
-			_, _ = templates.CurrentImports.Reserve(imp.ImportPath)
-		} else {
-			//nolint:errcheck //TODO: handle errors
-			_, _ = templates.CurrentImports.Reserve(imp.ImportPath, imp.Alias)
-		}
-	}
-	return ""
 }
 
 type Resolver struct {
@@ -284,12 +181,6 @@ type Resolver struct {
 	BoilerWhiteList           string
 	PublicErrorKey            string
 	PublicErrorMessage        string
-}
-
-func gqlToResolverName(base string, gqlname string) string {
-	gqlname = filepath.Base(gqlname)
-	ext := filepath.Ext(gqlname)
-	return filepath.Join(base, strings.TrimSuffix(gqlname, ext)+".resolvers.go")
 }
 
 func enhanceResolver(r *Resolver, models []*Model) { //nolint:gocyclo
