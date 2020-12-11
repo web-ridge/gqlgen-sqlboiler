@@ -3,8 +3,12 @@ package templates
 import (
 	"bytes"
 	"fmt"
+	"go/ast"
 	"go/format"
-	"io/ioutil"
+	"go/parser"
+	"go/printer"
+	"go/token"
+	"os"
 	"text/template"
 
 	"golang.org/x/tools/imports"
@@ -23,7 +27,10 @@ type Options struct {
 	// the plugin processor will look for .gotpl files
 	// in the same directory of where you wrote the plugin.
 	Template string
-
+	// UserDefinedFunctions is used to rewrite in the the file so we can use custom functions
+	// The struct is still available for use in private but will be rewritten to
+	// a private function with original in front of it
+	UserDefinedFunctions []string
 	// Data will be passed to the template execution.
 	Data interface{}
 }
@@ -31,7 +38,28 @@ type Options struct {
 func WriteTemplateFile(fileName string, cfg Options) error {
 	content, contentError := GetTemplateContent(cfg)
 	importFixedContent, importsError := imports.Process(fileName, []byte(content), nil)
-	writeError := ioutil.WriteFile(fileName, importFixedContent, 0o600)
+
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, "src.go", string(importFixedContent), 0)
+	if err != nil {
+		fmt.Println("could not parse golang file", err)
+	}
+
+	ast.Inspect(node, func(n ast.Node) bool {
+		fn, ok := n.(*ast.FuncDecl)
+		if ok && isFunctionOverriddenByUser(fn.Name.Name, cfg.UserDefinedFunctions) {
+			fn.Name.Name = "original" + fn.Name.Name
+			// fmt.Printf("override %v %v %v \n", fileName, fset.Position(fn.Pos()).Line, fn.Name.Name)
+		}
+		return true
+	})
+
+	// write new ast to file
+	f, writeError := os.Create(fileName)
+	defer f.Close()
+	if err := printer.Fprint(f, fset, node); err != nil {
+		return fmt.Errorf("errors while printing template to %v  %v", fileName, err)
+	}
 
 	if contentError != nil || writeError != nil || importsError != nil {
 		return fmt.Errorf("errors while writing template to %v writeError: %v, contentError: %v, importError: %v", fileName, writeError, contentError, importsError)
@@ -63,4 +91,13 @@ func GetTemplateContent(cfg Options) (string, error) {
 	}
 
 	return string(formattedContent), nil
+}
+
+func isFunctionOverriddenByUser(functionName string, userDefinedFunctions []string) bool {
+	for _, userDefinedFunction := range userDefinedFunctions {
+		if userDefinedFunction == functionName {
+			return true
+		}
+	}
+	return false
 }

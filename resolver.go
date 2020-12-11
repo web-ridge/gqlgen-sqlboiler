@@ -66,7 +66,6 @@ func (m *ResolverPlugin) GenerateCode(data *codegen.Data) error {
 	// switch data.Config.Resolver.Layout {
 	// case config.LayoutSingleFile:
 	err := m.generateSingleFile(data, models, boilerModels)
-	fmt.Println("error: ", err)
 	return err
 	//case config.LayoutFollowSchema:
 	//	return m.generatePerSchema(data, models, boilerModels)

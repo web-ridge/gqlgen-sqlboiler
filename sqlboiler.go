@@ -57,7 +57,7 @@ func GetBoilerModels(dir string) []*BoilerModel { //nolint:gocognit,gocyclo
 	relationsPerModelName := map[string][]*BoilerField{}
 
 	// Anonymous function because this is used 2 times it prevents duplicated code
-	// It's automatically inits an empty field array if it does not exist yet
+	// It's automatically init an empty field array if it does not exist yet
 	addFieldToMap := func(m map[string][]*BoilerField, modelName string, field *BoilerField) {
 		modelNames = appendIfMissing(modelNames, modelName)
 		_, ok := m[modelName]
@@ -321,6 +321,7 @@ func parseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 		if src, err := parser.ParseFile(fset, filename, nil, parser.ParseComments); err == nil { //nolint:nestif
 			var i int
 			for _, decl := range src.Decls {
+				// TODO: make cleaner
 				typeDecl, ok := decl.(*ast.GenDecl)
 				if !ok {
 					continue
@@ -358,12 +359,14 @@ func parseBoilerFile(dir string) (map[string]string, map[string]string, map[stri
 						case *ast.ArrayType:
 
 							name := field.Names[0].Name
-							fmt.Println(name)
+
 							if !isFirstCharacterLowerCase(name) {
-								fmt.Println("add", name)
+								//nolint:errcheck //TODO: handle errors
+								t, _ := field.Type.(*ast.ArrayType)
+
 								k := safeTypeSpec.Name.String() + "." + name
 
-								fieldsMap[k] = "unknown"
+								fieldsMap[k] = t.Elt.(*ast.Ident).Name + "Slice"
 								fieldsOrder[k] = i
 							}
 
