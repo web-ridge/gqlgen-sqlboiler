@@ -130,8 +130,15 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 		AuthorizationScopes: m.pluginConfig.AuthorizationScopes,
 	}
 
+	templateName := "resolver.gotpl"
+	templateContent, err := getTemplateContent(templateName)
+	if err != nil {
+		log.Err(err).Msg("error when reading " + templateName)
+		return err
+	}
+
 	return templates.WriteTemplateFile(data.Config.Resolver.Filename, templates.Options{
-		Template:    getTemplate("resolver.gotpl"),
+		Template:    templateContent,
 		PackageName: data.Config.Resolver.Package,
 		Data:        resolverBuild,
 	})

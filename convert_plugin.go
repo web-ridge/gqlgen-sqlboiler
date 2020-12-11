@@ -47,6 +47,11 @@ func init() { //nolint:gochecknoinits
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
 
+type Import struct {
+	Alias      string
+	ImportPath string
+}
+
 type ModelBuild struct {
 	Backend      Config
 	Frontend     Config
@@ -242,7 +247,6 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	// }
 
 	filesToGenerate := []string{
-		"convert.go",
 		"convert_input.go",
 		"filter.go",
 		"preload.go",
@@ -256,10 +260,17 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	for _, fileName := range filesToGenerate {
 		templateName := fileName + "tpl"
 		log.Debug().Msg("[convert] render " + templateName)
+
+		templateContent, err := getTemplateContent(templateName)
+		if err != nil {
+			log.Err(err).Msg("error when reading " + templateName)
+			continue
+		}
+
 		if renderError := templates.WriteTemplateFile(
 			m.Output.Directory+"/"+fileName,
 			templates.Options{
-				Template:             getTemplate(templateName),
+				Template:             templateContent,
 				PackageName:          m.Output.PackageName,
 				Data:                 b,
 				UserDefinedFunctions: userDefinedFunctions,
@@ -271,6 +282,16 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 
 	return nil
 }
+
+//// take a string in the form github.com/package/blah.Type and split it into package and type
+//func PkgAndType(name string) (string, string) {
+//	parts := strings.Split(name, ".")
+//	if len(parts) == 1 {
+//		return "", name
+//	}
+//
+//	return strings.Join(parts[:len(parts)-1], "."), parts[len(parts)-1]
+//}
 
 func enumsWithout(enums []*Enum, skip []string) []*Enum {
 	// lol: cleanup xD
@@ -289,16 +310,15 @@ func enumsWithout(enums []*Enum, skip []string) []*Enum {
 	return a
 }
 
-func getTemplate(filename string) string {
+func getTemplateContent(filename string) (string, error) {
 	// load path relative to calling source file
 	_, callerFile, _, _ := runtime.Caller(1) //nolint:dogsled
 	rootDir := filepath.Dir(callerFile)
-	content, err := ioutil.ReadFile(path.Join(rootDir, filename))
+	content, err := ioutil.ReadFile(path.Join(rootDir, "template_files", filename))
 	if err != nil {
-		log.Err(err).Msg("could not read .gotpl file")
-		return "Could not read .gotpl file"
+		return "", fmt.Errorf("could not read template file: %v", err)
 	}
-	return string(content)
+	return string(content), nil
 }
 
 // getFieldType check's if user has defined a
@@ -844,7 +864,7 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 			cc.ToGraphQL = strings.Replace(cc.ToGraphQL, "VALUE", "m."+field.BoilerField.Name, -1)
 			cc.ToBoiler = strings.Replace(cc.ToBoiler, "VALUE", "m."+field.Name, -1)
 		} else {
-			// Make these go-friendly for the helper/convert.go package
+			// Make these go-friendly for the helper/convert_plugin.go package
 			cc.ToBoiler = getToBoiler(getBoilerTypeAsText(boilType), getGraphTypeAsText(graphType))
 			cc.ToGraphQL = getToGraphQL(getBoilerTypeAsText(boilType), getGraphTypeAsText(graphType))
 		}
