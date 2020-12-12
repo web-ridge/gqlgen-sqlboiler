@@ -107,17 +107,8 @@ const inputKey = "input"
 							{{- end }}
 						{{- end }}
 
-						{{ $field.JSONName }}Input := {{ $field.BoilerField.Relationship.Name }}CreateInputToBoilerWhitelist(
-							boilergql.GetInputFromContext(ctx, "input.{{ $field.JSONName }}"),
-							{{ range $scope := $.AuthorizationScopes -}}
-								{{- if (call $scope.AddHook $field.BoilerField.Relationship $resolver "createRelationInputWhitelist")   }}
-									dm.{{ $field.BoilerField.Relationship.Name }}Columns.{{$scope.BoilerColumnName}},
-								{{- end }}
-							{{- end }}
-						)
-
 						// TODO: create the nested relations of {{ $field.Name }}Input if they exist
-						if err := {{ $field.JSONName }}.Insert(ctx, r.db, {{ $field.JSONName }}Input); err != nil {
+						if err := {{ $field.JSONName }}.Insert(ctx, r.db, boil.Infer()); err != nil {
 							log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 							return nil, errors.New({{ $resolver.PublicErrorKey }})
 						}
@@ -133,15 +124,7 @@ const inputKey = "input"
 				{{- end }}
 			{{- end }}
 
-			whiteList := {{ .InputModel.Name }}ToBoilerWhitelist(
-				boilergql.GetInputFromContext(ctx, inputKey),
-				{{ range $scope := $.AuthorizationScopes -}}
-					{{- if (call $scope.AddHook $resolver.Model.BoilerModel $resolver "createInputWhitelist")   }}
-						dm.{{ $resolver.Model.Name }}Columns.{{ $scope.BoilerColumnName }},
-					{{- end }}
-				{{- end }}
-			)
-			if err := m.Insert(ctx, r.db, whiteList); err != nil {
+			if err := m.Insert(ctx, r.db, boil.Infer()); err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}

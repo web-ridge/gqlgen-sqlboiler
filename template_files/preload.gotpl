@@ -52,7 +52,7 @@ var TablePreloadMap = map[string]map[string]boilergql.ColumnSetting{
 	func Get{{ .Name }}PreloadMods(ctx context.Context) (queryMods []qm.QueryMod) {
 		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, {{ $.Backend.PackageName }}.TableNames.{{ $model.BoilerModel.TableName }}, "")
 	}
-	func Get{{ .Name }}NodePreloadMods(ctx context.Context, level string) (queryMods []qm.QueryMod) {
+	func Get{{ .Name }}NodePreloadMods(ctx context.Context) (queryMods []qm.QueryMod) {
 		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, {{ $.Backend.PackageName }}.TableNames.{{ $model.BoilerModel.TableName }}, DefaultLevels.EdgesNode)
 	}
 	func Get{{ .Name }}PreloadModsWithLevel(ctx context.Context, level string) (queryMods []qm.QueryMod) {
