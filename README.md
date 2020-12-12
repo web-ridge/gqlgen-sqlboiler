@@ -25,17 +25,18 @@ It's really amazing how fast a generated api with these techniques is!
 ## Features
 
 - [x] Generate graphql.schema based on sqlboiler structs
+- [x] Three-way-merge with your old schema so you can easily keep your own changes
 - [x] Generate converts between sqlboiler structs and graphql (with relations included)
 - [x] Generate converts between input models and sqlboiler
-- [x] Genarated code understands the difference between empty and null for update inputs so you can set things empty if you explicicitly set them in your mutation!
+- [x] Genarated code understands the difference between empty and null for update input, so you can set things empty if you explicitly set them in your mutation!
 - [x] Fetch sqlboiler preloads from graphql context
-- [x] Support for foreign keys named differently than their corresponding model
-- [x] New plugin which generates CRUD resolvers based on mutations in graphql scheme.
+- [x] Support for foreign keys and relations
+- [x] Plugin which generates CRUD resolvers based on queries/mutations in graphql schema.
 - [x] Support one-to-one relationships inside input types.
 - [x] Generate code which implements the generated where and search filters
-- [x] Batch update/delete generation in resolvers (Not tested yet).
-- [x] Enum support.
-- [x] public errors in resolvers + logging via zerolog. (feel free for PR for configurable logging!)
+- [x] Batch update/delete generation in resolvers.
+- [x] Enum support (only in graphql schema right now).
+- [x] public errors in resolvers + logging via zerolog.
 
 ## v3.0
 
@@ -44,10 +45,15 @@ It's really amazing how fast a generated api with these techniques is!
 
 ## Roadmap v3.1
 
-- [ ] Support gqlgen multiple .graphql files
-- [ ] Support for opting out of standard generation if functions exist in {resolverName}\_custom.go
+- [x] Support for overriding convert functions with your custom resolvers (see example here: )
+- [ ] RESOLVER TODO
+
 
 ## Roadmap v3.2
+- [ ] Support gqlgen multiple .graphql files
+- [ ] Support multiple resolvers (per schema)
+
+## Roadmap v3.3
 
 - [ ] Adding automatic database migrations and integration with https://github.com/web-ridge/dbifier so faster iteration is possible
 - [ ] Crud of adding/removing relationships from many-to-many on edges
