@@ -9,7 +9,10 @@ import (
 	"go/printer"
 	"go/token"
 	"os"
+	"strings"
 	"text/template"
+
+	"github.com/iancoleman/strcase"
 
 	"golang.org/x/tools/imports"
 
@@ -33,6 +36,12 @@ type Options struct {
 	UserDefinedFunctions []string
 	// Data will be passed to the template execution.
 	Data interface{}
+}
+
+func init() {
+	strcase.ConfigureAcronym("QR", "qr")
+	strcase.ConfigureAcronym("KVK", "kvk")
+	strcase.ConfigureAcronym("URL", "url")
 }
 
 func WriteTemplateFile(fileName string, cfg Options) error {
@@ -105,4 +114,12 @@ func isFunctionOverriddenByUser(functionName string, userDefinedFunctions []stri
 		}
 	}
 	return false
+}
+
+func ToGo(name string) string {
+	return strcase.ToCamel(name)
+}
+
+func ToLowerAndGo(name string) string {
+	return ToGo(strings.ToLower(name))
 }

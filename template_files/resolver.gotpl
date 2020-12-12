@@ -73,7 +73,7 @@ const inputKey = "input"
 		{{- end -}}
 
 		{{- if .IsList }}
-			mods := Get{{ .Model.Name }}PreloadMods(ctx)
+			mods := Get{{ .Model.Name }}NodePreloadMods(ctx)
 			{{ range $scope := $.AuthorizationScopes -}}
 				{{- if (call $scope.AddHook $resolver.Model.BoilerModel $resolver "listWhere")   }}
 					mods = append(mods, dm.{{ $resolver.Model.Name }}Where.{{ $scope.BoilerColumnName }}.EQ({{ $scope.ImportAlias }}.{{ $scope.ScopeResolverName }}(ctx)))
