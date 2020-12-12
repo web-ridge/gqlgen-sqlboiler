@@ -39,8 +39,8 @@ func WriteTemplateFile(fileName string, cfg Options) error {
 	content, contentError := GetTemplateContent(cfg)
 	importFixedContent, importsError := imports.Process(fileName, []byte(content), nil)
 
-	fset := token.NewFileSet()
-	node, err := parser.ParseFile(fset, "src.go", string(importFixedContent), 0)
+	fSet := token.NewFileSet()
+	node, err := parser.ParseFile(fSet, "src.go", string(importFixedContent), 0)
 	if err != nil {
 		fmt.Println("could not parse golang file", err)
 	}
@@ -49,20 +49,25 @@ func WriteTemplateFile(fileName string, cfg Options) error {
 		fn, ok := n.(*ast.FuncDecl)
 		if ok && isFunctionOverriddenByUser(fn.Name.Name, cfg.UserDefinedFunctions) {
 			fn.Name.Name = "original" + fn.Name.Name
-			// fmt.Printf("override %v %v %v \n", fileName, fset.Position(fn.Pos()).Line, fn.Name.Name)
 		}
 		return true
 	})
 
 	// write new ast to file
 	f, writeError := os.Create(fileName)
-	defer f.Close()
-	if err := printer.Fprint(f, fset, node); err != nil {
+	defer func() {
+		if err := f.Close(); err != nil {
+			fmt.Println("could not close file")
+		}
+	}()
+	if err := printer.Fprint(f, fSet, node); err != nil {
 		return fmt.Errorf("errors while printing template to %v  %v", fileName, err)
 	}
 
 	if contentError != nil || writeError != nil || importsError != nil {
-		return fmt.Errorf("errors while writing template to %v writeError: %v, contentError: %v, importError: %v", fileName, writeError, contentError, importsError)
+		return fmt.Errorf(
+			"errors while writing template to %v writeError: %v, contentError: %v, importError: %v",
+			fileName, writeError, contentError, importsError)
 	}
 
 	return nil

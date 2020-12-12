@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	indent    = "\t"
+	indent    = "  "
 	lineBreak = "\n"
 )
 
@@ -86,58 +86,58 @@ func SchemaGet(
 	fullDirectives := make([]string, len(config.Directives))
 	for i, defaultDirective := range config.Directives {
 		fullDirectives[i] = "@" + defaultDirective
-		w.line(fmt.Sprintf("directive @%v on FIELD_DEFINITION", defaultDirective))
+		w.l(fmt.Sprintf("directive @%v on FIELD_DEFINITION", defaultDirective))
 	}
-	w.enter()
+	w.br()
 
 	joinedDirectives := strings.Join(fullDirectives, " ")
 
-	w.line(`schema {`)
-	w.tabLine(`query: Query`)
-	w.tabLine(`mutation: Mutation`)
-	w.line(`}`)
+	w.l(`schema {`)
+	w.tl(`query: Query`)
+	w.tl(`mutation: Mutation`)
+	w.l(`}`)
 
-	w.enter()
+	w.br()
 
-	w.line(`interface Node {`)
-	w.tabLine(`id: ID!`)
-	w.line(`}`)
+	w.l(`interface Node {`)
+	w.tl(`id: ID!`)
+	w.l(`}`)
 
-	w.enter()
+	w.br()
 
-	w.line(`type PageInfo {`)
-	w.tabLine(`hasNextPage: Boolean!`)
-	w.tabLine(`hasPreviousPage: Boolean!`)
-	w.tabLine(`startCursor: String`)
-	w.tabLine(`endCursor: String`)
-	w.line(`}`)
+	w.l(`type PageInfo {`)
+	w.tl(`hasNextPage: Boolean!`)
+	w.tl(`hasPreviousPage: Boolean!`)
+	w.tl(`startCursor: String`)
+	w.tl(`endCursor: String`)
+	w.l(`}`)
 
-	w.enter()
+	w.br()
 
 	// Generate sorting helpers
-	w.line("enum SortDirection { ASC, DESC }")
-	w.enter()
+	w.l("enum SortDirection { ASC, DESC }")
+	w.br()
 
 	for _, model := range models {
 		//	enum UserSort { FIRST_NAME, LAST_NAME }
-		w.line("enum " + model.Name + "Sort {")
+		w.l("enum " + model.Name + "Sort {")
 		for _, enum := range fieldAsEnumStrings(model.Fields) {
-			w.line(enum)
+			w.tl(enum)
 		}
-		w.line("}")
+		w.l("}")
 
-		w.enter()
+		w.br()
 
 		//	input UserOrdering {
 		//		sort: UserSort!
 		//		direction: SortDirection! = ASC
 		//	}
-		w.line("input " + model.Name + "Ordering {")
-		w.tabLine("sort: " + model.Name + "Sort!")
-		w.tabLine("direction: SortDirection! = ASC")
-		w.line("}")
+		w.l("input " + model.Name + "Ordering {")
+		w.tl("sort: " + model.Name + "Sort!")
+		w.tl("direction: SortDirection! = ASC")
+		w.l("}")
 
-		w.enter()
+		w.br()
 	}
 
 	// Create basic structs e.g.
@@ -148,21 +148,21 @@ func SchemaGet(
 	// 	organization: Organization!
 	// }
 	for _, model := range models {
-		w.line("type " + model.Name + " implements Node {")
+		w.l("type " + model.Name + " implements Node {")
 
 		for _, field := range model.Fields {
 			// e.g we have foreign key from user to organization
 			// organizationID is clutter in your scheme
 			// you only want Organization and OrganizationID should be skipped
 			if field.BoilerField.IsRelation {
-				w.tabLine(field.RelationName + ": " + field.RelationFullType)
+				w.tl(field.RelationName + ": " + field.RelationFullType)
 			} else {
-				w.tabLine(field.Name + ": " + field.FullType)
+				w.tl(field.Name + ": " + field.FullType)
 			}
 		}
-		w.line("}")
+		w.l("}")
 
-		w.enter()
+		w.br()
 	}
 
 	//type UserEdge {
@@ -170,13 +170,13 @@ func SchemaGet(
 	//	node: User
 	//}
 	for _, model := range models {
-		w.line("type " + model.Name + "Edge {")
+		w.l("type " + model.Name + "Edge {")
 
-		w.tabLine(`cursor: String!`)
-		w.tabLine(`node: ` + model.Name)
-		w.line("}")
+		w.tl(`cursor: String!`)
+		w.tl(`node: ` + model.Name)
+		w.l("}")
 
-		w.enter()
+		w.br()
 	}
 
 	//type UserConnection {
@@ -184,16 +184,16 @@ func SchemaGet(
 	//	pageInfo: PageInfo!
 	//}
 	for _, model := range models {
-		w.line("type " + model.Name + "Connection {")
-		w.tabLine(`edges: [` + model.Name + `Edge]`)
-		w.tabLine(`pageInfo: PageInfo!`)
-		w.line("}")
+		w.l("type " + model.Name + "Connection {")
+		w.tl(`edges: [` + model.Name + `Edge]`)
+		w.tl(`pageInfo: PageInfo!`)
+		w.l("}")
 
-		w.enter()
+		w.br()
 	}
 
 	// Add helpers for filtering lists
-	w.line(queryHelperStructs)
+	w.l(queryHelperStructs)
 
 	// generate filter structs per model
 	for _, model := range models {
@@ -205,12 +205,12 @@ func SchemaGet(
 		// 	search: String
 		// 	where: UserWhere
 		// }
-		w.line("input " + model.Name + "Filter {")
-		w.tabLine("search: String")
-		w.tabLine("where: " + model.Name + "Where")
-		w.line("}")
+		w.l("input " + model.Name + "Filter {")
+		w.tl("search: String")
+		w.tl("where: " + model.Name + "Where")
+		w.l("}")
 
-		w.enter()
+		w.br()
 
 		// Generate a where struct
 		// type UserWhere {
@@ -220,29 +220,29 @@ func SchemaGet(
 		// 	or: FlowBlockWhere
 		// 	and: FlowBlockWhere
 		// }
-		w.line("input " + model.Name + "Where {")
+		w.l("input " + model.Name + "Where {")
 
 		for _, field := range model.Fields {
 			if field.BoilerField.IsRelation {
 				// Support filtering in relationships (atleast schema wise)
-				w.tabLine(field.RelationName + ": " + field.RelationType + "Where")
+				w.tl(field.RelationName + ": " + field.RelationType + "Where")
 			} else {
-				w.tabLine(field.Name + ": " + field.Type + "Filter")
+				w.tl(field.Name + ": " + field.Type + "Filter")
 			}
 		}
-		w.tabLine("or: " + model.Name + "Where")
-		w.tabLine("and: " + model.Name + "Where")
-		w.line("}")
+		w.tl("or: " + model.Name + "Where")
+		w.tl("and: " + model.Name + "Where")
+		w.l("}")
 
-		w.enter()
+		w.br()
 	}
 
-	w.line("type Query {")
-	w.tabLine("node(id: ID!): Node")
+	w.l("type Query {")
+	w.tl("node(id: ID!): Node")
 
 	for _, model := range models {
 		// single models
-		w.tabLine(strcase.ToLowerCamel(model.Name) + "(id: ID!): " + model.Name + "!" + joinedDirectives)
+		w.tl(strcase.ToLowerCamel(model.Name) + "(id: ID!): " + model.Name + "!" + joinedDirectives)
 
 		// lists
 		modelPluralName := pluralizer.Plural(model.Name)
@@ -253,13 +253,13 @@ func SchemaGet(
 			"ordering: [" + model.Name + "Ordering!]",
 			"filter: " + model.Name + "Filter",
 		}
-		w.tabLine(
+		w.tl(
 			strcase.ToLowerCamel(modelPluralName) + "(" + strings.Join(arguments, ", ") + "): " +
 				model.Name + "Connection!" + joinedDirectives)
 	}
-	w.line("}")
+	w.l("}")
 
-	w.enter()
+	w.br()
 
 	// Generate input and payloads for mutatations
 	if config.GenerateMutations { //nolint:nestif
@@ -272,7 +272,7 @@ func SchemaGet(
 			// 	lastName: String
 			//	organizationId: ID!
 			// }
-			w.line("input " + model.Name + "CreateInput {")
+			w.l("input " + model.Name + "CreateInput {")
 
 			for _, field := range filteredFields {
 				// id is not required in create and will be specified in update resolver
@@ -286,18 +286,18 @@ func SchemaGet(
 					field.BoilerField.IsRelation && !strings.HasSuffix(field.BoilerField.Name, "ID") {
 					continue
 				}
-				w.tabLine(field.Name + ": " + field.FullType)
+				w.tl(field.Name + ": " + field.FullType)
 			}
-			w.line("}")
+			w.l("}")
 
-			w.enter()
+			w.br()
 
 			// input UserUpdateInput {
 			// 	firstName: String!
 			// 	lastName: String
 			//	organizationId: ID!
 			// }
-			w.line("input " + model.Name + "UpdateInput {")
+			w.l("input " + model.Name + "UpdateInput {")
 
 			for _, field := range filteredFields {
 				// id is not required in create and will be specified in update resolver
@@ -311,125 +311,125 @@ func SchemaGet(
 					field.BoilerField.IsRelation && !strings.HasSuffix(field.BoilerField.Name, "ID") {
 					continue
 				}
-				w.tabLine(field.Name + ": " + field.FullTypeOptional)
+				w.tl(field.Name + ": " + field.FullTypeOptional)
 			}
-			w.line("}")
+			w.l("}")
 
-			w.enter()
+			w.br()
 
 			if config.GenerateBatchCreate {
-				w.line("input " + modelPluralName + "CreateInput {")
+				w.l("input " + modelPluralName + "CreateInput {")
 
-				w.tabLine(strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "CreateInput!]!")
-				w.line("}")
+				w.tl(strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "CreateInput!]!")
+				w.l("}")
 
-				w.enter()
+				w.br()
 			}
 
 			// if batchUpdate {
-			// 	w.line("input " + modelPluralName + "UpdateInput {")
-			// 	w.tabLine(strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "UpdateInput!]!")
-			// 	w.line("}")
-			// 	w.enter()
+			// 	w.l("input " + modelPluralName + "UpdateInput {")
+			// 	w.tl(strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "UpdateInput!]!")
+			// 	w.l("}")
+			// 	w.br()
 			// }
 
 			// type UserPayload {
 			// 	user: User!
 			// }
-			w.line("type " + model.Name + "Payload {")
-			w.tabLine(strcase.ToLowerCamel(model.Name) + ": " + model.Name + "!")
-			w.line("}")
+			w.l("type " + model.Name + "Payload {")
+			w.tl(strcase.ToLowerCamel(model.Name) + ": " + model.Name + "!")
+			w.l("}")
 
-			w.enter()
+			w.br()
 
 			// TODO batch, delete input and payloads
 
 			// type UserDeletePayload {
 			// 	id: ID!
 			// }
-			w.line("type " + model.Name + "DeletePayload {")
-			w.tabLine("id: ID!")
-			w.line("}")
+			w.l("type " + model.Name + "DeletePayload {")
+			w.tl("id: ID!")
+			w.l("}")
 
-			w.enter()
+			w.br()
 
 			// type UsersPayload {
 			// 	users: [User!]!
 			// }
 			if config.GenerateBatchCreate {
-				w.line("type " + modelPluralName + "Payload {")
-				w.tabLine(strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "!]!")
-				w.line("}")
+				w.l("type " + modelPluralName + "Payload {")
+				w.tl(strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "!]!")
+				w.l("}")
 
-				w.enter()
+				w.br()
 			}
 
 			// type UsersDeletePayload {
 			// 	ids: [ID!]!
 			// }
 			if config.GenerateBatchDelete {
-				w.line("type " + modelPluralName + "DeletePayload {")
-				w.tabLine("ids: [ID!]!")
-				w.line("}")
+				w.l("type " + modelPluralName + "DeletePayload {")
+				w.tl("ids: [ID!]!")
+				w.l("}")
 
-				w.enter()
+				w.br()
 			}
 			// type UsersUpdatePayload {
 			// 	ok: Boolean!
 			// }
 			if config.GenerateBatchUpdate {
-				w.line("type " + modelPluralName + "UpdatePayload {")
-				w.tabLine("ok: Boolean!")
-				w.line("}")
+				w.l("type " + modelPluralName + "UpdatePayload {")
+				w.tl("ok: Boolean!")
+				w.l("}")
 
-				w.enter()
+				w.br()
 			}
 		}
 
 		// Generate mutation queries
-		w.line("type Mutation {")
+		w.l("type Mutation {")
 
 		for _, model := range models {
 			modelPluralName := pluralizer.Plural(model.Name)
 
 			// create single
 			// e.g createUser(input: UserInput!): UserPayload!
-			w.tabLine("create" + model.Name + "(input: " + model.Name + "CreateInput!): " +
+			w.tl("create" + model.Name + "(input: " + model.Name + "CreateInput!): " +
 				model.Name + "Payload!" + joinedDirectives)
 
 			// create multiple
 			// e.g createUsers(input: [UsersInput!]!): UsersPayload!
 			if config.GenerateBatchCreate {
-				w.tabLine("create" + modelPluralName + "(input: " + modelPluralName + "CreateInput!): " +
+				w.tl("create" + modelPluralName + "(input: " + modelPluralName + "CreateInput!): " +
 					modelPluralName + "Payload!" + joinedDirectives)
 			}
 
 			// update single
 			// e.g updateUser(id: ID!, input: UserInput!): UserPayload!
-			w.tabLine("update" + model.Name + "(id: ID!, input: " + model.Name + "UpdateInput!): " +
+			w.tl("update" + model.Name + "(id: ID!, input: " + model.Name + "UpdateInput!): " +
 				model.Name + "Payload!" + joinedDirectives)
 
 			// update multiple (batch update)
 			// e.g updateUsers(filter: UserFilter, input: UsersInput!): UsersPayload!
 			if config.GenerateBatchUpdate {
-				w.tabLine("update" + modelPluralName + "(filter: " + model.Name + "Filter, input: " +
+				w.tl("update" + modelPluralName + "(filter: " + model.Name + "Filter, input: " +
 					model.Name + "UpdateInput!): " + modelPluralName + "UpdatePayload!" + joinedDirectives)
 			}
 
 			// delete single
 			// e.g deleteUser(id: ID!): UserPayload!
-			w.tabLine("delete" + model.Name + "(id: ID!): " + model.Name + "DeletePayload!" + joinedDirectives)
+			w.tl("delete" + model.Name + "(id: ID!): " + model.Name + "DeletePayload!" + joinedDirectives)
 
 			// delete multiple
 			// e.g deleteUsers(filter: UserFilter, input: [UsersInput!]!): UsersPayload!
 			if config.GenerateBatchDelete {
-				w.tabLine("delete" + modelPluralName + "(filter: " + model.Name + "Filter): " +
+				w.tl("delete" + modelPluralName + "(filter: " + model.Name + "Filter): " +
 					modelPluralName + "DeletePayload!" + joinedDirectives)
 			}
 		}
-		w.line("}")
+		w.l("}")
 
-		w.enter()
+		w.br()
 	}
 
 	return w.s.String()
@@ -540,6 +540,9 @@ func toGraphQLType(fieldName, boilerType string) string {
 	if strings.Contains(lowerBoilerType, "int") {
 		return "Int"
 	}
+	if strings.Contains(lowerBoilerType, "byte") {
+		return "String"
+	}
 	if strings.Contains(lowerBoilerType, "decimal") || strings.Contains(lowerBoilerType, "float") {
 		return "Float"
 	}
@@ -585,12 +588,12 @@ func mergeContentInFile(content, outputFile string) error {
 	if err := writeContentToFile(content, newOutputFile); err != nil {
 		return fmt.Errorf("could not write schema to disk: %v", err)
 	}
-	if err := formatFile(outputFile); err != nil {
-		return fmt.Errorf("could not format with prettier %v", err)
-	}
-	if err := formatFile(newOutputFile); err != nil {
-		return fmt.Errorf("could not format with prettier%v", err)
-	}
+	//if err := formatFile(outputFile); err != nil {
+	//	return fmt.Errorf("could not format with prettier %v", err)
+	//}
+	//if err := formatFile(newOutputFile); err != nil {
+	//	return fmt.Errorf("could not format with prettier%v", err)
+	//}
 
 	// Three way merging done based on this answer
 	// https://stackoverflow.com/a/9123563/2508481
@@ -668,15 +671,15 @@ type SimpleWriter struct {
 	s strings.Builder
 }
 
-func (sw *SimpleWriter) line(v string) {
+func (sw *SimpleWriter) l(v string) {
 	sw.s.WriteString(v + lineBreak)
 }
 
-func (sw *SimpleWriter) enter() {
+func (sw *SimpleWriter) br() {
 	sw.s.WriteString(lineBreak)
 }
 
-func (sw *SimpleWriter) tabLine(v string) {
+func (sw *SimpleWriter) tl(v string) {
 	sw.s.WriteString(indent + v + lineBreak)
 }
 

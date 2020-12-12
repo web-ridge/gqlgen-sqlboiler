@@ -5,17 +5,15 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"strings"
 )
 
-func GetFunctionNamesFromDir(dir string, ignore []string) []string {
+func GetFunctionNamesFromDir(dir string, ignore []string) ([]string, error) {
 	var a []string
 	set := token.NewFileSet()
 	packs, err := parser.ParseDir(set, dir, nil, 0)
 	if err != nil {
-		fmt.Println("Failed to parse package:", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("failed to parse package:", err)
 	}
 
 	for _, pack := range packs {
@@ -24,19 +22,9 @@ func GetFunctionNamesFromDir(dir string, ignore []string) []string {
 			if !contains(ignore, simpleName) {
 				a = append(a, GetFunctionNamesFromAstFile(file)...)
 			}
-
 		}
 	}
-	return a
-}
-
-func GetAstFileFromString(fileContent string) (*ast.File, error) {
-	fset := token.NewFileSet()
-	node, err := parser.ParseFile(fset, "src.go", fileContent, 0)
-	if err != nil {
-		return nil, fmt.Errorf("can not get node: %v", err)
-	}
-	return node, nil
+	return a, nil
 }
 
 func GetFunctionNamesFromAstFile(node *ast.File) []string {
