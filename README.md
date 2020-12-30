@@ -239,6 +239,7 @@ import (
 	"github.com/../app/backend/models"
 )
 
+// use same name as in one of the generated files to override
 func UserCreateInputToBoiler(
 	m *graphql_models.UserCreateInput,
 ) *models.User {
