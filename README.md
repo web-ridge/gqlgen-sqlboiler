@@ -73,19 +73,16 @@ Checkout output folder in our examples
 [web-ridge/gqlgen-sqlboiler-examples > helper](https://github.com/web-ridge/gqlgen-sqlboiler-examples/tree/master/social-network/helpers)
 
 
-**Code snippet**
-
+### Output example
 ```go
 func PostToGraphQL(m *models.Post) *graphql_models.Post {
 	if m == nil {
 		return nil
 	}
-
 	r := &graphql_models.Post{
 		ID:      PostIDToGraphQL(m.ID),
 		Content: m.Content,
 	}
-
 	if boilergql.UintIsFilled(m.UserID) {
 		if m.R != nil && m.R.User != nil {
 			r.User = UserToGraphQL(m.R.User)
@@ -102,7 +99,6 @@ func PostToGraphQL(m *models.Post) *graphql_models.Post {
 	if m.R != nil && m.R.Likes != nil {
 		r.Likes = LikesToGraphQL(m.R.Likes)
 	}
-
 	return r
 }
 ```
