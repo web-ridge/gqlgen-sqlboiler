@@ -49,8 +49,8 @@ See [example of `convert_plugin.go`](https://github.com/web-ridge/gqlgen-sqlboil
 - [x] batch update/delete generation in resolvers.
 - [x] enum support (only in graphql schema right now).
 - [x] public errors in resolvers + logging via zerolog.
-- [x] implements [GraphQL Cursor Connections Specification](https://relay.dev/graphql/connections.htm)
-- [x] implements [Global Object Identification](https://graphql.org/learn/global-object-identification/)
+- [x] [GraphQL Cursor Connections Specification](https://relay.dev/graphql/connections.htm)
+- [x] [Global Object Identification](https://graphql.org/learn/global-object-identification/)
 - [x] Support for overriding convert functions with your custom resolvers. [example](https://github.com/web-ridge/gqlgen-sqlboiler#overriding-converts)
 - [x] Allow custom scope resolvers for things like userId, organizationId, creatorId, tenantId [example](https://github.com/web-ridge/gqlgen-sqlboiler-examples/blob/main/social-network/convert_plugin.go#L66)
 
