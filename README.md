@@ -10,14 +10,14 @@ To make this program a success coupling (same naming) between your database and 
 
 They go back to a schema first approach which we like. The generated code with these tools are the most efficient and fast in the Golang system (and probably outside of it too).
 
-- sqlboiler: https://github.com/volatiletech/sqlboiler#benchmarks
-- gqlgen: https://github.com/appleboy/golang-graphql-benchmark#summary
+- sqlboiler  [Benchmark sqlboiler](https://github.com/volatiletech/sqlboiler#benchmarks)
+- gqlgen [Benchmark gqlgen](https://github.com/appleboy/golang-graphql-benchmark#summary)
 
 It's really amazing how fast a generated api with these techniques is!
 
 ## Usage
 
-1. Generate database structs with: https://github.com/volatiletech/sqlboiler (--no-back-referencing is IMPORTANT!)
+1. Generate database structs with: [volatiletech/sqlboiler](https://github.com/volatiletech/sqlboiler) (--no-back-referencing is IMPORTANT!)
    e.g. `sqlboiler mysql --no-back-referencing`
 2. Generate gqlgen structs + converts between gqlgen and sqlboiler with this program  
    e.g. `go run convert_plugin.go` for file contents of that program see bottom of this readme you can chose whether to generate the graphql schema itself too
@@ -44,7 +44,7 @@ It's really amazing how fast a generated api with these techniques is!
 - [x] Type safe sorting
 
 ## v3.1
-- [x] Support for overriding convert functions with your custom resolvers (see example here: https://github.com/web-ridge/gqlgen-sqlboiler#overriding-converts)
+- [x] Support for overriding convert functions with your custom resolvers. [example](https://github.com/web-ridge/gqlgen-sqlboiler#overriding-converts)
 - [x] Allow custom scope resolvers for things like userId, organizationId, creatorId, tenantId 
 
 ## Roadmap v3.2
@@ -54,22 +54,20 @@ It's really amazing how fast a generated api with these techniques is!
 
 ## Roadmap v3.3
 
-- [ ] Adding automatic database migrations and integration with https://github.com/web-ridge/dbifier so faster iteration is possible
+- [ ] Adding automatic database migrations and integration with [web-ridge/dbifier](https://github.com/web-ridge/dbifier) so faster iteration is possible
 - [ ] Crud of adding/removing relationships from many-to-many on edges
 - [ ] Support more relationships inside input types
 - [ ] Generate tests
 - [ ] Run automatic tests in Github CI/CD in https://github.com/web-ridge/gqlgen-sqlboiler-examples
-- [ ] Batch create generation in resolvers (based on https://github.com/web-ridge/contact-tracing/blob/master/backend/helpers/convert_batch.go)
+- [ ] Batch create generation in resolvers (based on code from [web-ridge/contact-tracing](https://github.com/web-ridge/contact-tracing/blob/master/backend/helpers/convert_batch.go))
 
 ## Examples
-
-https://github.com/web-ridge/gqlgen-sqlboiler-examples
-
+[web-ridge/gqlgen-sqlboiler-examples](https://github.com/web-ridge/gqlgen-sqlboiler-examples)
 More examples are welcome. Send a PR ;-)
 
 ### Example result of this plugin
+[web-ridge/gqlgen-sqlboiler-examples > helper](https://github.com/web-ridge/gqlgen-sqlboiler-examples/tree/master/social-network/helpers)
 
-https://github.com/web-ridge/gqlgen-sqlboiler-examples/tree/master/social-network/helpers
 
 **Code snippet**
 
