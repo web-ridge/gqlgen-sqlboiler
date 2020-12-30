@@ -37,7 +37,7 @@ See [example of `convert_plugin.go`](https://github.com/web-ridge/gqlgen-sqlboil
 ## Features
 
 - [x] schema.graphql based on sqlboiler structs
-- [x] converts between sqlboiler and graphql
+- [x] converts between sqlboiler and gqlgen
 - [x] connections / edges / filtering / ordering / sorting
 - [x] three-way-merge schema re-generate
 - [x] converts between input models and sqlboiler
