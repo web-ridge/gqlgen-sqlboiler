@@ -50,22 +50,20 @@ See [example of `convert_plugin.go`](https://github.com/web-ridge/gqlgen-sqlboil
 - [x] Enum support (only in graphql schema right now).
 - [x] public errors in resolvers + logging via zerolog.
 
-## v3.0
-
+### v3.0
 - [x] Edges/connections
 - [x] Type safe sorting
 
-## v3.1
+### v3.1
 - [x] Support for overriding convert functions with your custom resolvers. [example](https://github.com/web-ridge/gqlgen-sqlboiler#overriding-converts)
 - [x] Allow custom scope resolvers for things like userId, organizationId, creatorId, tenantId 
 
-## Roadmap v3.2
+### Roadmap v3.2
 - [ ] Support overriding resolvers
 - [ ] Support gqlgen multiple .graphql files
 - [ ] Support multiple resolvers (per schema)
 
-## Roadmap v3.3
-
+### Roadmap v3.3
 - [ ] Adding automatic database migrations and integration with [web-ridge/dbifier](https://github.com/web-ridge/dbifier) so faster iteration is possible
 - [ ] Crud of adding/removing relationships from many-to-many on edges
 - [ ] Support more relationships inside input types
