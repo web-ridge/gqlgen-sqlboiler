@@ -30,7 +30,7 @@ Generate schema, converts and resolvers
 go run convert_plugin.go
 ```
 
-For file contents and options of `convert_plugin.go`
+See [https://github.com/web-ridge/gqlgen-sqlboiler#convert_plugingo](example of `convert_plugin.go`)
    
    
 
