@@ -257,7 +257,7 @@ func UserCreateInputToBoiler(
 }
 ```
 
-If you re-generate the original convert will get changed to originalUserCreateInputToBoiler which you can still use if you want in your overridden convert :)
+If you re-generate the original convert will get changed to originalUserCreateInputToBoiler which you can still use in your overridden convert.
 
 ## Help us
 
