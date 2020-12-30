@@ -51,6 +51,7 @@ See [example of `convert_plugin.go`](https://github.com/web-ridge/gqlgen-sqlboil
 - [x] public errors in resolvers + logging via zerolog.
 - [x] [overriding convert functions](https://github.com/web-ridge/gqlgen-sqlboiler#overriding-converts)
 - [x] [custom scope resolvers](https://github.com/web-ridge/gqlgen-sqlboiler-examples/blob/main/social-network/convert_plugin.go#L66) e.g userId, organizationId
+### Relay
 - [x] [GraphQL Cursor Connections Specification](https://relay.dev/graphql/connections.htm)
 - [x] [Global Object Identification](https://graphql.org/learn/global-object-identification/)
 ### Roadmap
