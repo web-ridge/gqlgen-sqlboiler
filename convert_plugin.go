@@ -122,6 +122,7 @@ type Field struct { //nolint:maligned
 	Enum               *Enum
 	// relation stuff
 	IsRelation bool
+	IsObject   bool
 	// boiler relation stuff is inside this field
 	BoilerField BoilerField
 	// graphql relation ship can be found here
@@ -420,14 +421,14 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 			}
 
 			// generate some booleans because these checks will be used a lot
-			isRelation := fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject
+			isObject := fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject
 
 			shortType := getShortType(typ.String())
 
 			isPrimaryID := strings.EqualFold(name, "id")
 
 			// get sqlboiler information of the field
-			boilerField := findBoilerFieldOrForeignKey(m.BoilerModel.Fields, name, isRelation)
+			boilerField := findBoilerFieldOrForeignKey(m.BoilerModel.Fields, name, isObject)
 			isString := strings.Contains(strings.ToLower(boilerField.Type), "string")
 			isNumberID := strings.HasSuffix(name, "ID") && !isString
 			isPrimaryNumberID := isPrimaryID && !isString
@@ -491,7 +492,8 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 				IsPrimaryID:        isPrimaryID,
 				IsPrimaryNumberID:  isPrimaryNumberID,
 				IsPrimaryStringID:  isPrimaryStringID,
-				IsRelation:         isRelation,
+				IsRelation:         boilerField.IsRelation,
+				IsObject:           isObject,
 				IsOr:               strings.EqualFold(name, "or"),
 				IsAnd:              strings.EqualFold(name, "and"),
 				IsPlural:           pluralizer.IsPlural(name),
@@ -560,10 +562,10 @@ func findModel(models []*Model, search string) *Model {
 //	return nil
 //}
 
-func findBoilerFieldOrForeignKey(fields []*BoilerField, golangGraphQLName string, isRelation bool) BoilerField {
+func findBoilerFieldOrForeignKey(fields []*BoilerField, golangGraphQLName string, isObject bool) BoilerField {
 	// get database friendly struct for this model
 	for _, field := range fields {
-		if isRelation {
+		if isObject {
 			// If it a relation check to see if a foreign key is available
 			if strings.EqualFold(field.Name, golangGraphQLName+"ID") {
 				return *field
@@ -711,7 +713,7 @@ func getPreloadMapForModel(backend Config, model *Model) map[string]ColumnSettin
 	preloadMap := map[string]ColumnSetting{}
 	for _, field := range model.Fields {
 		// only relations are preloadable
-		if !field.IsRelation {
+		if !field.IsObject || !field.BoilerField.IsRelation {
 			continue
 		}
 		// var key string
@@ -820,29 +822,30 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 			getToBoiler(
 				getBoilerTypeAsText(boilType),
 				getGraphTypeAsText(graphType),
-			), "boilergql.")
+			), boilerPackage)
 
 		cc.ToGraphQL = strings.TrimPrefix(
 			getToGraphQL(
 				getBoilerTypeAsText(boilType),
 				getGraphTypeAsText(graphType),
-			), "boilergql.")
+			), boilerPackage)
 	} else if graphType != boilType {
 		cc.IsCustom = true
 		if field.IsPrimaryID || field.IsNumberID && field.BoilerField.IsRelation {
+			// TODO: more dynamic and universal
 			cc.ToGraphQL = "VALUE"
 			cc.ToBoiler = "VALUE"
 
 			// first unpointer json type if is pointer
 			if strings.HasPrefix(graphType, "*") {
-				cc.ToBoiler = "boilergql.PointerStringToString(VALUE)"
+				cc.ToBoiler = boilerPackage + "PointerStringToString(VALUE)"
 			}
 
 			goToUint := getBoilerTypeAsText(boilType) + "ToUint"
 			if goToUint == "IntToUint" {
 				cc.ToGraphQL = "uint(VALUE)"
 			} else if goToUint != "UintToUint" {
-				cc.ToGraphQL = "boilergql." + goToUint + "(VALUE)"
+				cc.ToGraphQL = boilerPackage + goToUint + "(VALUE)"
 			}
 
 			if field.IsPrimaryID {
@@ -872,8 +875,16 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 			cc.ToBoiler = getToBoiler(getBoilerTypeAsText(boilType), getGraphTypeAsText(graphType))
 			cc.ToGraphQL = getToGraphQL(getBoilerTypeAsText(boilType), getGraphTypeAsText(graphType))
 		}
+
 	}
+
 	// fmt.Println("boilType for", field.Name, ":", boilType)
+
+	// JSON let the user convert how it looks in a custom file
+	if strings.Contains(boilType, "JSON") {
+		cc.ToBoiler = strings.TrimPrefix(cc.ToBoiler, boilerPackage)
+		cc.ToGraphQL = strings.TrimPrefix(cc.ToGraphQL, boilerPackage)
+	}
 
 	cc.GraphTypeAsText = getGraphTypeAsText(graphType)
 	cc.BoilerTypeAsText = getBoilerTypeAsText(boilType)
@@ -881,12 +892,14 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 	return //nolint:nakedret
 }
 
+const boilerPackage = "boilergql."
+
 func getToBoiler(boilType, graphType string) string {
-	return "boilergql." + getGraphTypeAsText(graphType) + "To" + getBoilerTypeAsText(boilType)
+	return boilerPackage + getGraphTypeAsText(graphType) + "To" + getBoilerTypeAsText(boilType)
 }
 
 func getToGraphQL(boilType, graphType string) string {
-	return "boilergql." + getBoilerTypeAsText(boilType) + "To" + getGraphTypeAsText(graphType)
+	return boilerPackage + getBoilerTypeAsText(boilType) + "To" + getGraphTypeAsText(graphType)
 }
 
 func getBoilerTypeAsText(boilType string) string {

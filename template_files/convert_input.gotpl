@@ -77,24 +77,13 @@ import (
 			input map[string]interface{},
 			m {{ $.Frontend.PackageName }}.{{ .Name }},
 		) {{ $.Backend.PackageName }}.M {
+			model := {{ .Name }}ToBoiler(&m)
 			modelM := {{ $.Backend.PackageName }}.M{}
 			for key := range input {
 				switch key {
 					{{ range $field := .Fields -}}
 					case "{{ $field.JSONName }}":
-						{{- if $field.ConvertConfig.IsCustom }}
-							{{- if $field.IsPrimaryID }}
-								modelM[{{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = {{ $field.ConvertConfig.ToBoiler }}
-							{{- else if and $field.IsNumberID $field.BoilerField.IsRelation }}
-								modelM[{{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = {{ $field.ConvertConfig.ToBoiler }}
-							{{- else if $field.IsRelation -}}
-							{{- else }}
-								modelM[{{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = {{ $field.ConvertConfig.ToBoiler }}(m.{{ $field.Name }})
-							{{- end }}
-						{{- else if $field.IsRelation -}}
-						{{- else }}
-							modelM[{{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = m.{{ $field.Name }}
-						{{- end }}
+						modelM[{{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = model.{{ $field.Name }}
 					{{ end -}}
 				}
 			}
@@ -102,7 +91,7 @@ import (
 		}
 		
 		func {{ .Name }}ToBoilerWhitelist(input map[string]interface{}, extraColumns ...string) boil.Columns {
-			columnsWhichAreSet := []string{}
+			var columnsWhichAreSet []string
 			for key := range input {
 				switch key {
 					{{ range $field := .Fields -}}

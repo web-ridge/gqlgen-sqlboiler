@@ -559,7 +559,8 @@ func toGraphQLType(fieldName, boilerType string) string {
 	// E.g. UserSlice
 	boilerType = strings.TrimSuffix(boilerType, "Slice")
 
-	return boilerType
+	// e.g. null.JSON let user define how it looks with their own struct
+	return strcase.ToCamel(fieldName)
 }
 
 func fieldsWithout(fields []*SchemaField, skipFieldNames []string) []*SchemaField {

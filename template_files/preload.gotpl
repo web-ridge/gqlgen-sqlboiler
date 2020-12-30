@@ -64,13 +64,13 @@ var TablePreloadMap = map[string]map[string]boilergql.ColumnSetting{
 	{{ if .IsPayload -}}
 	var {{ .Name }}PreloadLevels = struct {
 		{{ range $field := .Fields }}
-		{{- if $field.IsRelation -}}
+		{{- if $field.IsObject -}}
 		{{- $field.Name }} string
 		{{- end }}
 		{{- end }}
 	}{
 		{{ range $field := .Fields }}
-		{{- if $field.IsRelation -}}
+		{{- if $field.IsObject -}}
 		{{- $field.Name }}: "{{- $field.JSONName }}",
 		{{- end }}
 		{{- end }}

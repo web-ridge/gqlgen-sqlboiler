@@ -98,7 +98,7 @@ const inputKey = "input"
 			m := {{ .InputModel.Name }}ToBoiler(&input)
 			{{ $model := .Model -}}
 			{{ range $field := .InputModel.Fields -}}
-				{{ if $field.IsRelation -}}
+				{{ if and $field.IsObject $field.BoilerField.IsRelation -}}
 					if input.{{ $field.Name }} != nil {
 						{{ $field.JSONName }} := {{ $field.BoilerField.Relationship.Name }}CreateInputToBoiler(input.{{ $field.Name }})
 						{{ range $scope := $.AuthorizationScopes -}}
@@ -149,7 +149,7 @@ const inputKey = "input"
 			{{ $resolver := . -}}
 			{{ $model := .Model -}}
 			{{ range $field := .InputModel.Fields -}}
-				{{ if $field.IsRelation -}}
+				{{ if and $field.IsObject $field.BoilerField.IsRelation -}}
 					if input.{{ $field.Name }} != nil && input.{{ $field.Name }}ID != nil {
 						dbID := {{ $field.BoilerField.Relationship.Name }}ID(*input.{{ $field.Name }}ID)
 						nestedM := {{ $field.BoilerField.Relationship.Name }}UpdateInputToModelM(
