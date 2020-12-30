@@ -12,6 +12,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/iancoleman/strcase"
 
 	"golang.org/x/tools/imports"
@@ -38,7 +40,7 @@ type Options struct {
 	Data interface{}
 }
 
-func init() {
+func init() { // nolint:gochecknoinits
 	strcase.ConfigureAcronym("QR", "qr")
 	strcase.ConfigureAcronym("KVK", "kvk")
 	strcase.ConfigureAcronym("URL", "url")
@@ -51,7 +53,7 @@ func WriteTemplateFile(fileName string, cfg Options) error {
 	fSet := token.NewFileSet()
 	node, err := parser.ParseFile(fSet, "src.go", string(importFixedContent), 0)
 	if err != nil {
-		fmt.Println("could not parse golang file", err)
+		log.Error().Err(err).Msg("could not parse golang file")
 	}
 
 	ast.Inspect(node, func(n ast.Node) bool {
@@ -66,7 +68,7 @@ func WriteTemplateFile(fileName string, cfg Options) error {
 	f, writeError := os.Create(fileName)
 	defer func() {
 		if err := f.Close(); err != nil {
-			fmt.Println("could not close file")
+			log.Error().Err(err).Msg("could not close file")
 		}
 	}()
 	if err := printer.Fprint(f, fSet, node); err != nil {

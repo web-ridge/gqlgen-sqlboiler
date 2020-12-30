@@ -556,9 +556,6 @@ func toGraphQLType(fieldName, boilerType string) string {
 		return "Int"
 	}
 
-	// E.g. UserSlice
-	boilerType = strings.TrimSuffix(boilerType, "Slice")
-
 	// e.g. null.JSON let user define how it looks with their own struct
 	return strcase.ToCamel(fieldName)
 }

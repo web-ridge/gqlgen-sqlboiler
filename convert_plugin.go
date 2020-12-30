@@ -875,7 +875,6 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 			cc.ToBoiler = getToBoiler(getBoilerTypeAsText(boilType), getGraphTypeAsText(graphType))
 			cc.ToGraphQL = getToGraphQL(getBoilerTypeAsText(boilType), getGraphTypeAsText(graphType))
 		}
-
 	}
 
 	// fmt.Println("boilType for", field.Name, ":", boilType)
