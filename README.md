@@ -216,33 +216,7 @@ func main() {
 			backend,
 			frontend,
 			gbgen.ResolverPluginConfig{
-                    // Authorization scopes can be used to override e.g. userId, organizationId, tenantId
-                    // This will be resolved used the provided ScopeResolverName if the result of the AddTrigger=true
-                    // You would need this if you don't want to require these fields in your schema but you want to add them
-                    // to the db model.
-                    // If you do have these fields in your schema but want them authorized you could use a gqlgen directive
-                    //AuthorizationScopes: []*gbgen.AuthorizationScope{
-                    //	{
-                    //		ImportPath:        "github.com/yourcompany/backend/auth",
-                    //		ImportAlias:       "auth",
-                    //		ScopeResolverName: "UserIDFromContext", // function which is called with the context of the resolver
-                    //		BoilerColumnName:  "UserID",
-                    //
-                    //		AddHook: func(model *gbgen.BoilerModel, resolver *gbgen.Resolver, templateKey string) bool {
-                    //			// fmt.Println(templateKey)
-                    //			// templateKey contains a unique where the resolver tries to add something
-                    //			// e.g.
-                    //			// most of the time you can ignore this
-                    //			var addResolver bool
-                    //			for _, field := range model.Fields {
-                    //				if field.Name == "UserID" {
-                    //					addResolver = true
-                    //				}
-                    //			}
-                    //			return addResolver
-                    //		},
-                    //	},
-                    //},
+                   // See example for AuthorizationScopes here: https://github.com/web-ridge/gqlgen-sqlboiler-examples/blob/main/social-network/convert_plugin.go#L66
                 },
 		)),
 	); err != nil {
@@ -254,6 +228,31 @@ func main() {
 ```
 
 `go run convert_plugin.go`
+
+# Overriding converts
+You can now have a different file in your helpers/ directory e.g. convert_override_user.go
+```golang
+package helpers
+
+import (
+	"github.com/../app/backend/graphql_models"
+	"github.com/../app/backend/models"
+)
+
+func UserCreateInputToBoiler(
+	m *graphql_models.UserCreateInput,
+) *models.User {
+	if m == nil {
+		return nil
+	}
+
+	originalConvert := originalUserCreateInputToBoiler(m)
+	// TODO: bcryp pass
+	return originalConvert
+}
+```
+
+If you re-generate the original convert will get changed to originalUserCreateInputToBoiler which you can still use if you want in your overridden convert :)
 
 ## Help us
 
