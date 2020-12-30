@@ -16,11 +16,10 @@ It's really amazing how fast a generated api with these techniques is!
 
 ## Usage
 
-1. Generate database structs with: [volatiletech/sqlboiler](https://github.com/volatiletech/sqlboiler) (--no-back-referencing is IMPORTANT!)
-   e.g. 
+1. Generate database structs with: [volatiletech/sqlboiler](https://github.com/volatiletech/sqlboiler) 
    ```sqlboiler mysql --no-back-referencing```
-2. Make sure you have a sqlboiler.yml, gqlgen.yml and convert_plugin.go file in your project otherwise [follow the prerequisites](https://github.com/web-ridge/gqlgen-sqlboiler#prerequisites)
-2. Generate schema.graphql, converts and resolvers with our plugins    
+2. Make sure you have [followed the prerequisites](https://github.com/web-ridge/gqlgen-sqlboiler#prerequisites)
+2. Generate schema, converts and resolvers  
    ```go run convert_plugin.go``` 
    
 For file contents of that program see bottom of this readme you can chose whether to generate the graphql schema itself too
