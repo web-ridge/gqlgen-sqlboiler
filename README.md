@@ -43,13 +43,11 @@ It's really amazing how fast a generated api with these techniques is!
 - [x] Edges/connections
 - [x] Type safe sorting
 
-## Roadmap v3.1
-
+## v3.1
 - [x] Support for overriding convert functions with your custom resolvers (see example here: )
-- [ ] RESOLVER TODO
-
 
 ## Roadmap v3.2
+- [ ] Support overriding resolvers
 - [ ] Support gqlgen multiple .graphql files
 - [ ] Support multiple resolvers (per schema)
 
