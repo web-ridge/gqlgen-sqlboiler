@@ -36,34 +36,28 @@ See [example of `convert_plugin.go`](https://github.com/web-ridge/gqlgen-sqlboil
 
 ## Features
 
-- [x] Generate graphql.schema based on sqlboiler structs
-- [x] Three-way-merge with your old schema so you can easily keep your own changes
-- [x] Generate converts between sqlboiler structs and graphql (with relations included)
-- [x] Generate converts between input models and sqlboiler
-- [x] Genarated code understands the difference between empty and null for update input, so you can set things empty if you explicitly set them in your mutation!
-- [x] Fetch sqlboiler preloads from graphql context
-- [x] Support for foreign keys and relations
-- [x] Plugin which generates CRUD resolvers based on queries/mutations in graphql schema.
-- [x] Support one-to-one relationships inside input types.
-- [x] Generate code which implements the generated where and search filters
-- [x] Batch update/delete generation in resolvers.
-- [x] Enum support (only in graphql schema right now).
+- [x] graphql.schema based on sqlboiler structs
+- [x] converts between sqlboiler and graphql
+- [x] connections / edges / filtering / ordering / sorting
+- [x] three-way-merge schema re-generate
+- [x] converts between input models and sqlboiler
+- [x] understands the difference between empty and null in update input
+- [x] sqlboiler preloads from graphql context
+- [x] foreign keys and relations
+- [x] resolvers based on queries/mutations in schema
+- [x] one-to-one relationships inside input types.
+- [x] batch update/delete generation in resolvers.
+- [x] enum support (only in graphql schema right now).
 - [x] public errors in resolvers + logging via zerolog.
-
-### v3.0
-- [x] Edges/connections
-- [x] Type safe sorting
-
-### v3.1
+- [x] implements [GraphQL Cursor Connections Specification](https://relay.dev/graphql/connections.htm)
+- [x] implements [Global Object Identification](https://graphql.org/learn/global-object-identification/)
 - [x] Support for overriding convert functions with your custom resolvers. [example](https://github.com/web-ridge/gqlgen-sqlboiler#overriding-converts)
-- [x] Allow custom scope resolvers for things like userId, organizationId, creatorId, tenantId 
+- [x] Allow custom scope resolvers for things like userId, organizationId, creatorId, tenantId [example](https://github.com/web-ridge/gqlgen-sqlboiler-examples/blob/main/social-network/convert_plugin.go#L66)
 
-### Roadmap v3.2
+### Roadmap
 - [ ] Support overriding resolvers
 - [ ] Support gqlgen multiple .graphql files
 - [ ] Support multiple resolvers (per schema)
-
-### Roadmap v3.3
 - [ ] Adding automatic database migrations and integration with [web-ridge/dbifier](https://github.com/web-ridge/dbifier) so faster iteration is possible
 - [ ] Crud of adding/removing relationships from many-to-many on edges
 - [ ] Support more relationships inside input types
