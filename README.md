@@ -223,7 +223,6 @@ func main() {
 }
 ```
 
-`go run convert_plugin.go`
 
 ## Overriding converts
 You can now have a different file in your helpers/ directory e.g. convert_override_user.go
