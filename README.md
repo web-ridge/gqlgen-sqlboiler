@@ -58,7 +58,7 @@ See [example of `convert_plugin.go`](https://github.com/web-ridge/gqlgen-sqlboil
 - [ ] Support overriding resolvers
 - [ ] Support gqlgen multiple .graphql files
 - [ ] Support multiple resolvers (per schema)
-- [ ] Adding automatic database migrations and integration with [web-ridge/dbifier](https://github.com/web-ridge/dbifier) so faster iteration is possible
+- [ ] Adding automatic database migrations and integration with [web-ridge/dbifier](https://github.com/web-ridge/dbifier)
 - [ ] Crud of adding/removing relationships from many-to-many on edges
 - [ ] Support more relationships inside input types
 - [ ] Generate tests
