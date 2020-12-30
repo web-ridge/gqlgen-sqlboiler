@@ -163,7 +163,7 @@ models:
 ```
 
 ### convert_plugin.go
-Put this in your program convert_plugin.go e.g.
+Put something like the code below in file convert_plugin.go
 
 ```go
 // +build ignore
