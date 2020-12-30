@@ -67,9 +67,9 @@ See [example of `convert_plugin.go`](https://github.com/web-ridge/gqlgen-sqlboil
 
 ## Examples
 [web-ridge/gqlgen-sqlboiler-examples](https://github.com/web-ridge/gqlgen-sqlboiler-examples)
-More examples are welcome. Send a PR ;-)
+More examples are welcome
 
-### Example result of this plugin
+Checkout output folder in our examples
 [web-ridge/gqlgen-sqlboiler-examples > helper](https://github.com/web-ridge/gqlgen-sqlboiler-examples/tree/master/social-network/helpers)
 
 
