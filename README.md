@@ -181,7 +181,7 @@ func main() {
 		PackageName: "graphql_models",
 	}
 
-	if err = gbgen.SchemaWrite(gbgen.SchemaConfig{
+	if err := gbgen.SchemaWrite(gbgen.SchemaConfig{
 		BoilerModelDirectory: backend,
 		// Directives:           []string{"IsAuthenticated"},
 		// GenerateBatchCreate:  false, // Not implemented yet
