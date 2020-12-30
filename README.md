@@ -2,9 +2,9 @@
 
 We want developers to be able to build software faster using modern tools like GraphQL, Golang, React Native without depending on commercial providers like Firebase or AWS Amplify.
 
-This program generates type-safe code between your generated gqlgen and sqlboiler models with support for unique id's across your whole database (also if you're not using string id's). We can automatically generate the implementation of queries and mutations like create, update, delete based on your graphql scheme and your sqlboiler models.
+Our plugins generate type-safe code between gqlgen and sqlboiler models with support for unique id's across your whole database. We can automatically generate the implementation of queries and mutations like create, update, delete based on your graphql scheme and your sqlboiler models.
 
-To make this program a success coupling (same naming) between your database and graphql scheme is needed at the moment. The advantage of this program is the most when you have a database already designed. However everything is created with support for change so you could write some extra GrapQL resolvers if you'd like without a problem.
+Tight coupling between your database and graphql scheme is required otherwise generation will be skipped. The advantage of this program is the most when you have a database already designed. You can write extra GrapQL resolvers, and override the generated functions so you can iterate fast.
 
 ## Why gqlgen and sqlboiler
 
@@ -17,9 +17,15 @@ It's really amazing how fast a generated api with these techniques is!
 ## Usage
 
 1. Generate database structs with: [volatiletech/sqlboiler](https://github.com/volatiletech/sqlboiler) (--no-back-referencing is IMPORTANT!)
-   e.g. `sqlboiler mysql --no-back-referencing`
-2. Generate gqlgen structs + converts between gqlgen and sqlboiler with this program  
-   e.g. `go run convert_plugin.go` for file contents of that program see bottom of this readme you can chose whether to generate the graphql schema itself too
+   e.g. 
+   ```sqlboiler mysql --no-back-referencing```
+2. Make sure you have a sqlboiler.yml, gqlgen.yml and convert_plugin.go file in your project otherwise follow the [example](https://github.com/web-ridge/gqlgen-sqlboiler#overriding-converts)
+2. Generate schema.graphql, converts and resolvers with our plugins    
+   ```go run convert_plugin.go``` 
+   
+For file contents of that program see bottom of this readme you can chose whether to generate the graphql schema itself too
+   
+   
 
 ## Features
 
@@ -101,6 +107,9 @@ func PostToGraphQL(m *models.Post) *graphql_models.Post {
 	return r
 }
 ```
+
+
+## Prerequisites
 
 sqlboiler.yml
 
@@ -226,7 +235,7 @@ func main() {
 
 `go run convert_plugin.go`
 
-# Overriding converts
+## Overriding converts
 You can now have a different file in your helpers/ directory e.g. convert_override_user.go
 ```golang
 package helpers
