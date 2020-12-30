@@ -225,7 +225,7 @@ func main() {
 
 
 ## Overriding converts
-You can now have a different file in your helpers/ directory e.g. convert_override_user.go
+Put a file in your helpers/ directory e.g. convert_override_user.go
 ```golang
 package helpers
 
