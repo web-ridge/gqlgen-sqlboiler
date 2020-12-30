@@ -30,7 +30,7 @@ Generate schema, converts and resolvers
 go run convert_plugin.go
 ```
 
-For file contents of that program see bottom of this readme you can chose whether to generate the graphql schema itself too
+For file contents and options of `convert_plugin.go`
    
    
 
@@ -162,6 +162,7 @@ models:
     model: github.com/web-ridge/utils-go/boilergql/v3.SortDirection
 ```
 
+### convert_plugin.go
 Put this in your program convert_plugin.go e.g.
 
 ```go
