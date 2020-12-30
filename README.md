@@ -118,7 +118,7 @@ func PostToGraphQL(m *models.Post) *graphql_models.Post {
 
 ## Prerequisites
 
-sqlboiler.yml
+### sqlboiler.yml
 
 ```yaml
 mysql:
@@ -137,7 +137,7 @@ mysqldump:
   column-statistics: 0
 ```
 
-gqlgen.yml
+### gqlgen.yml
 
 ```yaml
 schema:
