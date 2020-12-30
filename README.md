@@ -44,7 +44,7 @@ It's really amazing how fast a generated api with these techniques is!
 - [x] Type safe sorting
 
 ## v3.1
-- [x] Support for overriding convert functions with your custom resolvers (see example here: )
+- [x] Support for overriding convert functions with your custom resolvers (see example here: https://github.com/web-ridge/gqlgen-sqlboiler#overriding-converts)
 - [x] Allow custom scope resolvers for things like userId, organizationId, creatorId, tenantId 
 
 ## Roadmap v3.2
