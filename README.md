@@ -66,7 +66,7 @@ See [example of `convert_plugin.go`](https://github.com/web-ridge/gqlgen-sqlboil
 - [ ] Batch create generation in resolvers (based on code from [web-ridge/contact-tracing](https://github.com/web-ridge/contact-tracing/blob/master/backend/helpers/convert_batch.go))
 
 ## Examples
-Checkout our examples to see the generated schema.grapql, converts and resolvers.
+Checkout our examples to see the generated schema.grapql, converts and resolvers.   
 [web-ridge/gqlgen-sqlboiler-examples](https://github.com/web-ridge/gqlgen-sqlboiler-examples)
 
 ### Output example
