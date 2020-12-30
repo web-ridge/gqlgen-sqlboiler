@@ -172,8 +172,6 @@ import (
 )
 
 func main() {
-
-
 	output := gbgen.Config{
 		Directory:   "helpers", // supports root or sub directories
 		PackageName: "helpers",
@@ -254,7 +252,7 @@ func UserCreateInputToBoiler(
 	}
 
 	originalConvert := originalUserCreateInputToBoiler(m)
-	// TODO: bcryp pass
+	// e.g. bcrypt password
 	return originalConvert
 }
 ```
