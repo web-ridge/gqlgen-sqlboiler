@@ -68,7 +68,7 @@ func WriteTemplateFile(fileName string, cfg Options) error {
 	f, writeError := os.Create(fileName)
 	defer func() {
 		if err := f.Close(); err != nil {
-			log.Error().Err(err).Msg("could not close file")
+			log.Error().Err(err).Str("fileName", fileName).Msg("could not close file")
 		}
 	}()
 	if err := printer.Fprint(f, fSet, node); err != nil {

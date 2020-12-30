@@ -94,7 +94,9 @@ func SchemaGet(
 
 	w.l(`schema {`)
 	w.tl(`query: Query`)
-	w.tl(`mutation: Mutation`)
+	if config.GenerateMutations {
+		w.tl(`mutation: Mutation`)
+	}
 	w.l(`}`)
 
 	w.br()

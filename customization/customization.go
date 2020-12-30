@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
 	"strings"
 )
 
@@ -13,7 +14,10 @@ func GetFunctionNamesFromDir(dir string, ignore []string) ([]string, error) {
 	set := token.NewFileSet()
 	packs, err := parser.ParseDir(set, dir, nil, 0)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse package:", err)
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to parse package: %v", err)
 	}
 
 	for _, pack := range packs {

@@ -45,6 +45,7 @@ It's really amazing how fast a generated api with these techniques is!
 
 ## v3.1
 - [x] Support for overriding convert functions with your custom resolvers (see example here: )
+- [x] Allow custom scope resolvers for things like userId, organizationId, creatorId, tenantId 
 
 ## Roadmap v3.2
 - [ ] Support overriding resolvers
@@ -165,11 +166,6 @@ import (
 )
 
 func main() {
-	cfg, err := config.LoadConfigFromDefaultLocations()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "failed to load config", err.Error())
-		os.Exit(2)
-	}
 
 	output := gbgen.Config{
 		Directory:   "helpers", // supports root or sub directories
@@ -199,6 +195,12 @@ func main() {
 		os.Exit(3)
 	}
 
+	cfg, err := config.LoadConfigFromDefaultLocations()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "failed to load config", err.Error())
+		os.Exit(2)
+	}
+
 	if err = api.Generate(cfg,
 		api.AddPlugin(gbgen.NewConvertPlugin(
 			output,   // directory where convert.go, convert_input.go and preload.go should live
@@ -212,7 +214,35 @@ func main() {
 			output,
 			backend,
 			frontend,
-			"", // leave empty if you don't have auth
+			gbgen.ResolverPluginConfig{
+                // Authorization scopes can be used to override e.g. userId, organizationId, tenantId
+                // This will be resolved used the provided ScopeResolverName if the result of the AddTrigger=true
+                // You would need this if you don't want to require these fields in your schema but you want to add them
+                // to the db model.
+                // If you do have these fields in your schema but want them authorized you could use a gqlgen directive
+                //AuthorizationScopes: []*gbgen.AuthorizationScope{
+                //	{
+                //		ImportPath:        "github.com/yourcompany/backend/auth",
+                //		ImportAlias:       "auth",
+                //		ScopeResolverName: "UserIDFromContext", // function which is called with the context of the resolver
+                //		BoilerColumnName:  "UserID",
+                //
+                //		AddHook: func(model *gbgen.BoilerModel, resolver *gbgen.Resolver, templateKey string) bool {
+                //			// fmt.Println(templateKey)
+                //			// templateKey contains a unique where the resolver tries to add something
+                //			// e.g.
+                //			// most of the time you can ignore this
+                //			var addResolver bool
+                //			for _, field := range model.Fields {
+                //				if field.Name == "UserID" {
+                //					addResolver = true
+                //				}
+                //			}
+                //			return addResolver
+                //		},
+                //	},
+                //},
+            },
 		)),
 	); err != nil {
 		fmt.Println("error while trying generate resolver and converts")
