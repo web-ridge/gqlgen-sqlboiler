@@ -27,6 +27,9 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/types"
 	"github.com/volatiletech/null/v8"
 	"database/sql"
+	{{ range $import := .Imports }}
+		{{ $import.Alias }} "{{ $import.ImportPath }}"
+	{{ end }}
 )
 
 
