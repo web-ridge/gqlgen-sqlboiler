@@ -28,6 +28,9 @@ import (
 	"github.com/volatiletech/null/v8"
 
 	"database/sql"
+	{{ range $import := .Imports }}
+		{{ $import.Alias }} "{{ $import.ImportPath }}"
+	{{ end }}
 )
 
 

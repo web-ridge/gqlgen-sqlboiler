@@ -86,9 +86,15 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 		Alias:      "dm",
 		ImportPath: path.Join(m.rootImportPath, m.backend.Directory),
 	})
+
 	file.Imports = append(file.Imports, Import{
 		Alias:      "fm",
 		ImportPath: path.Join(m.rootImportPath, m.frontend.Directory),
+	})
+
+	file.Imports = append(file.Imports, Import{
+		Alias:      "gm",
+		ImportPath: buildImportPath(m.rootImportPath, data.Config.Exec.Dir()),
 	})
 
 	for _, scope := range m.pluginConfig.AuthorizationScopes {
@@ -142,6 +148,17 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 		PackageName: data.Config.Resolver.Package,
 		Data:        resolverBuild,
 	})
+}
+
+func buildImportPath(rootImportPath, directory string) string {
+	fmt.Println(rootImportPath, directory)
+
+	index := strings.Index(directory, rootImportPath)
+	if index > 0 {
+		return directory[index:]
+	}
+
+	return directory
 }
 
 type ResolverBuild struct {
