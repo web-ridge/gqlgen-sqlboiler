@@ -151,13 +151,10 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 }
 
 func buildImportPath(rootImportPath, directory string) string {
-	fmt.Println(rootImportPath, directory)
-
 	index := strings.Index(directory, rootImportPath)
 	if index > 0 {
 		return directory[index:]
 	}
-
 	return directory
 }
 
