@@ -89,12 +89,12 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 
 	file.Imports = append(file.Imports, Import{
 		Alias:      "fm",
-		ImportPath: path.Join(m.rootImportPath, m.frontend.Directory),
+		ImportPath: path.Join(m.rootImportPath, m.frontend.Directory),	
 	})
 
 	file.Imports = append(file.Imports, Import{
 		Alias:      "gm",
-		ImportPath: buildImportPath(m.rootImportPath, data.Config.Exec.Dir()),
+		ImportPath: buildImportPath(m.rootImportPath, data.Config.Exec.ImportPath()),
 	})
 
 	for _, scope := range m.pluginConfig.AuthorizationScopes {
