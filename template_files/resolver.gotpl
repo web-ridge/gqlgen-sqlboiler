@@ -38,6 +38,12 @@ import (
 	type {{.ResolverType}} struct {
 		db *sql.DB
 	}
+
+	func New(db *sql.DB) *Resolver {
+		return &Resolver{
+			db: db,
+		}
+	}
 {{ end }}
 
 const inputKey = "input"
@@ -313,7 +319,7 @@ func (r *queryResolver) Node(ctx context.Context, globalGraphID string) (fm.Node
 
 
 {{ range $object := .Objects -}}
-	func (r *{{$.ResolverType}}) {{$object.Name}}() fm.{{ $object.Name }}Resolver { return &{{lcFirst $object.Name}}{{ucFirst $.ResolverType}}{r} }
+	func (r *{{$.ResolverType}}) {{$object.Name}}() gm.{{ $object.Name }}Resolver { return &{{lcFirst $object.Name}}{{ucFirst $.ResolverType}}{r} }
 {{ end }}
 
 {{ range $object := .Objects -}}

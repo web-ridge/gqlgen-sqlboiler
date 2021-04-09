@@ -59,6 +59,19 @@ type ModelBuild struct {
 	Scalars      []string
 }
 
+func (t ModelBuild) Imports() []Import {
+	return []Import{
+		Import{
+			Alias:      t.Frontend.PackageName,
+			ImportPath: t.Frontend.Directory,
+		},
+		Import{
+			Alias:      t.Backend.PackageName,
+			ImportPath: t.Backend.Directory,
+		},
+	}
+}
+
 type Interface struct {
 	Description string
 	Name        string
