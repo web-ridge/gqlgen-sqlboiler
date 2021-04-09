@@ -21,14 +21,11 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/vektah/gqlparser/v2/ast"
-	pluralize "github.com/web-ridge/go-pluralize"
+	"github.com/volatiletech/strmangle"
 	"github.com/web-ridge/gqlgen-sqlboiler/v3/templates"
 )
 
-var (
-	pathRegex  *regexp.Regexp    //nolint:gochecknoglobals
-	pluralizer *pluralize.Client //nolint:gochecknoglobals
-)
+var pathRegex *regexp.Regexp //nolint:gochecknoglobals
 
 func init() { //nolint:gochecknoinits
 	fmt.Println("               _     _____  _     _            \n              | |   |  __ \\(_)   | |           \n __      _____| |__ | |__) |_  __| | __ _  ___ \n \\ \\ /\\ / / _ \\ '_ \\|  _  /| |/ _` |/ _` |/ _ \\\n  \\ V  V /  __/ |_) | | \\ \\| | (_| | (_| |  __/\n   \\_/\\_/ \\___|_.__/|_|  \\_\\_|\\__,_|\\__, |\\___|\n                                     __/ |     \n                                    |___/   ") //nolint:lll
@@ -38,7 +35,6 @@ func init() { //nolint:gochecknoinits
 	fmt.Println("  Click the sponsor button (PayPal) on https://github.com/web-ridge/gqlgen-sqlboiler")
 	fmt.Println("")
 
-	pluralizer = pluralize.NewClient()
 	pathRegex = regexp.MustCompile(`src/(.*)`)
 
 	// Default level for this example is info, unless debug flag is present
@@ -456,7 +452,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 				// TODO: add filter + where here
 				switch {
 				case m.IsPayload:
-				case pluralizer.IsPlural(name):
+				case IsPlural(name):
 				case (m.IsFilter || m.IsWhere) && (strings.EqualFold(name, "and") ||
 					strings.EqualFold(name, "or") ||
 					strings.EqualFold(name, "search") ||
@@ -497,8 +493,8 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 				IsObject:           isObject,
 				IsOr:               strings.EqualFold(name, "or"),
 				IsAnd:              strings.EqualFold(name, "and"),
-				IsPlural:           pluralizer.IsPlural(name),
-				PluralName:         pluralizer.Plural(name),
+				IsPlural:           IsPlural(name),
+				PluralName:         strmangle.Plural(name),
 				OriginalType:       typ,
 				Description:        field.Description,
 				Enum:               enum,
@@ -518,6 +514,14 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 }
 
 var ignoreTypePrefixes = []string{"graphql_models", "models", "boilergql"} //nolint:gochecknoglobals
+
+func IsPlural(s string) bool {
+	return s != strmangle.Plural(s)
+}
+
+func IsSingular(s string) bool {
+	return s != strmangle.Singular(s)
+}
 
 func getShortType(longType string) string {
 	// longType e.g = gitlab.com/decicify/app/backend/graphql_models.FlowWhere
@@ -678,7 +682,7 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 				m := &Model{
 					Name:          modelName,
 					Description:   schemaType.Description,
-					PluralName:    pluralizer.Plural(modelName),
+					PluralName:    strmangle.Plural(modelName),
 					BoilerModel:   boilerModel,
 					IsInput:       isInput,
 					IsFilter:      isFilter,

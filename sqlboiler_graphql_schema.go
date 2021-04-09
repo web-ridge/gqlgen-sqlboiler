@@ -9,6 +9,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/volatiletech/strmangle"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/iancoleman/strcase"
@@ -226,7 +228,7 @@ func SchemaGet(
 
 		for _, field := range model.Fields {
 			if field.BoilerField.IsRelation {
-				// Support filtering in relationships (atleast schema wise)
+				// Support filtering in relationships (at least schema wise)
 				w.tl(field.RelationName + ": " + field.RelationType + "Where")
 			} else {
 				w.tl(field.Name + ": " + field.Type + "Filter")
@@ -247,7 +249,7 @@ func SchemaGet(
 		w.tl(strcase.ToLowerCamel(model.Name) + "(id: ID!): " + model.Name + "!" + joinedDirectives)
 
 		// lists
-		modelPluralName := pluralizer.Plural(model.Name)
+		modelPluralName := strmangle.Plural(model.Name)
 
 		arguments := []string{
 			"first: Int!",
@@ -268,7 +270,7 @@ func SchemaGet(
 		for _, model := range models {
 			filteredFields := fieldsWithout(model.Fields, config.SkipInputFields)
 
-			modelPluralName := pluralizer.Plural(model.Name)
+			modelPluralName := strmangle.Plural(model.Name)
 			// input UserCreateInput {
 			// 	firstName: String!
 			// 	lastName: String
@@ -392,7 +394,7 @@ func SchemaGet(
 		w.l("type Mutation {")
 
 		for _, model := range models {
-			modelPluralName := pluralizer.Plural(model.Name)
+			modelPluralName := strmangle.Plural(model.Name)
 
 			// create single
 			// e.g createUser(input: UserInput!): UserPayload!

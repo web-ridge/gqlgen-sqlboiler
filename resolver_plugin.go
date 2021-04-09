@@ -5,6 +5,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/volatiletech/strmangle"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/iancoleman/strcase"
@@ -243,7 +245,7 @@ func enhanceResolver(r *Resolver, models []*Model) { //nolint:gocyclo
 		r.IsBatchUpdate = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Update")
 		r.IsBatchDelete = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Delete")
 	case "Query":
-		isPlural := pluralizer.IsPlural(nameOfResolver)
+		isPlural := IsPlural(nameOfResolver)
 		if isPlural {
 			r.IsList = isPlural
 			r.IsListBackward = strings.Contains(r.Field.GoFieldName, "first int") &&
@@ -323,9 +325,9 @@ func getModelNames(v string, plural bool) (modelName, inputModelName string) {
 	}
 	var s string
 	if plural {
-		s = pluralizer.Plural(v)
+		s = strmangle.Plural(v)
 	} else {
-		s = pluralizer.Singular(v)
+		s = strmangle.Singular(v)
 	}
 
 	if isInputType {
@@ -337,10 +339,10 @@ func getModelNames(v string, plural bool) (modelName, inputModelName string) {
 
 func containsPrefixAndPartAfterThatIsSingle(v string, prefix string) bool {
 	partAfterThat := strings.TrimPrefix(v, prefix)
-	return strings.HasPrefix(v, prefix) && pluralizer.IsSingular(partAfterThat)
+	return strings.HasPrefix(v, prefix) && IsSingular(partAfterThat)
 }
 
 func containsPrefixAndPartAfterThatIsPlural(v string, prefix string) bool {
 	partAfterThat := strings.TrimPrefix(v, prefix)
-	return strings.HasPrefix(v, prefix) && pluralizer.IsPlural(partAfterThat)
+	return strings.HasPrefix(v, prefix) && IsPlural(partAfterThat)
 }

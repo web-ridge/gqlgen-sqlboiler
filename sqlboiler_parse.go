@@ -11,9 +11,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/iancoleman/strcase"
+	"github.com/rs/zerolog/log"
+	"github.com/volatiletech/strmangle"
 )
 
 type BoilerModel struct {
@@ -89,7 +89,7 @@ func GetBoilerModels(dir string) []*BoilerModel { //nolint:gocognit,gocyclo
 				relationField := &BoilerField{
 					Name:             boilerFieldName,
 					RelationshipName: strings.TrimSuffix(boilerFieldName, "ID"),
-					PluralName:       pluralizer.Plural(boilerFieldName),
+					PluralName:       strmangle.Plural(boilerFieldName),
 					Type:             boilerType,
 					IsRelation:       true,
 					IsRequired:       false,
@@ -110,7 +110,7 @@ func GetBoilerModels(dir string) []*BoilerModel { //nolint:gocognit,gocyclo
 
 		addFieldToMap(fieldsPerModelName, modelName, &BoilerField{
 			Name:             boilerFieldName,
-			PluralName:       pluralizer.Plural(boilerFieldName),
+			PluralName:       strmangle.Plural(boilerFieldName),
 			Type:             boiler.Type,
 			IsRelation:       isRelation,
 			IsRequired:       isRequired(boiler.Type),
@@ -135,7 +135,7 @@ func GetBoilerModels(dir string) []*BoilerModel { //nolint:gocognit,gocyclo
 		models[i] = &BoilerModel{
 			Name:       modelName,
 			TableName:  tableName,
-			PluralName: pluralizer.Plural(modelName),
+			PluralName: strmangle.Plural(modelName),
 			Fields:     fields,
 
 			HasPrimaryStringID: hasPrimaryStringID,
@@ -194,7 +194,7 @@ func findTableName(tableNames []string, modelName string) string {
 
 	// if database name is plural
 	for _, tableName := range tableNames {
-		if pluralizer.Plural(modelName) == tableName {
+		if strmangle.Plural(modelName) == tableName {
 			return tableName
 		}
 	}
