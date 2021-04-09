@@ -13,7 +13,6 @@ import (
 
 	"github.com/iancoleman/strcase"
 	"github.com/rs/zerolog/log"
-	"github.com/volatiletech/strmangle"
 )
 
 type BoilerModel struct {
@@ -89,7 +88,7 @@ func GetBoilerModels(dir string) []*BoilerModel { //nolint:gocognit,gocyclo
 				relationField := &BoilerField{
 					Name:             boilerFieldName,
 					RelationshipName: strings.TrimSuffix(boilerFieldName, "ID"),
-					PluralName:       strmangle.Plural(boilerFieldName),
+					PluralName:       Plural(boilerFieldName),
 					Type:             boilerType,
 					IsRelation:       true,
 					IsRequired:       false,
@@ -110,7 +109,7 @@ func GetBoilerModels(dir string) []*BoilerModel { //nolint:gocognit,gocyclo
 
 		addFieldToMap(fieldsPerModelName, modelName, &BoilerField{
 			Name:             boilerFieldName,
-			PluralName:       strmangle.Plural(boilerFieldName),
+			PluralName:       Plural(boilerFieldName),
 			Type:             boiler.Type,
 			IsRelation:       isRelation,
 			IsRequired:       isRequired(boiler.Type),
@@ -135,7 +134,7 @@ func GetBoilerModels(dir string) []*BoilerModel { //nolint:gocognit,gocyclo
 		models[i] = &BoilerModel{
 			Name:       modelName,
 			TableName:  tableName,
-			PluralName: strmangle.Plural(modelName),
+			PluralName: Plural(modelName),
 			Fields:     fields,
 
 			HasPrimaryStringID: hasPrimaryStringID,
@@ -194,7 +193,7 @@ func findTableName(tableNames []string, modelName string) string {
 
 	// if database name is plural
 	for _, tableName := range tableNames {
-		if strmangle.Plural(modelName) == tableName {
+		if Plural(modelName) == tableName {
 			return tableName
 		}
 	}

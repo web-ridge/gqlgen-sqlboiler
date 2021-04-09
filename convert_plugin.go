@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/web-ridge/gqlgen-sqlboiler/v3/customization"
 
@@ -61,11 +62,11 @@ type ModelBuild struct {
 
 func (t ModelBuild) Imports() []Import {
 	return []Import{
-		Import{
+		{
 			Alias:      t.Frontend.PackageName,
 			ImportPath: t.Frontend.Directory,
 		},
-		Import{
+		{
 			Alias:      t.Backend.PackageName,
 			ImportPath: t.Backend.Directory,
 		},
@@ -507,7 +508,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 				IsOr:               strings.EqualFold(name, "or"),
 				IsAnd:              strings.EqualFold(name, "and"),
 				IsPlural:           IsPlural(name),
-				PluralName:         strmangle.Plural(name),
+				PluralName:         Plural(name),
 				OriginalType:       typ,
 				Description:        field.Description,
 				Enum:               enum,
@@ -528,12 +529,41 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 
 var ignoreTypePrefixes = []string{"graphql_models", "models", "boilergql"} //nolint:gochecknoglobals
 
+// TaskBlockedBies -> TaskBlockedBy
+// People -> Person
+func Singular(s string) string {
+	singular := strmangle.Singular(strcase.ToSnake(s))
+
+	singularTitle := strmangle.TitleCase(singular)
+	if isFirstCharacterLowerCase(s) {
+		a := []rune(singularTitle)
+		a[0] = unicode.ToLower(a[0])
+		return string(a)
+	}
+	return singularTitle
+}
+
+// TaskBlockedBy -> TaskBlockedBies
+// Person -> Persons
+// Person -> People
+func Plural(s string) string {
+	plural := strmangle.Plural(strcase.ToSnake(s))
+
+	pluralTitle := strmangle.TitleCase(plural)
+	if isFirstCharacterLowerCase(s) {
+		a := []rune(pluralTitle)
+		a[0] = unicode.ToLower(a[0])
+		return string(a)
+	}
+	return pluralTitle
+}
+
 func IsPlural(s string) bool {
-	return s != strmangle.Plural(s)
+	return s == Plural(s)
 }
 
 func IsSingular(s string) bool {
-	return s != strmangle.Singular(s)
+	return s == Singular(s)
 }
 
 func getShortType(longType string) string {
@@ -681,6 +711,7 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 				}
 
 				// if no boiler model is found
+
 				if boilerModel == nil || boilerModel.Name == "" {
 					if isInput || isWhere || isFilter || isPayload || isPageInfo || isPagination {
 						// silent continue
@@ -692,10 +723,11 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 
 				isNormalInput := isInput && !isCreateInput && !isUpdateInput
 				isNormal := !isInput && !isWhere && !isFilter && !isPayload && !isEdge && !isConnection && !isOrdering
+
 				m := &Model{
 					Name:          modelName,
 					Description:   schemaType.Description,
-					PluralName:    strmangle.Plural(modelName),
+					PluralName:    Plural(modelName),
 					BoilerModel:   boilerModel,
 					IsInput:       isInput,
 					IsFilter:      isFilter,

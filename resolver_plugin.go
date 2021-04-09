@@ -5,8 +5,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/volatiletech/strmangle"
-
 	"github.com/rs/zerolog/log"
 
 	"github.com/iancoleman/strcase"
@@ -91,7 +89,7 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 
 	file.Imports = append(file.Imports, Import{
 		Alias:      "fm",
-		ImportPath: path.Join(m.rootImportPath, m.frontend.Directory),	
+		ImportPath: path.Join(m.rootImportPath, m.frontend.Directory),
 	})
 
 	file.Imports = append(file.Imports, Import{
@@ -339,9 +337,9 @@ func getModelNames(v string, plural bool) (modelName, inputModelName string) {
 	}
 	var s string
 	if plural {
-		s = strmangle.Plural(v)
+		s = Plural(v)
 	} else {
-		s = strmangle.Singular(v)
+		s = Singular(v)
 	}
 
 	if isInputType {

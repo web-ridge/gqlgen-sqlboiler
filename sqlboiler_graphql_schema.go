@@ -9,8 +9,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/volatiletech/strmangle"
-
 	"github.com/rs/zerolog/log"
 
 	"github.com/iancoleman/strcase"
@@ -249,7 +247,7 @@ func SchemaGet(
 		w.tl(strcase.ToLowerCamel(model.Name) + "(id: ID!): " + model.Name + "!" + joinedDirectives)
 
 		// lists
-		modelPluralName := strmangle.Plural(model.Name)
+		modelPluralName := Plural(model.Name)
 
 		arguments := []string{
 			"first: Int!",
@@ -270,7 +268,7 @@ func SchemaGet(
 		for _, model := range models {
 			filteredFields := fieldsWithout(model.Fields, config.SkipInputFields)
 
-			modelPluralName := strmangle.Plural(model.Name)
+			modelPluralName := Plural(model.Name)
 			// input UserCreateInput {
 			// 	firstName: String!
 			// 	lastName: String
@@ -394,7 +392,7 @@ func SchemaGet(
 		w.l("type Mutation {")
 
 		for _, model := range models {
-			modelPluralName := strmangle.Plural(model.Name)
+			modelPluralName := Plural(model.Name)
 
 			// create single
 			// e.g createUser(input: UserInput!): UserPayload!
