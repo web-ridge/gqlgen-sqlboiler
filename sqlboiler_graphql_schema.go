@@ -452,7 +452,7 @@ func getFullType(fieldType string, isArray bool, isRequired bool) string {
 
 	if isArray {
 		// To use a list type, surround the type in square brackets, so [Int] is a list of integers.
-		gType = "[" + gType + "]"
+		gType = "[" + gType + "!]"
 	}
 	if isRequired {
 		// Use an exclamation point to indicate a type cannot be nullable,

@@ -260,6 +260,7 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 
 	filesToGenerate := []string{
 		"convert.go",
+		"convert_batch.go",
 		"convert_input.go",
 		"filter.go",
 		"preload.go",

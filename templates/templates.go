@@ -53,6 +53,7 @@ func WriteTemplateFile(fileName string, cfg Options) error {
 	fSet := token.NewFileSet()
 	node, err := parser.ParseFile(fSet, "src.go", string(importFixedContent), 0)
 	if err != nil {
+		fmt.Println(content)
 		log.Error().Err(err).Msg("could not parse golang file")
 	}
 
@@ -71,6 +72,7 @@ func WriteTemplateFile(fileName string, cfg Options) error {
 			log.Error().Err(err).Str("fileName", fileName).Msg("could not close file")
 		}
 	}()
+
 	if err := printer.Fprint(f, fSet, node); err != nil {
 		return fmt.Errorf("errors while printing template to %v  %v", fileName, err)
 	}
