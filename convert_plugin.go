@@ -146,9 +146,11 @@ type Field struct { //nolint:maligned
 }
 
 type Enum struct {
-	Description string
-	Name        string
-	Values      []*EnumValue
+	Description   string
+	Name          string
+	Values        []*EnumValue
+	HasBoilerEnum bool
+	BoilerEnum    *BoilerEnum
 }
 
 type EnumValue struct {
@@ -233,17 +235,17 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	// log.Debug().Msg("[customization] looking for *_customized files")
 
 	log.Debug().Msg("[convert] get boiler models")
-	boilerModels := GetBoilerModels(m.Backend.Directory)
+	boilerModels, boilerEnums := GetBoilerModels(m.Backend.Directory)
 
 	log.Debug().Msg("[convert] get extra's from schema")
-	interfaces, enums, scalars := getExtrasFromSchema(cfg.Schema)
+	interfaces, enums, scalars := getExtrasFromSchema(cfg.Schema, boilerEnums)
 
 	log.Debug().Msg("[convert] get model with information")
 	models := GetModelsWithInformation(b.Backend, enums, originalCfg, boilerModels)
 
 	b.Models = models
 	b.Interfaces = interfaces
-	b.Enums = enumsWithout(enums, []string{"SortDirection"})
+	b.Enums = enumsWithout(enums, []string{"SortDirection", "Sort"})
 	b.Scalars = scalars
 	if len(b.Models) == 0 {
 		log.Warn().Msg("no models found in graphql so skipping generation")
@@ -316,7 +318,7 @@ func enumsWithout(enums []*Enum, skip []string) []*Enum {
 	for _, e := range enums {
 		var skipped bool
 		for _, skip := range skip {
-			if skip == e.Name {
+			if strings.HasSuffix(e.Name, skip) {
 				skipped = true
 			}
 		}
@@ -627,7 +629,7 @@ func findBoilerFieldOrForeignKey(fields []*BoilerField, golangGraphQLName string
 	return BoilerField{}
 }
 
-func getExtrasFromSchema(schema *ast.Schema) (interfaces []*Interface, enums []*Enum, scalars []string) {
+func getExtrasFromSchema(schema *ast.Schema, boilerEnums []*BoilerEnum) (interfaces []*Interface, enums []*Enum, scalars []string) {
 	for _, schemaType := range schema.Types {
 		switch schemaType.Kind {
 		case ast.Interface, ast.Union:
@@ -636,9 +638,12 @@ func getExtrasFromSchema(schema *ast.Schema) (interfaces []*Interface, enums []*
 				Name:        schemaType.Name,
 			})
 		case ast.Enum:
+			boilerEnum := findBoilerEnum(boilerEnums, schemaType.Name)
 			it := &Enum{
-				Name:        schemaType.Name,
-				Description: schemaType.Description,
+				Name:          schemaType.Name,
+				Description:   schemaType.Description,
+				HasBoilerEnum: boilerEnum != nil,
+				BoilerEnum:    boilerEnum,
 			}
 			for _, v := range schemaType.EnumValues {
 				it.Values = append(it.Values, &EnumValue{
@@ -851,6 +856,15 @@ type ConvertConfig struct {
 	ToGraphQL        string
 	GraphTypeAsText  string
 	BoilerTypeAsText string
+}
+
+func findBoilerEnum(enums []*BoilerEnum, graphType string) *BoilerEnum {
+	for _, enum := range enums {
+		if enum.Name == graphType {
+			return enum
+		}
+	}
+	return nil
 }
 
 func findEnum(enums []*Enum, graphType string) *Enum {

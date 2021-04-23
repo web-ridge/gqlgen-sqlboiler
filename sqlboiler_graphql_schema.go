@@ -27,6 +27,10 @@ type SchemaConfig struct {
 	GenerateMutations    bool
 	GenerateBatchDelete  bool
 	GenerateBatchUpdate  bool
+	HookShouldAddModel   func(model SchemaModel) bool
+	HookShouldAddField   func(model SchemaModel, field SchemaField) bool
+	HookChangeField      func(model *SchemaModel, field *SchemaField)
+	HookChangeModel      func(model *SchemaModel)
 }
 
 type SchemaGenerateConfig struct {
@@ -39,14 +43,11 @@ type SchemaModel struct {
 }
 
 type SchemaField struct {
-	Name             string
-	Type             string // String, ID, Integer
-	RelationName     string // posts
-	RelationType     string // Page, User, Post
-	FullType         string // e.g String! or if array [String!]
-	RelationFullType string // [Posts!]
-	FullTypeOptional string // e.g. String or if array [String]
-	BoilerField      *BoilerField
+	Name        string
+	Type        string // String, ID, Integer
+	IsNullable  bool
+	BoilerField *BoilerField
+	SkipInput   bool
 }
 
 func SchemaWrite(config SchemaConfig, outputFile string, generateOptions SchemaGenerateConfig) error {
@@ -80,9 +81,10 @@ func SchemaGet(
 	w := &SimpleWriter{}
 
 	// Parse models and their fields based on the sqlboiler model directory
-	boilerModels := GetBoilerModels(config.BoilerModelDirectory.Directory)
-	models := boilerModelsToModels(boilerModels)
+	boilerModels, boilerEnums := GetBoilerModels(config.BoilerModelDirectory.Directory)
+	models := executeHooksOnModels(boilerModelsToModels(boilerModels), config)
 
+	fmt.Println(boilerEnums)
 	fullDirectives := make([]string, len(config.Directives))
 	for i, defaultDirective := range config.Directives {
 		fullDirectives[i] = "@" + defaultDirective
@@ -116,15 +118,30 @@ func SchemaGet(
 
 	w.br()
 
+	// Add helpers for filtering lists
+	w.l(queryHelperStructs)
+
+	for _, enum := range boilerEnums {
+		//	enum UserSort { FIRST_NAME, LAST_NAME }
+		w.l("enum " + enum.Name + " {")
+		for _, v := range enum.Values {
+			w.tl(strcase.ToScreamingSnake(strings.TrimPrefix(v.Name, enum.Name)))
+		}
+		w.l("}")
+
+		w.br()
+	}
+
 	// Generate sorting helpers
 	w.l("enum SortDirection { ASC, DESC }")
 	w.br()
 
 	for _, model := range models {
+
 		//	enum UserSort { FIRST_NAME, LAST_NAME }
 		w.l("enum " + model.Name + "Sort {")
-		for _, enum := range fieldAsEnumStrings(model.Fields) {
-			w.tl(enum)
+		for _, v := range fieldAsEnumStrings(model.Fields) {
+			w.tl(v)
 		}
 		w.l("}")
 
@@ -140,16 +157,15 @@ func SchemaGet(
 		w.l("}")
 
 		w.br()
-	}
 
-	// Create basic structs e.g.
-	// type User {
-	// 	firstName: String!
-	// 	lastName: String
-	// 	isProgrammer: Boolean!
-	// 	organization: Organization!
-	// }
-	for _, model := range models {
+		// Create basic structs e.g.
+		// type User {
+		// 	firstName: String!
+		// 	lastName: String
+		// 	isProgrammer: Boolean!
+		// 	organization: Organization!
+		// }
+
 		w.l("type " + model.Name + " implements Node {")
 
 		for _, field := range model.Fields {
@@ -157,21 +173,24 @@ func SchemaGet(
 			// organizationID is clutter in your scheme
 			// you only want Organization and OrganizationID should be skipped
 			if field.BoilerField.IsRelation {
-				w.tl(field.RelationName + ": " + field.RelationFullType)
+				w.tl(
+					getRelationName(field) + ": " +
+						getFinalFullTypeWithRelation(field, false),
+				)
 			} else {
-				w.tl(field.Name + ": " + field.FullType)
+				fullType := getFinalFullType(field, false)
+				w.tl(field.Name + ": " + fullType)
 			}
 		}
 		w.l("}")
 
 		w.br()
-	}
 
-	//type UserEdge {
-	//	cursor: String!
-	//	node: User
-	//}
-	for _, model := range models {
+		//type UserEdge {
+		//	cursor: String!
+		//	node: User
+		//}
+
 		w.l("type " + model.Name + "Edge {")
 
 		w.tl(`cursor: String!`)
@@ -179,26 +198,21 @@ func SchemaGet(
 		w.l("}")
 
 		w.br()
-	}
 
-	//type UserConnection {
-	//	edges: [UserEdge]
-	//	pageInfo: PageInfo!
-	//}
-	for _, model := range models {
+		//type UserConnection {
+		//	edges: [UserEdge]
+		//	pageInfo: PageInfo!
+		//}
+
 		w.l("type " + model.Name + "Connection {")
 		w.tl(`edges: [` + model.Name + `Edge]`)
 		w.tl(`pageInfo: PageInfo!`)
 		w.l("}")
 
 		w.br()
-	}
 
-	// Add helpers for filtering lists
-	w.l(queryHelperStructs)
+		// generate filter structs per model
 
-	// generate filter structs per model
-	for _, model := range models {
 		// Ignore some specified input fields
 		// Generate a type safe grapql filter
 
@@ -225,9 +239,13 @@ func SchemaGet(
 		w.l("input " + model.Name + "Where {")
 
 		for _, field := range model.Fields {
+			if field.SkipInput {
+				continue
+			}
 			if field.BoilerField.IsRelation {
 				// Support filtering in relationships (at least schema wise)
-				w.tl(field.RelationName + ": " + field.RelationType + "Where")
+				relationName := getRelationName(field)
+				w.tl(relationName + ": " + field.BoilerField.Relationship.Name + "Where")
 			} else {
 				w.tl(field.Name + ": " + field.Type + "Filter")
 			}
@@ -277,6 +295,9 @@ func SchemaGet(
 			w.l("input " + model.Name + "CreateInput {")
 
 			for _, field := range filteredFields {
+				if field.SkipInput {
+					continue
+				}
 				// id is not required in create and will be specified in update resolver
 				if field.Name == "id" {
 					continue
@@ -288,7 +309,8 @@ func SchemaGet(
 					field.BoilerField.IsRelation && !strings.HasSuffix(field.BoilerField.Name, "ID") {
 					continue
 				}
-				w.tl(field.Name + ": " + field.FullType)
+				fullType := getFinalFullType(field, false)
+				w.tl(field.Name + ": " + fullType)
 			}
 			w.l("}")
 
@@ -302,6 +324,9 @@ func SchemaGet(
 			w.l("input " + model.Name + "UpdateInput {")
 
 			for _, field := range filteredFields {
+				if field.SkipInput {
+					continue
+				}
 				// id is not required in create and will be specified in update resolver
 				if field.Name == "id" {
 					continue
@@ -313,7 +338,7 @@ func SchemaGet(
 					field.BoilerField.IsRelation && !strings.HasSuffix(field.BoilerField.Name, "ID") {
 					continue
 				}
-				w.tl(field.Name + ": " + field.FullTypeOptional)
+				w.tl(field.Name + ": " + getFinalFullType(field, true))
 			}
 			w.l("}")
 
@@ -463,14 +488,42 @@ func getFullType(fieldType string, isArray bool, isRequired bool) string {
 }
 
 func boilerModelsToModels(boilerModels []*BoilerModel) []*SchemaModel {
-	models := make([]*SchemaModel, len(boilerModels))
+	a := make([]*SchemaModel, len(boilerModels))
 	for i, boilerModel := range boilerModels {
-		models[i] = &SchemaModel{
+		a[i] = &SchemaModel{
 			Name:   boilerModel.Name,
 			Fields: boilerFieldsToFields(boilerModel.Fields),
 		}
 	}
-	return models
+	return a
+}
+
+// executeHooksOnModels removes models and fields which the user hooked in into + it can change values
+func executeHooksOnModels(models []*SchemaModel, config SchemaConfig) []*SchemaModel {
+	var a []*SchemaModel
+	for _, m := range models {
+		if config.HookShouldAddModel != nil && !config.HookShouldAddModel(*m) {
+			continue
+		}
+		var af []*SchemaField
+		for _, f := range m.Fields {
+			if config.HookShouldAddField != nil && !config.HookShouldAddField(*m, *f) {
+				continue
+			}
+			if config.HookChangeField != nil {
+				config.HookChangeField(m, f)
+			}
+			af = append(af, f)
+		}
+		m.Fields = af
+		if config.HookChangeModel != nil {
+			config.HookChangeModel(m)
+		}
+
+		a = append(a, m)
+
+	}
+	return a
 }
 
 func boilerFieldsToFields(boilerFields []*BoilerField) []*SchemaField {
@@ -481,31 +534,44 @@ func boilerFieldsToFields(boilerFields []*BoilerField) []*SchemaField {
 	return fields
 }
 
-func boilerFieldToField(boilerField *BoilerField) *SchemaField {
-	var relationName string
-	var relationType string
-	var relationFullType string
-	if boilerField.Relationship != nil {
-		relationName = strcase.ToLowerCamel(boilerField.RelationshipName)
-		relationType = boilerField.Relationship.Name
+func getRelationName(schemaField *SchemaField) string {
+	return strcase.ToLowerCamel(schemaField.BoilerField.RelationshipName)
+}
 
-		relationFullType = getFullType(
+func getFinalFullTypeWithRelation(schemaField *SchemaField, alwaysOptional bool) string {
+	boilerField := schemaField.BoilerField
+	if boilerField.Relationship != nil {
+		relationType := boilerField.Relationship.Name
+		if alwaysOptional {
+			return getFullType(
+				relationType,
+				boilerField.IsArray,
+				false,
+			)
+		}
+		return getFullType(
 			relationType,
 			boilerField.IsArray,
 			boilerField.IsRequired,
 		)
 	}
+	return getFinalFullType(schemaField, alwaysOptional)
+}
 
+func getFinalFullType(schemaField *SchemaField, alwaysOptional bool) string {
+	boilerField := schemaField.BoilerField
+	if alwaysOptional {
+		return getFullType(schemaField.Type, boilerField.IsArray, false)
+	}
+	return getFullType(schemaField.Type, boilerField.IsArray, boilerField.IsRequired)
+}
+
+func boilerFieldToField(boilerField *BoilerField) *SchemaField {
 	t := toGraphQLType(boilerField.Name, boilerField.Type)
 	return &SchemaField{
-		Name:             toGraphQLName(boilerField.Name),
-		RelationName:     relationName,
-		RelationType:     relationType,
-		Type:             t,
-		FullType:         getFullType(t, boilerField.IsArray, boilerField.IsRequired),
-		FullTypeOptional: getFullType(t, boilerField.IsArray, false),
-		RelationFullType: relationFullType,
-		BoilerField:      boilerField,
+		Name:        toGraphQLName(boilerField.Name),
+		Type:        t,
+		BoilerField: boilerField,
 	}
 }
 

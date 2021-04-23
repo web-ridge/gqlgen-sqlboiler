@@ -53,7 +53,6 @@ func WriteTemplateFile(fileName string, cfg Options) error {
 	fSet := token.NewFileSet()
 	node, err := parser.ParseFile(fSet, "src.go", string(importFixedContent), 0)
 	if err != nil {
-		fmt.Println(content)
 		log.Error().Err(err).Msg("could not parse golang file")
 	}
 

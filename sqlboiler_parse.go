@@ -20,6 +20,7 @@ type BoilerModel struct {
 	TableName          string
 	PluralName         string
 	Fields             []*BoilerField
+	Enums              []*BoilerEnum
 	HasPrimaryStringID bool
 }
 
@@ -30,9 +31,22 @@ type BoilerField struct {
 	IsForeignKey     bool
 	IsRequired       bool
 	IsArray          bool
+	IsEnum           bool
 	IsRelation       bool
+	Enum             BoilerEnum
 	RelationshipName string
 	Relationship     *BoilerModel
+}
+
+type BoilerEnum struct {
+	Name          string
+	ModelName     string
+	ModelFieldKey string
+	Values        []*BoilerEnumValue
+}
+
+type BoilerEnumValue struct {
+	Name string
 }
 
 type BoilerType struct {
@@ -42,10 +56,11 @@ type BoilerType struct {
 
 // parseModelsAndFieldsFromBoiler since these are like User.ID, User.Organization and we want them grouped by
 // modelName and their belonging fields.
-func GetBoilerModels(dir string) []*BoilerModel { //nolint:gocognit,gocyclo
+func GetBoilerModels(dir string) ([]*BoilerModel, []*BoilerEnum) { //nolint:gocognit,gocyclo
 	boilerTypeMap, _, boilerTypeOrder := parseBoilerFile(dir)
 	boilerTypes := getSortedBoilerTypes(boilerTypeMap, boilerTypeOrder)
 	tableNames := parseTableNames(dir)
+	enums := parseEnums(dir)
 
 	// sortedModelNames is needed to get the right order back of the models since we want the same order every time
 	// this program has ran.
@@ -132,11 +147,11 @@ func GetBoilerModels(dir string) []*BoilerModel { //nolint:gocognit,gocyclo
 		}
 
 		models[i] = &BoilerModel{
-			Name:       modelName,
-			TableName:  tableName,
-			PluralName: Plural(modelName),
-			Fields:     fields,
-
+			Name:               modelName,
+			TableName:          tableName,
+			PluralName:         Plural(modelName),
+			Fields:             fields,
+			Enums:              filterEnumsByModelName(enums, modelName),
 			HasPrimaryStringID: hasPrimaryStringID,
 		}
 	}
@@ -162,6 +177,13 @@ func GetBoilerModels(dir string) []*BoilerModel { //nolint:gocognit,gocyclo
 	}
 	for _, model := range models {
 		for _, field := range model.Fields {
+			enumForField := getEnumByModelNameAndFieldName(enums, model.Name, field.Name)
+			if enumForField != nil {
+				field.IsEnum = true
+				field.IsRelation = false
+				field.Enum = *enumForField
+			}
+
 			if field.IsRelation && field.Relationship == nil {
 				log.Warn().Str("model", model.Name).Str("field", field.Name).Msg(
 					"We could not find the relationship in the generated " +
@@ -169,10 +191,30 @@ func GetBoilerModels(dir string) []*BoilerModel { //nolint:gocognit,gocyclo
 						"non-relational \n")
 				field.IsRelation = false
 			}
+
 		}
 	}
 
-	return models
+	return models, enums
+}
+
+func getEnumByModelNameAndFieldName(enums []*BoilerEnum, modelName string, fieldName string) *BoilerEnum {
+	for _, e := range enums {
+		if e.ModelName == modelName && e.ModelFieldKey == fieldName {
+			return e
+		}
+	}
+	return nil
+}
+
+func filterEnumsByModelName(enums []*BoilerEnum, modelName string) []*BoilerEnum {
+	var a []*BoilerEnum
+	for _, e := range enums {
+		if e.ModelName == modelName {
+			a = append(a, e)
+		}
+	}
+	return a
 }
 
 func findBoilerField(fields []*BoilerField, fieldName string) *BoilerField {
@@ -284,6 +326,57 @@ func parseTableNames(dir string) []string {
 		tableNames[i] = tableNameMatch[1]
 	}
 	return tableNames
+}
+
+var (
+	enumRegex       = regexp.MustCompile(`// Enum values for (\w+).(\w+)\nconst\s\(\n(:?(.|\n)*?)\n\)`) //nolint:gochecknoglobals
+	enumValuesRegex = regexp.MustCompile(`\s(\w+)\s*=\s*"(\w+)"`)                                       //nolint:gochecknoglobals
+)
+
+func parseEnums(dir string) []*BoilerEnum {
+	dir, err := filepath.Abs(dir)
+	errMessage := "could not open enum names file, this could not lead to problems if you're " +
+		"using enums in your db"
+	if err != nil {
+		log.Warn().Err(err).Msg(errMessage)
+		return nil
+	}
+	content, err := ioutil.ReadFile(filepath.Join(dir, "boil_types.go"))
+	if err != nil {
+		log.Warn().Err(err).Msg(errMessage)
+		return nil
+	}
+	matches := enumRegex.FindAllStringSubmatch(string(content), -1)
+	a := make([]*BoilerEnum, len(matches))
+	for i, match := range matches {
+		// 1: message_letter
+		// 2: status
+		// 3: contents
+
+		a[i] = &BoilerEnum{
+			Name:          strcase.ToCamel(match[1] + "_" + match[2]),
+			ModelName:     strcase.ToCamel(match[1]),
+			ModelFieldKey: strcase.ToCamel(match[2]),
+			Values:        parseEnumValues(match[3]),
+		}
+	}
+	return a
+}
+
+func parseEnumValues(content string) []*BoilerEnumValue {
+	matches := enumValuesRegex.FindAllStringSubmatch(content, -1)
+	a := make([]*BoilerEnumValue, len(matches))
+	for i, match := range matches {
+		// 1: message_letter
+		// 2: status
+		// 2: status
+		// 3: contents
+
+		a[i] = &BoilerEnumValue{
+			Name: match[1],
+		}
+	}
+	return a
 }
 
 // will return StructName.key

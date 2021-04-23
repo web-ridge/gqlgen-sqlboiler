@@ -35,21 +35,31 @@ import (
 
 {{ range $enum := .Enums }}
 
+	{{- if not $enum.HasBoilerEnum }}
 	type {{$enum.Name}} string
 	const (
 	{{- range $value := .Values }}
 		{{$enum.Name|go}}{{ .Name|go }}        {{$enum.Name}} = "{{ .NameLower }}"
 	{{- end }}
 	)
+	{{- end }}
 
 	var {{$enum.Name}}DBValue = map[{{ $.Frontend.PackageName }}.{{ .Name }}]{{$enum.Name}}{
 		{{- range $value := .Values }}
-			{{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }}: {{$enum.Name|go}}{{ .Name|go }},
+			{{- if $enum.HasBoilerEnum }}
+				{{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }}: dm.{{$enum.Name|go}}{{ .Name|go }},
+			{{- else }}
+				{{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }}: {{$enum.Name|go}}{{ .Name|go }},
+			{{- end }}
 		{{- end }}
 	}
 	var {{$enum.Name}}APIValue = map[{{$enum.Name}}]{{ $.Frontend.PackageName }}.{{ .Name }}{
 		{{- range $value := .Values }}
-			{{$enum.Name|go}}{{ .Name|go }}: {{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }},
+			{{- if $enum.HasBoilerEnum }}
+				dm.{{$enum.Name|go}}{{ .Name|go }}: {{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }},
+			{{- else }}
+				{{$enum.Name|go}}{{ .Name|go }}: {{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }},
+			{{- end }}
 		{{- end }}
 	}
 

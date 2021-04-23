@@ -59,7 +59,7 @@ func (m *ResolverPlugin) GenerateCode(data *codegen.Data) error {
 
 	// Get all models information
 	log.Debug().Msg("[resolver] get boiler models")
-	boilerModels := GetBoilerModels(m.backend.Directory)
+	boilerModels, _ := GetBoilerModels(m.backend.Directory)
 	log.Debug().Msg("[resolver] get models with information")
 	models := GetModelsWithInformation(m.backend, nil, data.Config, boilerModels)
 	log.Debug().Msg("[resolver] generate file")
@@ -131,7 +131,7 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 		File:                &file,
 		PackageName:         data.Config.Resolver.Package,
 		ResolverType:        data.Config.Resolver.Type,
-		HasRoot:             true,
+		HasRoot:             false,
 		Models:              models,
 		AuthorizationScopes: m.pluginConfig.AuthorizationScopes,
 	}
