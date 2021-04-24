@@ -35,34 +35,42 @@ import (
 
 {{ range $enum := .Enums }}
 
-	{{- if not $enum.HasBoilerEnum }}
-	type {{$enum.Name}} string
-	const (
-	{{- range $value := .Values }}
-		{{$enum.Name|go}}{{ .Name|go }}        {{$enum.Name}} = "{{ .NameLower }}"
-	{{- end }}
-	)
-	{{- end }}
-
-	var {{$enum.Name}}DBValue = map[{{ $.Frontend.PackageName }}.{{ .Name }}]{{$enum.Name}}{
+	{{- if $enum.HasBoilerEnum }}
+	var {{$enum.Name}}DBValue = map[{{ $.Frontend.PackageName }}.{{ .Name }}]string{
 		{{- range $value := .Values }}
-			{{- if $enum.HasBoilerEnum }}
-				{{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }}: dm.{{$enum.Name|go}}{{ .Name|go }},
-			{{- else }}
+			{{- if .BoilerEnumValue }}
+				{{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }}: {{ $.Backend.PackageName }}.{{ .BoilerEnumValue.Name }},
+			{{- end }}
+		{{- end }}
+	}
+
+	var {{$enum.Name}}APIValue = map[string]{{ $.Frontend.PackageName }}.{{ .Name }}{
+		{{- range $value := .Values }}
+		    {{- if .BoilerEnumValue }}
+				{{ $.Backend.PackageName }}.{{ .BoilerEnumValue.Name }}: {{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }},
+			{{- end }}
+		{{- end }}
+	}
+	{{- else }}
+		type {{$enum.Name}} string
+		const (
+			{{- range $value := .Values }}
+				{{$enum.Name|go}}{{ .Name|go }}        {{$enum.Name}} = "{{ .NameLower }}"
+			{{- end }}
+		)
+
+		var {{$enum.Name}}DBValue = map[{{ $.Frontend.PackageName }}.{{ .Name }}]{{$enum.Name}}{
+			{{- range $value := .Values }}
 				{{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }}: {{$enum.Name|go}}{{ .Name|go }},
 			{{- end }}
-		{{- end }}
-	}
-	var {{$enum.Name}}APIValue = map[{{$enum.Name}}]{{ $.Frontend.PackageName }}.{{ .Name }}{
-		{{- range $value := .Values }}
-			{{- if $enum.HasBoilerEnum }}
-				dm.{{$enum.Name|go}}{{ .Name|go }}: {{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }},
-			{{- else }}
+		}
+
+		var {{$enum.Name}}APIValue = map[{{$enum.Name}}]{{ $.Frontend.PackageName }}.{{ .Name }}{
+			{{- range $value := .Values }}
 				{{$enum.Name|go}}{{ .Name|go }}: {{ $.Frontend.PackageName }}.{{$enum.Name|go}}{{ .Name|go }},
 			{{- end }}
-		{{- end }}
-	}
-
+		}
+	{{- end }}
 
 	func NullDotStringToPointer{{ .Name }}(v null.String) *{{ $.Frontend.PackageName }}.{{ .Name }} {
 		s := StringTo{{ .Name }}(v.String)
@@ -80,8 +88,11 @@ import (
 	}
 
 	func StringTo{{ .Name }}(v string) {{ $.Frontend.PackageName }}.{{ .Name }} {
-		s := {{$enum.Name}}APIValue[{{ .Name }}(v)]
-		return s
+		{{- if $enum.HasBoilerEnum }}
+			return {{$enum.Name}}APIValue[v]
+		{{- else }}
+			return {{$enum.Name}}APIValue[{{ .Name }}(v)]
+		{{- end }}
 	}
 
 	func StringToPointer{{ .Name }}(v string) *{{ $.Frontend.PackageName }}.{{ .Name }} {
@@ -112,9 +123,24 @@ import (
 	}
 
 	func {{ .Name }}ToString(v {{ $.Frontend.PackageName }}.{{ .Name }}) string {
-		s := {{$enum.Name}}DBValue[v]
-		return string(s)
+		{{- if $enum.HasBoilerEnum }}
+		return {{$enum.Name}}DBValue[v]
+		{{- else }}
+		return string({{$enum.Name}}DBValue[v])
+		{{- end }}
 	}
+
+	func {{ .PluralName }}ToInterfaceArray(va []{{ $.Frontend.PackageName }}.{{ .Name }}) []interface{} {
+		var a []interface{}
+		for _, v := range va {
+			rv, ok := {{ .Name }}DBValue[v]
+			if ok {
+				a = append(a, rv)
+			}
+		}
+		return a
+	}
+
 {{ end }}
 
 {{ range $model := .Models }}

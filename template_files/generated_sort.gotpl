@@ -138,7 +138,7 @@ import (
 				{{- end -}}
 			{{- end -}}
 
-		
+
 			return boilergql.CursorValuesToString(a)
 		}
 
@@ -199,14 +199,14 @@ import (
 			direction := {{ .BoilerModel.Name }}SortDirection(ordering)
 			cursor := boilergql.GetCursor(pagination.Forward, pagination.Backward)
 			sign := boilergql.GetComparison(pagination.Forward, pagination.Backward, reverse, direction)
-		
+
 			var mods []qm.QueryMod
 			mods = append(mods, {{ .BoilerModel.Name }}CursorMods(ordering, cursor, sign)...)
 			mods = append(mods, {{ .BoilerModel.Name }}SortMods(ordering, reverse, direction)...)
 			mods = append(mods, qm.Limit(limit))
 			return cursor, mods
 		}
-		
+
 		func {{ .BoilerModel.Name }}PaginationMods(pagination boilergql.ConnectionPagination, ordering []*{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Ordering) ([]qm.QueryMod, error) {
 			if pagination.Forward != nil && pagination.Backward != nil {
 				return nil, errors.New("can not use forward and backward pagination at once")
@@ -214,13 +214,13 @@ import (
 			if pagination.Forward == nil && pagination.Backward == nil {
 				return nil, errors.New("no forward or backward pagination provided")
 			}
-		
+
 			reverse := pagination.Backward != nil
 			limit := boilergql.GetLimit(pagination.Forward, pagination.Backward)
 			_, mods := {{ .BoilerModel.Name }}PaginationModsBase(pagination, ordering, reverse, limit)
 			return mods, nil
 		}
-		
+
 		func To{{ .BoilerModel.Name }}CursorSwitch(ordering []*{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Ordering, m *{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}, cursorType boilergql.CursorType, offset int, index int) string {
 			switch cursorType {
 			case boilergql.CursorTypeOffset:
@@ -230,7 +230,7 @@ import (
 			}
 			return ""
 		}
-		
+
 		func {{ .BoilerModel.Name }}ReversePageInformation(
 			ctx context.Context,
 			db *sql.DB,
@@ -244,7 +244,7 @@ import (
 				return {{ $.Backend.PackageName }}.{{ .BoilerModel.PluralName }}(reverseMods...).Count(ctx, db)
 			})
 		}
-		
+
 		func {{ .BoilerModel.Name }}EdgeConverter(pagination boilergql.ConnectionPagination, ordering []*{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Ordering) func(*{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}, int) *{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Edge {
 			cursor, cursorType := boilergql.GetCursor(pagination.Forward, pagination.Backward), {{ .BoilerModel.Name }}CursorType(ordering)
 			offset := boilergql.GetOffsetFromCursor(cursor)
@@ -256,7 +256,7 @@ import (
 				}
 			}
 		}
-		
+
 		func {{ .BoilerModel.Name }}StartEndCursor(edges []*{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Edge) (*string, *string) {
 			var startCursor, endCursor *string
 			if len(edges) >= 2 {
@@ -270,7 +270,7 @@ import (
 			}
 			return startCursor, endCursor
 		}
-		
+
 		func {{ .BoilerModel.Name }}Connection(
 			ctx context.Context,
 			db *sql.DB,
@@ -282,12 +282,12 @@ import (
 			if err != nil {
 				return nil, err
 			}
-		
+
 			hasMoreReversed, err := {{ .BoilerModel.Name }}ReversePageInformation(ctx, db, pagination, ordering)
 			if err != nil {
 				return nil, err
 			}
-		
+
 			a, err := {{ $.Backend.PackageName }}.{{ .BoilerModel.PluralName }}(append(originalMods, paginationMods...)...).All(ctx, db)
 			if err != nil {
 				return nil, err
@@ -309,8 +309,8 @@ import (
 				},
 			}, nil
 		}
-		
-		
+
+
 
     {{ end }}
 {{ end }}

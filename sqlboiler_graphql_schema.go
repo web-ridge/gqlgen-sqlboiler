@@ -84,7 +84,6 @@ func SchemaGet(
 	boilerModels, boilerEnums := GetBoilerModels(config.BoilerModelDirectory.Directory)
 	models := executeHooksOnModels(boilerModelsToModels(boilerModels), config)
 
-	fmt.Println(boilerEnums)
 	fullDirectives := make([]string, len(config.Directives))
 	for i, defaultDirective := range config.Directives {
 		fullDirectives[i] = "@" + defaultDirective
@@ -122,7 +121,11 @@ func SchemaGet(
 	w.l(queryHelperStructs)
 
 	for _, enum := range boilerEnums {
-		//	enum UserSort { FIRST_NAME, LAST_NAME }
+
+		//	enum UserRoleFilter { ADMIN, USER }
+		w.l(fmt.Sprintf(enumFilterHelper, enum.Name))
+
+		//	enum UserRole { ADMIN, USER }
 		w.l("enum " + enum.Name + " {")
 		for _, v := range enum.Values {
 			w.tl(strcase.ToScreamingSnake(strings.TrimPrefix(v.Name, enum.Name)))
@@ -567,7 +570,7 @@ func getFinalFullType(schemaField *SchemaField, alwaysOptional bool) string {
 }
 
 func boilerFieldToField(boilerField *BoilerField) *SchemaField {
-	t := toGraphQLType(boilerField.Name, boilerField.Type)
+	t := toGraphQLType(boilerField)
 	return &SchemaField{
 		Name:        toGraphQLName(boilerField.Name),
 		Type:        t,
@@ -595,9 +598,13 @@ func toGraphQLName(fieldName string) string {
 	return strcase.ToLowerCamel(graphqlName)
 }
 
-func toGraphQLType(fieldName, boilerType string) string {
-	lowerFieldName := strings.ToLower(fieldName)
-	lowerBoilerType := strings.ToLower(boilerType)
+func toGraphQLType(boilerField *BoilerField) string {
+	lowerFieldName := strings.ToLower(boilerField.Name)
+	lowerBoilerType := strings.ToLower(boilerField.Type)
+
+	if boilerField.IsEnum {
+		return boilerField.Enum.Name
+	}
 
 	if strings.HasSuffix(lowerFieldName, "id") {
 		return "ID"
@@ -625,7 +632,7 @@ func toGraphQLType(fieldName, boilerType string) string {
 	}
 
 	// e.g. null.JSON let user define how it looks with their own struct
-	return strcase.ToCamel(fieldName)
+	return strcase.ToCamel(boilerField.Name)
 }
 
 func fieldsWithout(fields []*SchemaField, skipFieldNames []string) []*SchemaField {
@@ -748,6 +755,16 @@ func (sw *SimpleWriter) br() {
 func (sw *SimpleWriter) tl(v string) {
 	sw.s.WriteString(indent + v + lineBreak)
 }
+
+const enumFilterHelper = `
+input %[1]vFilter {
+	equalTo: %[1]v
+	notEqualTo: %[1]v
+
+	in: [%[1]v!]
+	notIn: [%[1]v!]
+}
+`
 
 // TODO: only generate these if they are set
 const queryHelperStructs = `

@@ -148,15 +148,17 @@ type Field struct { //nolint:maligned
 type Enum struct {
 	Description   string
 	Name          string
+	PluralName    string
 	Values        []*EnumValue
 	HasBoilerEnum bool
 	BoilerEnum    *BoilerEnum
 }
 
 type EnumValue struct {
-	Description string
-	Name        string
-	NameLower   string
+	Description     string
+	Name            string
+	NameLower       string
+	BoilerEnumValue *BoilerEnumValue
 }
 
 func NewConvertPlugin(output, backend, frontend Config, pluginConfig ConvertPluginConfig) plugin.Plugin {
@@ -196,12 +198,17 @@ func copyConfig(cfg config.Config) *config.Config {
 	return &cfg
 }
 
-func GetModelsWithInformation(backend Config, enums []*Enum, cfg *config.Config, boilerModels []*BoilerModel) []*Model {
+func GetModelsWithInformation(
+	backend Config,
+	enums []*Enum,
+	cfg *config.Config,
+	boilerModels []*BoilerModel,
+	ignoreTypePrefixes []string) []*Model {
 	// get models based on the schema and sqlboiler structs
 	models := getModelsFromSchema(cfg.Schema, boilerModels)
 
 	// Now we have all model's let enhance them with fields
-	enhanceModelsWithFields(enums, cfg.Schema, cfg, models)
+	enhanceModelsWithFields(enums, cfg.Schema, cfg, models, ignoreTypePrefixes)
 
 	// Add preload maps
 	enhanceModelsWithPreloadArray(backend, models)
@@ -241,7 +248,7 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	interfaces, enums, scalars := getExtrasFromSchema(cfg.Schema, boilerEnums)
 
 	log.Debug().Msg("[convert] get model with information")
-	models := GetModelsWithInformation(b.Backend, enums, originalCfg, boilerModels)
+	models := GetModelsWithInformation(b.Backend, enums, originalCfg, boilerModels, []string{m.Frontend.PackageName, m.Backend.PackageName, "boilergql"})
 
 	b.Models = models
 	b.Interfaces = interfaces
@@ -261,12 +268,12 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	// }
 
 	filesToGenerate := []string{
-		"convert.go",
-		"convert_batch.go",
-		"convert_input.go",
-		"filter.go",
-		"preload.go",
-		"sort.go",
+		"generated_convert.go",
+		"generated_convert_batch.go",
+		"generated_convert_input.go",
+		"generated_filter.go",
+		"generated_preload.go",
+		"generated_sort.go",
 	}
 
 	// We get all function names from helper repository to check if any customizations are available
@@ -405,7 +412,7 @@ func getGraphqlFieldName(cfg *config.Config, modelName string, field *ast.FieldD
 
 //nolint:gocognit,gocyclo
 func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Config,
-	models []*Model) {
+	models []*Model, ignoreTypePrefixes []string) {
 	binder := cfg.NewBinder()
 
 	// Generate the basic of the fields
@@ -437,7 +444,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 			// generate some booleans because these checks will be used a lot
 			isObject := fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject
 
-			shortType := getShortType(typ.String())
+			shortType := getShortType(typ.String(), ignoreTypePrefixes)
 
 			isPrimaryID := strings.EqualFold(name, "id")
 
@@ -495,7 +502,6 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 			}
 
 			enum := findEnum(enums, shortType)
-
 			field := &Field{
 				Name:               name,
 				JSONName:           jsonName,
@@ -529,8 +535,6 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 		}
 	}
 }
-
-var ignoreTypePrefixes = []string{"graphql_models", "models", "boilergql"} //nolint:gochecknoglobals
 
 // TaskBlockedBies -> TaskBlockedBy
 // People -> Person
@@ -569,7 +573,7 @@ func IsSingular(s string) bool {
 	return s == Singular(s)
 }
 
-func getShortType(longType string) string {
+func getShortType(longType string, ignoreTypePrefixes []string) string {
 	// longType e.g = gitlab.com/decicify/app/backend/graphql_models.FlowWhere
 	splittedBySlash := strings.Split(longType, "/")
 	// gitlab.com, decicify, app, backend, graphql_models.FlowWhere
@@ -641,15 +645,17 @@ func getExtrasFromSchema(schema *ast.Schema, boilerEnums []*BoilerEnum) (interfa
 			boilerEnum := findBoilerEnum(boilerEnums, schemaType.Name)
 			it := &Enum{
 				Name:          schemaType.Name,
+				PluralName:    Plural(schemaType.Name),
 				Description:   schemaType.Description,
 				HasBoilerEnum: boilerEnum != nil,
 				BoilerEnum:    boilerEnum,
 			}
 			for _, v := range schemaType.EnumValues {
 				it.Values = append(it.Values, &EnumValue{
-					Name:        v.Name,
-					NameLower:   strcase.ToLowerCamel(strings.ToLower(v.Name)),
-					Description: v.Description,
+					Name:            v.Name,
+					NameLower:       strcase.ToLowerCamel(strings.ToLower(v.Name)),
+					Description:     v.Description,
+					BoilerEnumValue: findBoilerEnumValue(boilerEnum, v.Name),
 				})
 			}
 			if strings.HasPrefix(it.Name, "_") {
@@ -864,6 +870,19 @@ func findBoilerEnum(enums []*BoilerEnum, graphType string) *BoilerEnum {
 			return enum
 		}
 	}
+	return nil
+}
+
+func findBoilerEnumValue(enum *BoilerEnum, name string) *BoilerEnumValue {
+	if enum != nil {
+		for _, v := range enum.Values {
+			if strings.EqualFold(strings.TrimPrefix(v.Name, enum.Name), name) {
+				return v
+			}
+		}
+		log.Error().Str(enum.Name, name).Msg("could sqlboiler enum value")
+	}
+
 	return nil
 }
 

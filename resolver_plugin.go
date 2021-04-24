@@ -61,7 +61,7 @@ func (m *ResolverPlugin) GenerateCode(data *codegen.Data) error {
 	log.Debug().Msg("[resolver] get boiler models")
 	boilerModels, _ := GetBoilerModels(m.backend.Directory)
 	log.Debug().Msg("[resolver] get models with information")
-	models := GetModelsWithInformation(m.backend, nil, data.Config, boilerModels)
+	models := GetModelsWithInformation(m.backend, nil, data.Config, boilerModels, nil)
 	log.Debug().Msg("[resolver] generate file")
 	// switch data.Config.Resolver.Layout {
 	// case config.LayoutSingleFile:
@@ -136,7 +136,7 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 		AuthorizationScopes: m.pluginConfig.AuthorizationScopes,
 	}
 
-	templateName := "resolver.gotpl"
+	templateName := "generated_resolver.gotpl"
 	templateContent, err := getTemplateContent(templateName)
 	if err != nil {
 		log.Err(err).Msg("error when reading " + templateName)
