@@ -43,7 +43,7 @@ const batchInsertStatement = "INSERT INTO %s (%s) VALUES %s"
 		{{ end }}
 	}
 
-	var {{ lcFirst .BoilerModel.PluralName }}BatchCreateColumnsMarks = "({{- range $i, $field := .Fields -}}{{- if $i -}},{{- end -}}?{{- end -}})"
+	var {{ lcFirst .BoilerModel.PluralName }}BatchCreateColumnsMarks = boilergql.GetQuestionMarksForColumns({{ lcFirst .BoilerModel.PluralName }}BatchCreateColumns)
 
 	func {{ lcFirst .BoilerModel.Name }}ToBatchCreateValues(e *{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}) []interface{} {
 		return []interface{}{
