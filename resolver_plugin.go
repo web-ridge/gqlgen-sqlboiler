@@ -267,6 +267,8 @@ func enhanceResolver(r *Resolver, models []*Model) { //nolint:gocyclo
 		}
 
 		r.IsSingle = !r.IsList
+	case "Subscription":
+	// TODO: generate helpers for subscription
 	default:
 		log.Warn().Str("unknown", r.Object.Name).Msg(
 			"only Query and Mutation are handled we don't recognize the following")
