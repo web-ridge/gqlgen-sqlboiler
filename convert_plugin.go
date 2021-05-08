@@ -347,8 +347,8 @@ func getTemplateContent(filename string) (string, error) {
 	return string(content), nil
 }
 
-// getFieldType check's if user has defined a
-func getFieldType(binder *config.Binder, schema *ast.Schema, cfg *config.Config, field *ast.FieldDefinition) (
+// getAstFieldType check's if user has defined a
+func getAstFieldType(binder *config.Binder, schema *ast.Schema, cfg *config.Config, field *ast.FieldDefinition) (
 	types.Type, error) {
 	var typ types.Type
 	var err error
@@ -422,7 +422,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 			fieldDef := schema.Types[field.Type.Name()]
 
 			// This calls some qglgen boilerType which gets the gqlgen type
-			typ, err := getFieldType(binder, schema, cfg, field)
+			typ, err := getAstFieldType(binder, schema, cfg, field)
 			if err != nil {
 				log.Err(err).Msg("could not get field type from graphql schema")
 			}

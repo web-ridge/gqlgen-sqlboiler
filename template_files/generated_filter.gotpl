@@ -41,9 +41,19 @@ func startsWithValue(v string) string { return   v + percentSign   }
 func endsWithValue(v string) string   { return   percentSign + v  }
 func containsValue(v string) string   { return   percentSign + v + percentSign   }
 
+const emptyString = "''"
+const isZero = "0"
 const isLike = " LIKE ?"
 const in = " IN ?"
 const notIn = " NOT IN ?"
+
+func isNullOr(column string, v string) qm.QueryMod {
+	return qm.Where("("+column+" IS NULL OR "+column+" != "+v+")", column)
+}
+
+func isNotNullOr(column string, v string) qm.QueryMod {
+	return qm.Where("("+column+" IS NOT NULL AND "+column+" != "+v+")", column)
+}
 
 func appendSubQuery(queryMods []qm.QueryMod, q *queries.Query) []qm.QueryMod {
 	// TODO: integrate with subquery in sqlboiler if it will be released in the future
@@ -66,6 +76,12 @@ func BooleanFilterToMods(m *{{ $.Frontend.PackageName }}.BooleanFilter, column s
 		return nil
 	}
 	var queryMods []qm.QueryMod
+	if m.IsNull != nil {
+		queryMods = append(queryMods, qmhelper.WhereIsNull(column))
+	}
+	if m.NotNull != nil {
+		queryMods = append(queryMods, qmhelper.WhereIsNotNull(column))
+	}
 	if m.EqualTo != nil {
 		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, *m.EqualTo))
 	}
@@ -80,6 +96,12 @@ func IDFilterToMods(m *{{ $.Frontend.PackageName }}.IDFilter, column string) []q
 		return nil
 	}
 	var queryMods []qm.QueryMod
+	if m.IsNull != nil {
+		queryMods = append(queryMods, qmhelper.WhereIsNull(column))
+	}
+	if m.NotNull != nil {
+		queryMods = append(queryMods, qmhelper.WhereIsNotNull(column))
+	}
 	if m.EqualTo != nil {
 		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, boilergql.IDToBoiler(*m.EqualTo)))
 	}
@@ -101,6 +123,24 @@ func StringFilterToMods(m *{{ $.Frontend.PackageName }}.StringFilter, column str
 	}
 
 	var queryMods []qm.QueryMod
+	if m.IsNullOrEmpty != nil {
+		queryMods = append(queryMods, isNullOr(column, emptyString))
+	}
+	if m.IsEmpty != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, emptyString))
+	}
+	if m.IsNull != nil {
+		queryMods = append(queryMods, qmhelper.WhereIsNull(column))
+	}
+	if m.NotNullOrEmpty != nil {
+		queryMods = append(queryMods, isNotNullOr(column, emptyString))
+	}
+	if m.NotEmpty != nil {
+		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.NEQ, emptyString))
+	}
+	if m.NotNull != nil {
+		queryMods = append(queryMods, qmhelper.WhereIsNotNull(column))
+	}
 	if m.EqualTo != nil {
 		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, *m.EqualTo))
 	}
@@ -145,6 +185,18 @@ func FloatFilterToMods(m *{{ $.Frontend.PackageName }}.FloatFilter, column strin
 		return nil
 	}
 	var queryMods []qm.QueryMod
+	if m.IsNullOrZero != nil {
+		queryMods = append(queryMods, isNullOr(column, isZero))
+	}
+	if m.IsNull != nil {
+		queryMods = append(queryMods, qmhelper.WhereIsNull(column))
+	}
+	if m.NotNullOrZero != nil {
+		queryMods = append(queryMods, isNotNullOr(column, isZero))
+	}
+	if m.NotNull != nil {
+		queryMods = append(queryMods, qmhelper.WhereIsNotNull(column))
+	}
 	if m.EqualTo != nil {
 		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, *m.EqualTo))
 	}
@@ -177,6 +229,18 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 		return nil
 	}
 	var queryMods []qm.QueryMod
+	if m.IsNullOrZero != nil {
+		queryMods = append(queryMods, isNullOr(column, isZero))
+	}
+	if m.IsNull != nil {
+		queryMods = append(queryMods, qmhelper.WhereIsNull(column))
+	}
+	if m.NotNullOrZero != nil {
+		queryMods = append(queryMods, isNotNullOr(column, isZero))
+	}
+	if m.NotNull != nil {
+		queryMods = append(queryMods, qmhelper.WhereIsNotNull(column))
+	}
 	if m.EqualTo != nil {
 		queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, *m.EqualTo))
 	}
@@ -210,6 +274,12 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 		}
 
 		var queryMods []qm.QueryMod
+		if m.IsNull != nil {
+			queryMods = append(queryMods, qmhelper.WhereIsNull(column))
+		}
+		if m.NotNull != nil {
+			queryMods = append(queryMods, qmhelper.WhereIsNotNull(column))
+		}
 		if m.EqualTo != nil {
 			queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, *m.EqualTo))
 		}

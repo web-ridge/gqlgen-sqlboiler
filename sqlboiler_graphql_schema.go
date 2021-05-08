@@ -30,6 +30,7 @@ type SchemaConfig struct {
 	HookShouldAddModel   func(model SchemaModel) bool
 	HookShouldAddField   func(model SchemaModel, field SchemaField) bool
 	HookChangeField      func(model *SchemaModel, field *SchemaField)
+	HookChangeFields     func(model *SchemaModel, fields []*SchemaField, parenType ParentType) []*SchemaField
 	HookChangeModel      func(model *SchemaModel)
 }
 
@@ -43,12 +44,64 @@ type SchemaModel struct {
 }
 
 type SchemaField struct {
-	Name        string
-	Type        string // String, ID, Integer
-	IsNullable  bool
-	BoilerField *BoilerField
-	SkipInput   bool
+	Name                 string
+	Type                 string // String, ID, Integer
+	InputWhereType       string
+	InputCreateType      string
+	InputUpdateType      string
+	InputBatchUpdateType string
+	InputBatchCreateType string
+	BoilerField          *BoilerField
+	SkipInput            bool
+	SkipWhere            bool
+	SkipCreate           bool
+	SkipUpdate           bool
+	SkipBatchUpdate      bool
+	SkipBatchCreate      bool
+	InputDirectives      []string
+	Directives           []string
 }
+
+func NewSchemaField(name string, typ string, boilerField *BoilerField) *SchemaField {
+	return &SchemaField{
+		Name:                 name,
+		Type:                 typ,
+		InputWhereType:       typ,
+		InputCreateType:      typ,
+		InputUpdateType:      typ,
+		InputBatchUpdateType: typ,
+		InputBatchCreateType: typ,
+		BoilerField:          boilerField,
+	}
+}
+
+func (s *SchemaField) SetInputTypeForAllInputs(v string) {
+	s.InputWhereType = v
+	s.InputCreateType = v
+	s.InputUpdateType = v
+	s.InputBatchUpdateType = v
+	s.InputBatchCreateType = v
+}
+
+func (s *SchemaField) SetSkipForAllInputs(v bool) {
+	s.SkipInput = v
+	s.SkipWhere = v
+	s.SkipCreate = v
+	s.SkipUpdate = v
+	s.SkipBatchUpdate = v
+	s.SkipBatchCreate = v
+}
+
+type ParentType string
+
+const (
+	ParentTypeNormal      ParentType = "Normal"
+	ParentTypeWhere       ParentType = "Where"
+	ParentTypeCreate      ParentType = "Create"
+	ParentTypeUpdate      ParentType = "Update"
+	ParentTypeBatchUpdate ParentType = "BatchUpdate"
+	ParentTypeBatchCreate ParentType = "BatchCreate"
+)
 
 func SchemaWrite(config SchemaConfig, outputFile string, generateOptions SchemaGenerateConfig) error {
 	// Generate schema based on config
@@ -72,6 +125,14 @@ func SchemaWrite(config SchemaConfig, outputFile string, generateOptions SchemaG
 	}
 
 	return nil
+}
+
+func getDirectivesAsString(va []string) string {
+	a := make([]string, len(va))
+	for i, v := range va {
+		a[i] = "@" + v
+	}
+	return strings.Join(a, " ")
 }
 
 //nolint:gocognit,gocyclo
@@ -171,18 +232,19 @@ func SchemaGet(
 
 		w.l("type " + model.Name + " implements Node {")
 
-		for _, field := range model.Fields {
+		for _, field := range enhanceFields(config, model, model.Fields, ParentTypeNormal) {
+			directives := getDirectivesAsString(field.Directives)
 			// e.g we have foreign key from user to organization
 			// organizationID is clutter in your scheme
 			// you only want Organization and OrganizationID should be skipped
 			if field.BoilerField.IsRelation {
 				w.tl(
 					getRelationName(field) + ": " +
-						getFinalFullTypeWithRelation(field, false),
+						getFinalFullTypeWithRelation(field, ParentTypeNormal) + directives,
 				)
 			} else {
-				fullType := getFinalFullType(field, false)
-				w.tl(field.Name + ": " + fullType)
+				fullType := getFinalFullType(field, ParentTypeNormal)
+				w.tl(field.Name + ": " + fullType + directives)
 			}
 		}
 		w.l("}")
@@ -241,16 +303,17 @@ func SchemaGet(
 		// }
 		w.l("input " + model.Name + "Where {")
 
-		for _, field := range model.Fields {
-			if field.SkipInput {
+		for _, field := range enhanceFields(config, model, model.Fields, ParentTypeWhere) {
+			if field.SkipInput || field.SkipWhere {
 				continue
 			}
+			directives := getDirectivesAsString(field.InputDirectives)
 			if field.BoilerField.IsRelation {
 				// Support filtering in relationships (at least schema wise)
 				relationName := getRelationName(field)
-				w.tl(relationName + ": " + field.BoilerField.Relationship.Name + "Where")
+				w.tl(relationName + ": " + field.BoilerField.Relationship.Name + "Where" + directives)
 			} else {
-				w.tl(field.Name + ": " + field.Type + "Filter")
+				w.tl(field.Name + ": " + field.Type + "Filter" + directives)
 			}
 		}
 		w.tl("or: " + model.Name + "Where")
@@ -297,8 +360,8 @@ func SchemaGet(
 			// }
 			w.l("input " + model.Name + "CreateInput {")
 
-			for _, field := range filteredFields {
-				if field.SkipInput {
+			for _, field := range enhanceFields(config, model, filteredFields, ParentTypeCreate) {
+				if field.SkipInput || field.SkipCreate {
 					continue
 				}
 				// id is not required in create and will be specified in update resolver
@@ -312,8 +375,9 @@ func SchemaGet(
 					field.BoilerField.IsRelation && !strings.HasSuffix(field.BoilerField.Name, "ID") {
 					continue
 				}
-				fullType := getFinalFullType(field, false)
-				w.tl(field.Name + ": " + fullType)
+				directives := getDirectivesAsString(field.InputDirectives)
+				fullType := getFinalFullType(field, ParentTypeCreate)
+				w.tl(field.Name + ": " + fullType + directives)
 			}
 			w.l("}")
 
@@ -326,8 +390,8 @@ func SchemaGet(
 			// }
 			w.l("input " + model.Name + "UpdateInput {")
 
-			for _, field := range filteredFields {
-				if field.SkipInput {
+			for _, field := range enhanceFields(config, model, filteredFields, ParentTypeUpdate) {
+				if field.SkipInput || field.SkipUpdate {
 					continue
 				}
 				// id is not required in create and will be specified in update resolver
@@ -341,7 +405,8 @@ func SchemaGet(
 					field.BoilerField.IsRelation && !strings.HasSuffix(field.BoilerField.Name, "ID") {
 					continue
 				}
-				w.tl(field.Name + ": " + getFinalFullType(field, true))
+				directives := getDirectivesAsString(field.InputDirectives)
+				w.tl(field.Name + ": " + getFinalFullType(field, ParentTypeUpdate) + directives)
 			}
 			w.l("}")
 
@@ -465,6 +530,13 @@ func SchemaGet(
 	return w.s.String()
 }
 
+func enhanceFields(config SchemaConfig, model *SchemaModel, fields []*SchemaField, parentType ParentType) []*SchemaField {
+	if config.HookChangeFields != nil {
+		return config.HookChangeFields(model, fields, parentType)
+	}
+	return fields
+}
+
 func fieldAsEnumStrings(fields []*SchemaField) []string {
 	var enums []string
 	for _, field := range fields {
@@ -541,8 +613,14 @@ func getRelationName(schemaField *SchemaField) string {
 	return strcase.ToLowerCamel(schemaField.BoilerField.RelationshipName)
 }
 
-func getFinalFullTypeWithRelation(schemaField *SchemaField, alwaysOptional bool) string {
+func getAlwaysOptional(parentType ParentType) bool {
+	return parentType == ParentTypeUpdate || parentType == ParentTypeWhere || parentType == ParentTypeBatchUpdate
+}
+
+func getFinalFullTypeWithRelation(schemaField *SchemaField, parentType ParentType) string {
 	boilerField := schemaField.BoilerField
+	alwaysOptional := getAlwaysOptional(parentType)
+
 	if boilerField.Relationship != nil {
 		relationType := boilerField.Relationship.Name
 		if alwaysOptional {
@@ -558,24 +636,42 @@ func getFinalFullTypeWithRelation(schemaField *SchemaField, alwaysOptional bool)
 			boilerField.IsRequired,
 		)
 	}
-	return getFinalFullType(schemaField, alwaysOptional)
+	return getFinalFullType(schemaField, parentType)
 }
 
-func getFinalFullType(schemaField *SchemaField, alwaysOptional bool) string {
+func getFinalFullType(schemaField *SchemaField, parentType ParentType) string {
+	alwaysOptional := getAlwaysOptional(parentType)
 	boilerField := schemaField.BoilerField
+	isRequired := boilerField.IsRequired
 	if alwaysOptional {
-		return getFullType(schemaField.Type, boilerField.IsArray, false)
+		isRequired = false
 	}
-	return getFullType(schemaField.Type, boilerField.IsArray, boilerField.IsRequired)
+
+	return getFullType(getFieldType(schemaField, parentType), boilerField.IsArray, isRequired)
+}
+
+func getFieldType(schemaField *SchemaField, parentType ParentType) string {
+	switch parentType {
+	case ParentTypeNormal:
+		return schemaField.Type
+	case ParentTypeWhere:
+		return schemaField.InputWhereType
+	case ParentTypeCreate:
+		return schemaField.InputCreateType
+	case ParentTypeUpdate:
+		return schemaField.InputUpdateType
+	case ParentTypeBatchUpdate:
+		return schemaField.InputBatchUpdateType
+	case ParentTypeBatchCreate:
+		return schemaField.InputBatchCreateType
+	default:
+		return ""
+	}
 }
 
 func boilerFieldToField(boilerField *BoilerField) *SchemaField {
 	t := toGraphQLType(boilerField)
-	return &SchemaField{
-		Name:        toGraphQLName(boilerField.Name),
-		Type:        t,
-		BoilerField: boilerField,
-	}
+	return NewSchemaField(toGraphQLName(boilerField.Name), t, boilerField)
 }
 
 func toGraphQLName(fieldName string) string {
@@ -711,10 +807,14 @@ func formatFile(filename string) error {
 	name := "prettier"
 	args := []string{filename, "--write"}
 
-	out, err := exec.Command(name, args...).Output()
+	cmd := exec.Command(name, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
 	if err != nil {
-		return fmt.Errorf("executing command: '%v %v' failed with: %v, output: %v", name, strings.Join(args, " "), err, out)
+		return fmt.Errorf("executing command: '%v %v' failed with: %v", name, strings.Join(args, " "), err)
 	}
+
 	// fmt.Println(fmt.Sprintf("Formatting of %v done", filename))
 	return nil
 }
@@ -758,6 +858,9 @@ func (sw *SimpleWriter) tl(v string) {
 
 const enumFilterHelper = `
 input %[1]vFilter {
+	isNull: Boolean
+	notNull: Boolean
+
 	equalTo: %[1]v
 	notEqualTo: %[1]v
 
@@ -769,6 +872,8 @@ input %[1]vFilter {
 // TODO: only generate these if they are set
 const queryHelperStructs = `
 input IDFilter {
+	isNull: Boolean
+	notNull: Boolean
 	equalTo: ID
 	notEqualTo: ID
 	in: [ID!]
@@ -776,6 +881,12 @@ input IDFilter {
 }
 
 input StringFilter {
+	isNullOrEmpty: Boolean
+	isEmpty: Boolean
+	isNull: Boolean
+	notNullOrEmpty: Boolean
+	notEmpty: Boolean
+	notNull: Boolean
 	equalTo: String
 	notEqualTo: String
 
@@ -802,6 +913,10 @@ input StringFilter {
 }
 
 input IntFilter {
+	isNullOrZero: Boolean
+	isNull: Boolean
+	notNullOrZero: Boolean
+	notNull: Boolean
 	equalTo: Int
 	notEqualTo: Int
 	lessThan: Int
@@ -813,6 +928,10 @@ input IntFilter {
 }
 
 input FloatFilter {
+	isNullOrZero: Boolean
+	isNull: Boolean
+	notNullOrZero: Boolean
+	notNull: Boolean
 	equalTo: Float
 	notEqualTo: Float
 	lessThan: Float
@@ -824,6 +943,8 @@ input FloatFilter {
 }
 
 input BooleanFilter {
+	isNull: Boolean
+	notNull: Boolean
 	equalTo: Boolean
 	notEqualTo: Boolean
 }
