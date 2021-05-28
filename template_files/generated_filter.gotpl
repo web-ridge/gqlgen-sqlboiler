@@ -36,7 +36,7 @@ import (
 
 // const regexSign = `'`
 const percentSign = `%`
-const parentTableStatement = "%v.%v = %v.id"
+const parentTableStatement = "%v.%v = %v.%v"
 func startsWithValue(v string) string { return   v + percentSign   }
 func endsWithValue(v string) string   { return   percentSign + v  }
 func containsValue(v string) string   { return   percentSign + v + percentSign   }
@@ -307,7 +307,7 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 			if m.Search != nil || m.Where != nil {
 				var queryMods []qm.QueryMod
 				queryMods  = append(queryMods, {{ .BoilerModel.Name }}SearchToMods(m.Search)...)
-				queryMods  = append(queryMods, {{ .BoilerModel.Name }}WhereToMods(m.Where, true, "")...)
+				queryMods  = append(queryMods, {{ .BoilerModel.Name }}WhereToMods(m.Where, true, "", "")...)
 				if len(queryMods) > 0 {
 					return []qm.QueryMod{
 						qm.Expr(queryMods...),
@@ -334,7 +334,7 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 				queryMods = append(queryMods, IDFilterToMods(m.ID, foreignColumn)...)
 			}
 		
-			subQueryMods := {{ .Name }}ToMods(m, !hasForeignKeyInRoot, parentTable)
+			subQueryMods := {{ .Name }}ToMods(m, !hasForeignKeyInRoot, parentTable, foreignColumn)
 			if len(subQueryMods) > 0 {
 				subQuery := {{ $.Backend.PackageName }}.{{.BoilerModel.PluralName}}(append(subQueryMods, qm.Select("1"))...)
 				queryMods = appendSubQuery(queryMods, subQuery.Query)
@@ -342,7 +342,7 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 			return queryMods
 		} 
 		
-		func {{ .Name }}ToMods(m *{{ $.Frontend.PackageName }}.{{ .Name }}, withPrimaryID bool, parentTable string) []qm.QueryMod {
+		func {{ .Name }}ToMods(m *{{ $.Frontend.PackageName }}.{{ .Name }}, withPrimaryID bool, parentTable string, parentForeignKey string) []qm.QueryMod {
 			if m == nil {
 				return nil
 			}
@@ -360,11 +360,11 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 					{{- end }}
 				{{-  else if $field.IsOr  }}
 					if m.Or != nil {
-						queryMods = append(queryMods, qm.Or2(qm.Expr({{ $field.TypeWithoutPointer|go }}ToMods(m.Or, true, "")...)))
+						queryMods = append(queryMods, qm.Or2(qm.Expr({{ $field.TypeWithoutPointer|go }}ToMods(m.Or, true, "", "")...)))
 					}
 				{{-  else if $field.IsAnd  }}
 					if m.And != nil {
-						queryMods = append(queryMods, qm.Expr({{ $field.TypeWithoutPointer|go }}ToMods(m.And, true, "")...))
+						queryMods = append(queryMods, qm.Expr({{ $field.TypeWithoutPointer|go }}ToMods(m.And, true, "", "")...))
 					}
 				{{- else }}
 					{{- if  $field.IsPrimaryID }}
@@ -377,18 +377,19 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 				{{- end -}}
 			{{ end }}
 
-			if len(queryMods) > 0 && parentTable != "" {
+			if len(queryMods) > 0 && parentTable != "" && parentForeignKey != "" {
 				{{ range $field := .Fields }}
 					{{-  if and $field.IsRelation $field.BoilerField.IsRelation  -}}
 							{{- if  not $field.IsPlural -}}
 								{{- if $field.BoilerField.IsForeignKey }}
 									if parentTable == {{ $.Backend.PackageName }}.TableNames.{{ $field.Relationship.BoilerModel.TableName }} {
-										queryMods = append(queryMods, qm.Where(fmt.Sprintf(parentTableStatement, {{ $.Backend.PackageName }}.TableNames.{{- $model.BoilerModel.TableName }}, {{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }}, parentTable)))
+										queryMods = append(queryMods, qm.Where(fmt.Sprintf(parentTableStatement, {{ $.Backend.PackageName }}.TableNames.{{- $model.BoilerModel.TableName }}, {{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }}, parentTable, parentForeignKey)))
 									}
 								{{- end -}}
 							{{- else }}
+
 								 if parentTable == {{ $.Backend.PackageName }}.TableNames.{{ $field.Relationship.BoilerModel.TableName }} {
-									 queryMods = append(queryMods, qm.Where(fmt.Sprintf(parentTableStatement, {{ $.Backend.PackageName }}.TableNames.{{- $model.BoilerModel.TableName }}, {{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.ID, parentTable)))
+									 queryMods = append(queryMods, qm.Where(fmt.Sprintf(parentTableStatement, {{ $.Backend.PackageName }}.TableNames.{{- $model.BoilerModel.TableName }}, {{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.ID, parentTable, parentForeignKey)))
 								 }
 						{{- end -}}
 					{{- end -}}
