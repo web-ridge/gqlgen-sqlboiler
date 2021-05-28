@@ -387,7 +387,6 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 									}
 								{{- end -}}
 							{{- else }}
-
 								 if parentTable == {{ $.Backend.PackageName }}.TableNames.{{ $field.Relationship.BoilerModel.TableName }} {
 									 queryMods = append(queryMods, qm.Where(fmt.Sprintf(parentTableStatement, {{ $.Backend.PackageName }}.TableNames.{{- $model.BoilerModel.TableName }}, {{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.ID, parentTable, parentForeignKey)))
 								 }
