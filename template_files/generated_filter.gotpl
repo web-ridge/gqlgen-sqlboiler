@@ -305,12 +305,21 @@ func IntFilterToMods(m *{{ $.Frontend.PackageName }}.IntFilter, column string) [
 				return nil
 			}
 			if m.Search != nil || m.Where != nil {
-				var queryMods []qm.QueryMod
-				queryMods  = append(queryMods, {{ .BoilerModel.Name }}SearchToMods(m.Search)...)
-				queryMods  = append(queryMods, {{ .BoilerModel.Name }}WhereToMods(m.Where, true, "", "")...)
-				if len(queryMods) > 0 {
+
+				searchMods := {{ .BoilerModel.Name }}SearchToMods(m.Search)
+				filterMods := {{ .BoilerModel.Name }}WhereToMods(m.Where, true, "", "")
+				if len(searchMods) > 0 && len(filterMods) > 0 {
 					return []qm.QueryMod{
-						qm.Expr(queryMods...),
+						qm.Expr(searchMods...),
+						qm.Expr(filterMods...),
+					}
+				} else if len(searchMods) > 0 {
+					return []qm.QueryMod{
+						qm.Expr(searchMods...),
+					}
+				} else if len(filterMods) > 0 {
+					return []qm.QueryMod{
+						qm.Expr(filterMods...),
 					}
 				}
 			}
