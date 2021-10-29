@@ -324,7 +324,7 @@ func SchemaGet(
 	}
 
 	w.l("type Query {")
-	w.tl("node(id: ID!): Node")
+	w.tl("node(id: ID!): Node" + joinedDirectives)
 
 	for _, model := range models {
 		// single models
