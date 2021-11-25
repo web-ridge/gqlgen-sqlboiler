@@ -225,7 +225,7 @@ const inputKey = "input"
 					{{- end }}
 				{{- end }}
 			}
-			 if _, err := dm.{{ .Model.PluralName }}(mods...).DeleteAll(ctx, r.db); err != nil {
+			 if _, err := dm.{{ .Model.PluralName }}(mods...).DeleteAll(ctx, r.db{{$resolver.SoftDeleteSuffix}}); err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}

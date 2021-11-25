@@ -33,6 +33,7 @@ type AuthorizationScope struct {
 }
 
 type ResolverPluginConfig struct {
+	EnableSoftDeletes   bool
 	AuthorizationScopes []*AuthorizationScope
 }
 
@@ -122,7 +123,7 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 				Field:          f,
 				Implementation: `panic("not implemented yet")`,
 			}
-			enhanceResolver(resolver, models)
+			enhanceResolver(m.pluginConfig, resolver, models)
 			if resolver.Model.BoilerModel != nil && resolver.Model.BoilerModel.Name != "" {
 				file.Resolvers = append(file.Resolvers, resolver)
 			} else if resolver.Field.GoFieldName != "Node" {
@@ -205,6 +206,7 @@ type Resolver struct {
 	BoilerWhiteList           string
 	PublicErrorKey            string
 	PublicErrorMessage        string
+	SoftDeleteSuffix          string
 }
 
 func (rb *ResolverBuild) getResolverType(ty string) string {
@@ -239,7 +241,7 @@ func (rb *ResolverBuild) ShortResolverDeclaration(r *Resolver) string {
 	return res
 }
 
-func enhanceResolver(r *Resolver, models []*Model) { //nolint:gocyclo
+func enhanceResolver(resolverConfig ResolverPluginConfig, r *Resolver, models []*Model) { //nolint:gocyclo
 	nameOfResolver := r.Field.GoFieldName
 
 	// get model names + model convert information
@@ -261,6 +263,9 @@ func enhanceResolver(r *Resolver, models []*Model) { //nolint:gocyclo
 		r.IsBatchCreate = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Create")
 		r.IsBatchUpdate = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Update")
 		r.IsBatchDelete = containsPrefixAndPartAfterThatIsPlural(nameOfResolver, "Delete")
+		if resolverConfig.EnableSoftDeletes == true && model.HasDeletedAt {
+			r.SoftDeleteSuffix = ", false"
+		}
 	case "Query":
 		isPlural := IsPlural(nameOfResolver)
 		if isPlural {

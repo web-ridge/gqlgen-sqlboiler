@@ -84,25 +84,25 @@ type Preload struct {
 }
 
 type Model struct { //nolint:maligned
-	Name           string
-	PluralName     string
-	BoilerModel    *BoilerModel
-	PrimaryKeyType string
-	Fields         []*Field
-	IsNormal       bool
-	IsInput        bool
-	IsCreateInput  bool
-	IsUpdateInput  bool
-	IsNormalInput  bool
-	IsPayload      bool
-	IsConnection   bool
-	IsEdge         bool
-	IsOrdering     bool
-	IsWhere        bool
-	IsFilter       bool
-	IsPreloadable  bool
-	PreloadArray   []Preload
-
+	Name               string
+	PluralName         string
+	BoilerModel        *BoilerModel
+	PrimaryKeyType     string
+	Fields             []*Field
+	IsNormal           bool
+	IsInput            bool
+	IsCreateInput      bool
+	IsUpdateInput      bool
+	IsNormalInput      bool
+	IsPayload          bool
+	IsConnection       bool
+	IsEdge             bool
+	IsOrdering         bool
+	IsWhere            bool
+	IsFilter           bool
+	IsPreloadable      bool
+	PreloadArray       []Preload
+	HasDeletedAt       bool
 	HasPrimaryStringID bool
 	// other stuff
 	Description string
@@ -753,6 +753,7 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 					IsOrdering:    isOrdering,
 					IsNormal:      isNormal,
 					IsPreloadable: isNormal,
+					HasDeletedAt:  boilerModel.HasDeletedAt,
 				}
 
 				for _, implementor := range schema.GetImplements(schemaType) {

@@ -22,6 +22,7 @@ type BoilerModel struct {
 	Fields             []*BoilerField
 	Enums              []*BoilerEnum
 	HasPrimaryStringID bool
+	HasDeletedAt       bool
 }
 
 type BoilerField struct {
@@ -146,6 +147,12 @@ func GetBoilerModels(dir string) ([]*BoilerModel, []*BoilerEnum) { //nolint:goco
 			hasPrimaryStringID = true
 		}
 
+		var hasDeletedAt bool
+		deletedAtField := findBoilerField(fields, "DeletedAt")
+		if deletedAtField != nil {
+			hasDeletedAt = true
+		}
+
 		models[i] = &BoilerModel{
 			Name:               modelName,
 			TableName:          tableName,
@@ -153,6 +160,7 @@ func GetBoilerModels(dir string) ([]*BoilerModel, []*BoilerEnum) { //nolint:goco
 			Fields:             fields,
 			Enums:              filterEnumsByModelName(enums, modelName),
 			HasPrimaryStringID: hasPrimaryStringID,
+			HasDeletedAt:       hasDeletedAt,
 		}
 	}
 
