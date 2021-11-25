@@ -252,7 +252,9 @@ func FindBoilerModel(models []*BoilerModel, modelName string) *BoilerModel {
 }
 
 func isRequired(boilerType string) bool {
-	if strings.HasPrefix(boilerType, "null.") || strings.HasPrefix(boilerType, "*") {
+	if strings.HasPrefix(boilerType, "null.") ||
+		strings.HasPrefix(boilerType, "types.Null") ||
+		strings.HasPrefix(boilerType, "*") {
 		return false
 	}
 	return true
