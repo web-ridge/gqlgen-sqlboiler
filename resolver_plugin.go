@@ -97,11 +97,16 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*Model,
 		ImportPath: buildImportPath(m.rootImportPath, data.Config.Exec.ImportPath()),
 	})
 
+	addedAliases := make(map[string]bool)
 	for _, scope := range m.pluginConfig.AuthorizationScopes {
-		file.Imports = append(file.Imports, Import{
-			Alias:      scope.ImportAlias,
-			ImportPath: scope.ImportPath,
-		})
+
+		if !addedAliases[scope.ImportAlias] {
+			file.Imports = append(file.Imports, Import{
+				Alias:      scope.ImportAlias,
+				ImportPath: scope.ImportPath,
+			})
+		}
+		addedAliases[scope.ImportAlias] = true
 	}
 
 	for _, o := range data.Objects {
