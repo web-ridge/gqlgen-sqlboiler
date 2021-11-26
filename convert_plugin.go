@@ -207,6 +207,11 @@ func GetModelsWithInformation(
 	// get models based on the schema and sqlboiler structs
 	models := getModelsFromSchema(cfg.Schema, boilerModels)
 
+	// always sort enums the same way to prevent merge conflicts in generated code
+	sort.Slice(enums, func(i, j int) bool {
+		return enums[i].Name < enums[j].Name
+	})
+
 	// Now we have all model's let enhance them with fields
 	enhanceModelsWithFields(enums, cfg.Schema, cfg, models, ignoreTypePrefixes)
 
@@ -877,11 +882,13 @@ func findBoilerEnum(enums []*BoilerEnum, graphType string) *BoilerEnum {
 func findBoilerEnumValue(enum *BoilerEnum, name string) *BoilerEnumValue {
 	if enum != nil {
 		for _, v := range enum.Values {
-			if strings.EqualFold(strings.TrimPrefix(v.Name, enum.Name), name) {
+			boilerName := strings.TrimPrefix(v.Name, enum.Name)
+			frontendName := strings.Replace(name, "_", "", -1)
+			if strings.EqualFold(boilerName, frontendName) {
 				return v
 			}
 		}
-		log.Error().Str(enum.Name, name).Msg("could sqlboiler enum value")
+		log.Error().Str(enum.Name, name).Msg("could not find sqlboiler enum value")
 	}
 
 	return nil
