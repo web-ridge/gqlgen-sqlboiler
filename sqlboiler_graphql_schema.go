@@ -313,7 +313,7 @@ func SchemaGet(
 				relationName := getRelationName(field)
 				w.tl(relationName + ": " + field.BoilerField.Relationship.Name + "Where" + directives)
 			} else {
-				w.tl(field.Name + ": " + field.Type + "Filter" + directives)
+				w.tl(field.Name + ": " + getFilterType(field) + "Filter" + directives)
 			}
 		}
 		w.tl("or: " + model.Name + "Where")
@@ -530,6 +530,14 @@ func SchemaGet(
 	return w.s.String()
 }
 
+func getFilterType(field *SchemaField) string {
+	boilerType := field.BoilerField.Type
+	if boilerType == "null.Time" || boilerType == "time.Time" {
+		return "TimeUnix"
+	}
+	return field.Type
+}
+
 func enhanceFields(config SchemaConfig, model *SchemaModel, fields []*SchemaField, parentType ParentType) []*SchemaField {
 	if config.HookChangeFields != nil {
 		return config.HookChangeFields(model, fields, parentType)
@@ -723,6 +731,7 @@ func toGraphQLType(boilerField *BoilerField) string {
 
 	// TODO: make this a scalar or something configurable?
 	// I like to use unix here
+	// make sure TimeUnixFilter keeps working
 	if strings.Contains(lowerBoilerType, "time") {
 		return "Int"
 	}
@@ -925,6 +934,19 @@ input IntFilter {
 	moreThanOrEqualTo: Int
 	in: [Int!]
 	notIn: [Int!]
+}
+
+input TimeUnixFilter {
+	isNullOrZero: Boolean
+	isNull: Boolean
+	notNullOrZero: Boolean
+	notNull: Boolean
+	equalTo: Int
+	notEqualTo: Int
+	lessThan: Int
+	lessThanOrEqualTo: Int
+	moreThan: Int
+	moreThanOrEqualTo: Int
 }
 
 input FloatFilter {

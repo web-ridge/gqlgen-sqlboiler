@@ -9,6 +9,6 @@ require (
 	github.com/rs/zerolog v1.20.0
 	github.com/vektah/gqlparser/v2 v2.0.1
 	github.com/volatiletech/strmangle v0.0.1
-	golang.org/x/mod v0.3.0
-	golang.org/x/tools v0.0.0-20200507205054-480da3ebd79c
+	golang.org/x/mod v0.4.2
+	golang.org/x/tools v0.1.5
 )

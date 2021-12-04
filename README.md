@@ -204,7 +204,7 @@ func main() {
 			backend,  // directory where sqlboiler files are put
 			frontend, // directory where gqlgen models live
 			gbgen.ConvertPluginConfig{
-				// UseReflectWorkaroundForSubModelFilteringInPostgresIssue25: true, // see issue #25 on GitHub
+				DatabaseDriver: gbgen.MySQL, // or gbgen.PostgreSQL,
 			},
 		)),
 		api.AddPlugin(gbgen.NewResolverPlugin(

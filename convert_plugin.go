@@ -184,8 +184,18 @@ type Config struct {
 	PackageName string
 }
 
+// DatabaseDriver defines which data syntax to use for some of the converts
+type DatabaseDriver string
+
+const (
+	// MySQL is the default
+	MySQL DatabaseDriver = "mysql"
+	// PostgreSQL is the default
+	PostgreSQL DatabaseDriver = "postgres"
+)
+
 type ConvertPluginConfig struct {
-	UseReflectWorkaroundForSubModelFilteringInPostgresIssue25 bool
+	DatabaseDriver DatabaseDriver
 }
 
 var _ plugin.ConfigMutator = &ConvertPlugin{}
@@ -243,6 +253,10 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	cfg := copyConfig(*originalCfg)
 	if err := os.MkdirAll(m.Output.Directory, os.ModePerm); err != nil {
 		log.Error().Err(err).Str("directory", m.Output.Directory).Msg("could not create directories")
+	}
+
+	if m.PluginConfig.DatabaseDriver == "" {
+		fmt.Println("Please specify database driver, see README on github")
 	}
 	// log.Debug().Msg("[customization] looking for *_customized files")
 
