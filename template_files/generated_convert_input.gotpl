@@ -84,10 +84,13 @@ import (
 			modelM := {{ $.Backend.PackageName }}.M{}
 			for key := range input {
 				switch key {
-					{{ range $field := .Fields -}}
-					case "{{ $field.JSONName }}":
-						modelM[{{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = model.{{ $field.Name }}
-					{{ end -}}
+					{{ range $field := .Fields }}
+						{{ if $field.IsRelationAndNotForeignKey}}
+						{{ else }}
+							case "{{ $field.JSONName }}":
+							modelM[{{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }}] = model.{{ $field.Name }}
+						{{ end }}
+					{{ end }}
 				}
 			}
 			return modelM

@@ -131,8 +131,9 @@ type Field struct { //nolint:maligned
 	ConvertConfig      ConvertConfig
 	Enum               *Enum
 	// relation stuff
-	IsRelation bool
-	IsObject   bool
+	IsRelation                 bool
+	IsRelationAndNotForeignKey bool
+	IsObject                   bool
 	// boiler relation stuff is inside this field
 	BoilerField BoilerField
 	// graphql relation ship can be found here
@@ -522,24 +523,25 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 
 			enum := findEnum(enums, shortType)
 			field := &Field{
-				Name:               name,
-				JSONName:           jsonName,
-				Type:               shortType,
-				TypeWithoutPointer: strings.Replace(strings.TrimPrefix(shortType, "*"), ".", "Dot", -1),
-				BoilerField:        boilerField,
-				IsNumberID:         isNumberID,
-				IsPrimaryID:        isPrimaryID,
-				IsPrimaryNumberID:  isPrimaryNumberID,
-				IsPrimaryStringID:  isPrimaryStringID,
-				IsRelation:         boilerField.IsRelation,
-				IsObject:           isObject,
-				IsOr:               strings.EqualFold(name, "or"),
-				IsAnd:              strings.EqualFold(name, "and"),
-				IsPlural:           IsPlural(name),
-				PluralName:         Plural(name),
-				OriginalType:       typ,
-				Description:        field.Description,
-				Enum:               enum,
+				Name:                       name,
+				JSONName:                   jsonName,
+				Type:                       shortType,
+				TypeWithoutPointer:         strings.Replace(strings.TrimPrefix(shortType, "*"), ".", "Dot", -1),
+				BoilerField:                boilerField,
+				IsNumberID:                 isNumberID,
+				IsPrimaryID:                isPrimaryID,
+				IsPrimaryNumberID:          isPrimaryNumberID,
+				IsPrimaryStringID:          isPrimaryStringID,
+				IsRelation:                 boilerField.IsRelation,
+				IsRelationAndNotForeignKey: boilerField.IsRelation && !strings.HasSuffix(strings.ToLower(name), "id"),
+				IsObject:                   isObject,
+				IsOr:                       strings.EqualFold(name, "or"),
+				IsAnd:                      strings.EqualFold(name, "and"),
+				IsPlural:                   IsPlural(name),
+				PluralName:                 Plural(name),
+				OriginalType:               typ,
+				Description:                field.Description,
+				Enum:                       enum,
 			}
 			field.ConvertConfig = getConvertConfig(enums, m, field)
 			m.Fields = append(m.Fields, field)
