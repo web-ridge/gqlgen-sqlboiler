@@ -87,6 +87,7 @@ type Model struct { //nolint:maligned
 	Name               string
 	PluralName         string
 	BoilerModel        *BoilerModel
+	HasBoilerModel     bool
 	PrimaryKeyType     string
 	Fields             []*Field
 	IsNormal           bool
@@ -152,6 +153,7 @@ type Enum struct {
 	PluralName    string
 	Values        []*EnumValue
 	HasBoilerEnum bool
+	HasFilter     bool
 	BoilerEnum    *BoilerEnum
 }
 
@@ -209,15 +211,13 @@ func copyConfig(cfg config.Config) *config.Config {
 	return &cfg
 }
 
-func GetModelsWithInformation(
+func EnhanceModelsWithInformation(
 	backend Config,
 	enums []*Enum,
 	cfg *config.Config,
 	boilerModels []*BoilerModel,
+	models []*Model,
 	ignoreTypePrefixes []string) []*Model {
-	// get models based on the schema and sqlboiler structs
-	models := getModelsFromSchema(cfg.Schema, boilerModels)
-
 	// always sort enums the same way to prevent merge conflicts in generated code
 	sort.Slice(enums, func(i, j int) bool {
 		return enums[i].Name < enums[j].Name
@@ -264,11 +264,15 @@ func (m *ConvertPlugin) MutateConfig(originalCfg *config.Config) error {
 	log.Debug().Msg("[convert] get boiler models")
 	boilerModels, boilerEnums := GetBoilerModels(m.Backend.Directory)
 
-	log.Debug().Msg("[convert] get extra's from schema")
-	interfaces, enums, scalars := getExtrasFromSchema(cfg.Schema, boilerEnums)
+	// get models based on the schema and sqlboiler structs
+	log.Debug().Msg("[convert] enhance model with information")
+	baseModels := getModelsFromSchema(cfg.Schema, boilerModels)
 
-	log.Debug().Msg("[convert] get model with information")
-	models := GetModelsWithInformation(b.Backend, enums, originalCfg, boilerModels, []string{m.Frontend.PackageName, m.Backend.PackageName, "boilergql"})
+	log.Debug().Msg("[convert] get extra's from schema")
+	interfaces, enums, scalars := getExtrasFromSchema(cfg.Schema, boilerEnums, baseModels)
+
+	log.Debug().Msg("[convert] enhance model with information")
+	models := EnhanceModelsWithInformation(b.Backend, enums, originalCfg, boilerModels, baseModels, []string{m.Frontend.PackageName, m.Backend.PackageName, "boilergql"})
 
 	b.Models = models
 	b.Interfaces = interfaces
@@ -437,6 +441,9 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 
 	// Generate the basic of the fields
 	for _, m := range models {
+		if !m.HasBoilerModel {
+			continue
+		}
 		// Let's convert the pure ast fields to something usable for our templates
 		for _, field := range m.PureFields {
 			fieldDef := schema.Types[field.Type.Name()]
@@ -469,7 +476,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 			isPrimaryID := strings.EqualFold(name, "id")
 
 			// get sqlboiler information of the field
-			boilerField := findBoilerFieldOrForeignKey(m.BoilerModel.Fields, name, isObject)
+			boilerField := findBoilerFieldOrForeignKey(m.BoilerModel, name, isObject)
 			isString := strings.Contains(strings.ToLower(boilerField.Type), "string")
 			isNumberID := strings.HasSuffix(name, "ID") && !isString
 			isPrimaryNumberID := isPrimaryID && !isString
@@ -638,9 +645,13 @@ func findModel(models []*Model, search string) *Model {
 //	return nil
 //}
 
-func findBoilerFieldOrForeignKey(fields []*BoilerField, golangGraphQLName string, isObject bool) BoilerField {
+func findBoilerFieldOrForeignKey(boilerModel *BoilerModel, golangGraphQLName string, isObject bool) BoilerField {
+	if boilerModel == nil {
+		return BoilerField{}
+	}
+
 	// get database friendly struct for this model
-	for _, field := range fields {
+	for _, field := range boilerModel.Fields {
 		if isObject {
 			// If it a relation check to see if a foreign key is available
 			if strings.EqualFold(field.Name, golangGraphQLName+"ID") {
@@ -654,7 +665,7 @@ func findBoilerFieldOrForeignKey(fields []*BoilerField, golangGraphQLName string
 	return BoilerField{}
 }
 
-func getExtrasFromSchema(schema *ast.Schema, boilerEnums []*BoilerEnum) (interfaces []*Interface, enums []*Enum, scalars []string) {
+func getExtrasFromSchema(schema *ast.Schema, boilerEnums []*BoilerEnum, models []*Model) (interfaces []*Interface, enums []*Enum, scalars []string) {
 	for _, schemaType := range schema.Types {
 		switch schemaType.Kind {
 		case ast.Interface, ast.Union:
@@ -664,12 +675,14 @@ func getExtrasFromSchema(schema *ast.Schema, boilerEnums []*BoilerEnum) (interfa
 			})
 		case ast.Enum:
 			boilerEnum := findBoilerEnum(boilerEnums, schemaType.Name)
+			fmt.Println(schemaType.Name, len(models))
 			it := &Enum{
 				Name:          schemaType.Name,
 				PluralName:    Plural(schemaType.Name),
 				Description:   schemaType.Description,
 				HasBoilerEnum: boilerEnum != nil,
 				BoilerEnum:    boilerEnum,
+				HasFilter:     findModel(models, schemaType.Name+"Filter") != nil,
 			}
 			for _, v := range schemaType.EnumValues {
 				it.Values = append(it.Values, &EnumValue{
@@ -745,36 +758,43 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 
 				// if no boiler model is found
 
-				if boilerModel == nil || boilerModel.Name == "" {
-					if isInput || isWhere || isFilter || isPayload || isPageInfo || isPagination {
-						// silent continue
+				hasEmptyBoilerModel := boilerModel == nil || boilerModel.Name == ""
+				// TODO: make this cleaner and support custom structs
+				if !isFilter {
+					if hasEmptyBoilerModel {
+						if isInput || isWhere || isPayload || isPageInfo || isPagination {
+							// silent continue
+							continue
+						}
+						log.Warn().Str("model", modelName).Msg("skipped because no database model found")
 						continue
 					}
-					log.Warn().Str("model", modelName).Msg("skipped because no database model found")
-					continue
 				}
 
 				isNormalInput := isInput && !isCreateInput && !isUpdateInput
 				isNormal := !isInput && !isWhere && !isFilter && !isPayload && !isEdge && !isConnection && !isOrdering
 
+				hasBoilerModel := !hasEmptyBoilerModel
+				hasDeletedAt := hasBoilerModel && boilerModel.HasDeletedAt
 				m := &Model{
-					Name:          modelName,
-					Description:   schemaType.Description,
-					PluralName:    Plural(modelName),
-					BoilerModel:   boilerModel,
-					IsInput:       isInput,
-					IsFilter:      isFilter,
-					IsWhere:       isWhere,
-					IsUpdateInput: isUpdateInput,
-					IsCreateInput: isCreateInput,
-					IsNormalInput: isNormalInput,
-					IsConnection:  isConnection,
-					IsEdge:        isEdge,
-					IsPayload:     isPayload,
-					IsOrdering:    isOrdering,
-					IsNormal:      isNormal,
-					IsPreloadable: isNormal,
-					HasDeletedAt:  boilerModel.HasDeletedAt,
+					Name:           modelName,
+					Description:    schemaType.Description,
+					PluralName:     Plural(modelName),
+					BoilerModel:    boilerModel,
+					HasBoilerModel: hasBoilerModel,
+					IsInput:        isInput,
+					IsFilter:       isFilter,
+					IsWhere:        isWhere,
+					IsUpdateInput:  isUpdateInput,
+					IsCreateInput:  isCreateInput,
+					IsNormalInput:  isNormalInput,
+					IsConnection:   isConnection,
+					IsEdge:         isEdge,
+					IsPayload:      isPayload,
+					IsOrdering:     isOrdering,
+					IsNormal:       isNormal,
+					IsPreloadable:  isNormal,
+					HasDeletedAt:   hasDeletedAt,
 				}
 
 				for _, implementor := range schema.GetImplements(schemaType) {

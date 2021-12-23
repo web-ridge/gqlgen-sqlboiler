@@ -61,8 +61,10 @@ func (m *ResolverPlugin) GenerateCode(data *codegen.Data) error {
 	// Get all models information
 	log.Debug().Msg("[resolver] get boiler models")
 	boilerModels, _ := GetBoilerModels(m.backend.Directory)
-	log.Debug().Msg("[resolver] get models with information")
-	models := GetModelsWithInformation(m.backend, nil, data.Config, boilerModels, nil)
+	log.Debug().Msg("[resolver] get models")
+	baseModels := getModelsFromSchema(data.Schema, boilerModels)
+	log.Debug().Msg("[resolver] enhance models with information")
+	models := EnhanceModelsWithInformation(m.backend, nil, data.Config, boilerModels, baseModels, nil)
 	log.Debug().Msg("[resolver] generate file")
 	// switch data.Config.Resolver.Layout {
 	// case config.LayoutSingleFile:

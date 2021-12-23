@@ -316,38 +316,40 @@ func TimeUnixFilterToMods(m *{{ $.Frontend.PackageName }}.TimeUnixFilter, c stri
 }
 
 {{ range $enum := .Enums }}
-	func {{ .Name }}FilterToMods(m *{{ $.Frontend.PackageName }}.{{ .Name }}Filter, column string) []qm.QueryMod {
-		if m == nil {
-			return nil
-		}
+	{{ if $enum.HasFilter }}
+		func {{ .Name }}FilterToMods(m *{{ $.Frontend.PackageName }}.{{ .Name }}Filter, column string) []qm.QueryMod {
+			if m == nil {
+				return nil
+			}
 
-		var queryMods []qm.QueryMod
-		if m.IsNull != nil {
-			queryMods = append(queryMods, qmhelper.WhereIsNull(column))
-		}
-		if m.NotNull != nil {
-			queryMods = append(queryMods, qmhelper.WhereIsNotNull(column))
-		}
-		if m.EqualTo != nil {
-			queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, *m.EqualTo))
-		}
-		if m.NotEqualTo != nil {
-			queryMods = append(queryMods, qmhelper.Where(column, qmhelper.NEQ, *m.NotEqualTo))
-		}
-		if len(m.In) > 0 {
-			queryMods = append(queryMods, qm.WhereIn(column+in, {{ .PluralName }}ToInterfaceArray(m.In)...))
-		}
-		if len(m.NotIn) > 0 {
-			queryMods = append(queryMods, qm.WhereIn(column+notIn, {{ .PluralName }}ToInterfaceArray(m.NotIn)...))
-		}
+			var queryMods []qm.QueryMod
+			if m.IsNull != nil {
+				queryMods = append(queryMods, qmhelper.WhereIsNull(column))
+			}
+			if m.NotNull != nil {
+				queryMods = append(queryMods, qmhelper.WhereIsNotNull(column))
+			}
+			if m.EqualTo != nil {
+				queryMods = append(queryMods, qmhelper.Where(column, qmhelper.EQ, *m.EqualTo))
+			}
+			if m.NotEqualTo != nil {
+				queryMods = append(queryMods, qmhelper.Where(column, qmhelper.NEQ, *m.NotEqualTo))
+			}
+			if len(m.In) > 0 {
+				queryMods = append(queryMods, qm.WhereIn(column+in, {{ .PluralName }}ToInterfaceArray(m.In)...))
+			}
+			if len(m.NotIn) > 0 {
+				queryMods = append(queryMods, qm.WhereIn(column+notIn, {{ .PluralName }}ToInterfaceArray(m.NotIn)...))
+			}
 
-		return queryMods
-	}
+			return queryMods
+		}
+	{{ end }}
 {{- end }}
 
 {{ range $model := .Models }}
 
-	{{- if .IsFilter -}}
+	{{- if and .IsFilter .HasBoilerModel -}}
 		func {{ .Name }}ToMods(m *{{ $.Frontend.PackageName }}.{{ .Name }}) []qm.QueryMod {
 			if m == nil {
 				return nil
@@ -378,7 +380,7 @@ func TimeUnixFilterToMods(m *{{ $.Frontend.PackageName }}.TimeUnixFilter, c stri
 			return nil
 		}
 	{{ end }}
-	{{- if .IsWhere  -}}
+	{{- if and .IsWhere .HasBoilerModel  -}}
 		func {{ .Name }}SubqueryToMods(m *{{ $.Frontend.PackageName }}.{{ .Name }}, foreignColumn string, parentTable string) []qm.QueryMod {
 			if m == nil {
 				return nil
