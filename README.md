@@ -51,15 +51,16 @@ See [example of `convert_plugin.go`](https://github.com/web-ridge/gqlgen-sqlboil
 - [x] public errors in resolvers + logging via zerolog.
 - [x] [overriding convert functions](https://github.com/web-ridge/gqlgen-sqlboiler#overriding-converts)
 - [x] [custom scope resolvers](https://github.com/web-ridge/gqlgen-sqlboiler-examples/blob/main/social-network/convert_plugin.go#L66) e.g userId, organizationId
+- [x] Support gqlgen multiple .graphql files
 ### Relay
 - [x] [GraphQL Cursor Connections Specification](https://relay.dev/graphql/connections.htm)
 - [x] [Global Object Identification](https://graphql.org/learn/global-object-identification/)
 ### Roadmap
+- [ ] Support automatic converts for custom schema objects
 - [ ] Support overriding resolvers
-- [ ] Support gqlgen multiple .graphql files
 - [ ] Support multiple resolvers (per schema)
 - [ ] Adding automatic database migrations and integration with [web-ridge/dbifier](https://github.com/web-ridge/dbifier)
-- [ ] Crud of adding/removing relationships from many-to-many on edges
+- [ ] Crud of adding/removing relationships from one-to-many and many-to-many on edges
 - [ ] Support more relationships inside input types
 - [ ] Generate tests
 - [ ] Run automatic tests in Github CI/CD in https://github.com/web-ridge/gqlgen-sqlboiler-examples
