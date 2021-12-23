@@ -52,6 +52,7 @@ See [example of `convert_plugin.go`](https://github.com/web-ridge/gqlgen-sqlboil
 - [x] [overriding convert functions](https://github.com/web-ridge/gqlgen-sqlboiler#overriding-converts)
 - [x] [custom scope resolvers](https://github.com/web-ridge/gqlgen-sqlboiler-examples/blob/main/social-network/convert_plugin.go#L66) e.g userId, organizationId
 - [x] Support gqlgen multiple .graphql files
+- [x] Batch create helpers for sqlboiler and integration batch create inputs
 ### Relay
 - [x] [GraphQL Cursor Connections Specification](https://relay.dev/graphql/connections.htm)
 - [x] [Global Object Identification](https://graphql.org/learn/global-object-identification/)
@@ -64,7 +65,6 @@ See [example of `convert_plugin.go`](https://github.com/web-ridge/gqlgen-sqlboil
 - [ ] Support more relationships inside input types
 - [ ] Generate tests
 - [ ] Run automatic tests in Github CI/CD in https://github.com/web-ridge/gqlgen-sqlboiler-examples
-- [ ] Batch create generation in resolvers (based on code from [web-ridge/contact-tracing](https://github.com/web-ridge/contact-tracing/blob/master/backend/helpers/convert_batch.go))
 
 ## Examples
 Checkout our examples to see the generated schema.grapql, converts and resolvers.   
