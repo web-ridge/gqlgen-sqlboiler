@@ -675,7 +675,6 @@ func getExtrasFromSchema(schema *ast.Schema, boilerEnums []*BoilerEnum, models [
 			})
 		case ast.Enum:
 			boilerEnum := findBoilerEnum(boilerEnums, schemaType.Name)
-			fmt.Println(schemaType.Name, len(models))
 			it := &Enum{
 				Name:          schemaType.Name,
 				PluralName:    Plural(schemaType.Name),
