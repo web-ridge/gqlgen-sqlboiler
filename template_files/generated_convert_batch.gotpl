@@ -38,25 +38,28 @@ const batchInsertStatement = "INSERT INTO %s (%s) VALUES %s"
 {{ if .IsCreateInput  }}
 
 	var {{ lcFirst .BoilerModel.PluralName }}BatchCreateColumns = []string{
-		{{ range $field := .Fields -}}
-			{{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{- $field.BoilerField.Name }},
-		{{ end }}
+		{{- range $field := .BoilerModel.Fields -}}
+			{{- if $field.InTableNotID -}}
+				{{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{- $field.Name }},
+			{{- end -}}
+		{{- end -}}
 	}
 
 	var {{ lcFirst .BoilerModel.PluralName }}BatchCreateColumnsMarks = boilergql.GetQuestionMarksForColumns({{ lcFirst .BoilerModel.PluralName }}BatchCreateColumns)
 
 	func {{ lcFirst .BoilerModel.Name }}ToBatchCreateValues(e *{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}) []interface{} {
 		return []interface{}{
-			{{ range $field := .Fields -}}
-				e.{{- $field.BoilerField.Name }},
-			{{ end }}
+			{{- range $field := .BoilerModel.Fields -}}
+				{{- if $field.InTableNotID -}}
+					e.{{- $field.Name }},
+				{{- end -}}
+			{{- end -}}
 		}
 	}
 
 	func {{ lcFirst .BoilerModel.PluralName }}ToBatchCreate(a []*{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}) ([]string, []interface{}) {
 		queryMarks := make([]string, len(a))
 		// nolint:prealloc
-		// yes?
 		var values []interface{}
 		for i, boilerRow := range a {
 			queryMarks[i] = {{ lcFirst .BoilerModel.PluralName }}BatchCreateColumnsMarks

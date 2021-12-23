@@ -34,6 +34,8 @@ type BoilerField struct {
 	IsArray          bool
 	IsEnum           bool
 	IsRelation       bool
+	InTable          bool
+	InTableNotID     bool
 	Enum             BoilerEnum
 	RelationshipName string
 	Relationship     *BoilerModel
@@ -109,6 +111,8 @@ func GetBoilerModels(dir string) ([]*BoilerModel, []*BoilerEnum) { //nolint:goco
 					IsRelation:       true,
 					IsRequired:       false,
 					IsArray:          isArray,
+					InTable:          false,
+					InTableNotID:     false,
 				}
 				addFieldToMap(relationsPerModelName, modelName, relationField)
 			}
@@ -121,7 +125,8 @@ func GetBoilerModels(dir string) ([]*BoilerModel, []*BoilerEnum) { //nolint:goco
 		if boilerFieldName == "L" || boilerFieldName == "R" {
 			continue
 		}
-		isRelation := strings.HasSuffix(boilerFieldName, "ID") && boilerFieldName != "ID"
+		isID := boilerFieldName == "ID"
+		isRelation := strings.HasSuffix(boilerFieldName, "ID") && !isID
 
 		addFieldToMap(fieldsPerModelName, modelName, &BoilerField{
 			Name:             boilerFieldName,
@@ -131,6 +136,8 @@ func GetBoilerModels(dir string) ([]*BoilerModel, []*BoilerEnum) { //nolint:goco
 			IsRequired:       isRequired(boiler.Type),
 			RelationshipName: strings.TrimSuffix(boilerFieldName, "ID"),
 			IsForeignKey:     isRelation,
+			InTable:          true,
+			InTableNotID:     !isID,
 		})
 	}
 	sort.Strings(modelNames)

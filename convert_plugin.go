@@ -533,7 +533,7 @@ func enhanceModelsWithFields(enums []*Enum, schema *ast.Schema, cfg *config.Conf
 				IsPrimaryNumberID:          isPrimaryNumberID,
 				IsPrimaryStringID:          isPrimaryStringID,
 				IsRelation:                 boilerField.IsRelation,
-				IsRelationAndNotForeignKey: boilerField.IsRelation && !strings.HasSuffix(strings.ToLower(name), "id"),
+				IsRelationAndNotForeignKey: boilerField.IsRelation && !boilerField.IsForeignKey,
 				IsObject:                   isObject,
 				IsOr:                       strings.EqualFold(name, "or"),
 				IsAnd:                      strings.EqualFold(name, "and"),
