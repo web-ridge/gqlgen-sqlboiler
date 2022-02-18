@@ -309,6 +309,7 @@ func SchemaGet(
 			}
 			directives := getDirectivesAsString(field.InputDirectives)
 			if field.BoilerField.IsRelation {
+
 				// Support filtering in relationships (at least schema wise)
 				relationName := getRelationName(field)
 				w.tl(relationName + ": " + field.BoilerField.Relationship.Name + "Where" + directives)
