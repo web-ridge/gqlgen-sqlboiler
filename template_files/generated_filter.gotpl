@@ -411,11 +411,11 @@ func TimeUnixFilterToMods(m *{{ $.Frontend.PackageName }}.TimeUnixFilter, c stri
 			{{ range $field := .Fields }}
 				{{-  if and $field.IsRelation $field.BoilerField.IsRelation }}
 					{{- if  $field.IsPlural }}
-						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, "", {{ $.Backend.PackageName }}.TableNames.{{- $model.BoilerModel.TableName }})...)
+						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, "", {{ $.Backend.PackageName }}.{{- $model.TableNameResolverName }}.{{- $model.BoilerModel.TableName }})...)
 					{{- else if $field.BoilerField.IsForeignKey }}
-						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, {{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }}, {{ $.Backend.PackageName }}.TableNames.{{- $model.BoilerModel.TableName }})...)
+						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, {{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }}, {{ $.Backend.PackageName }}.{{- $model.TableNameResolverName }}.{{- $model.BoilerModel.TableName }})...)
 					{{- else }}
-						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, "", {{ $.Backend.PackageName }}.TableNames.{{- $model.BoilerModel.TableName }})...)
+						queryMods = append(queryMods, {{ $field.TypeWithoutPointer|go }}SubqueryToMods(m.{{ $field.Name }}, "", {{ $.Backend.PackageName }}.{{- $model.TableNameResolverName }}.{{- $model.BoilerModel.TableName }})...)
 					{{- end }}
 				{{-  else if $field.IsOr  }}
 					if m.Or != nil {
@@ -441,13 +441,13 @@ func TimeUnixFilterToMods(m *{{ $.Frontend.PackageName }}.TimeUnixFilter, c stri
 					{{-  if and $field.IsRelation $field.BoilerField.IsRelation  -}}
 							{{- if  not $field.IsPlural -}}
 								{{- if $field.BoilerField.IsForeignKey }}
-									if parentTable == {{ $.Backend.PackageName }}.TableNames.{{ $field.Relationship.BoilerModel.TableName }} {
-										queryMods = append(queryMods, qm.Where(fmt.Sprintf(parentTableStatement, {{ $.Backend.PackageName }}.TableNames.{{- $model.BoilerModel.TableName }}, {{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }}, parentTable, parentForeignKey)))
+									if parentTable == {{ $.Backend.PackageName }}.{{- $model.TableNameResolverName }}.{{ $field.Relationship.BoilerModel.TableName }} {
+										queryMods = append(queryMods, qm.Where(fmt.Sprintf(parentTableStatement, {{ $.Backend.PackageName }}.{{- $model.TableNameResolverName }}.{{- $model.BoilerModel.TableName }}, {{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{ $field.BoilerField.Name }}, parentTable, parentForeignKey)))
 									}
 								{{- end -}}
 							{{- else }}
-								 if parentTable == {{ $.Backend.PackageName }}.TableNames.{{ $field.Relationship.BoilerModel.TableName }} {
-									 queryMods = append(queryMods, qm.Where(fmt.Sprintf(parentTableStatement, {{ $.Backend.PackageName }}.TableNames.{{- $model.BoilerModel.TableName }}, {{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.ID, parentTable, parentForeignKey)))
+								 if parentTable == {{ $.Backend.PackageName }}.{{- $model.TableNameResolverName }}.{{ $field.Relationship.BoilerModel.TableName }} {
+									 queryMods = append(queryMods, qm.Where(fmt.Sprintf(parentTableStatement, {{ $.Backend.PackageName }}.{{- $model.TableNameResolverName }}.{{- $model.BoilerModel.TableName }}, {{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.ID, parentTable, parentForeignKey)))
 								 }
 						{{- end -}}
 					{{- end -}}

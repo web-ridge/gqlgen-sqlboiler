@@ -24,6 +24,7 @@ type BoilerModel struct {
 	Enums              []*BoilerEnum
 	HasPrimaryStringID bool
 	HasDeletedAt       bool
+	IsView             bool
 }
 
 type BoilerField struct {
@@ -65,6 +66,7 @@ func GetBoilerModels(dir string) ([]*BoilerModel, []*BoilerEnum) { //nolint:goco
 	boilerTypes := getSortedBoilerTypes(boilerTypeMap, boilerTypeOrder)
 	tableNames := parseTableNames(dir)
 	enums := parseEnums(dir)
+	viewNames := parseViews(dir)
 
 	// sortedModelNames is needed to get the right order back of the models since we want the same order every time
 	// this program has ran.
@@ -169,6 +171,7 @@ func GetBoilerModels(dir string) ([]*BoilerModel, []*BoilerEnum) { //nolint:goco
 			Enums:              filterEnumsByModelName(enums, modelName),
 			HasPrimaryStringID: hasPrimaryStringID,
 			HasDeletedAt:       hasDeletedAt,
+			IsView:             sliceContains(viewNames, modelName),
 		}
 	}
 
@@ -347,6 +350,27 @@ func parseTableNames(dir string) []string {
 		tableNames[i] = tableNameMatch[1]
 	}
 	return tableNames
+}
+
+func parseViews(dir string) []string {
+	dir, err := filepath.Abs(dir)
+	errMessage := "could not open boiler table names file, this could not lead to problems if you're " +
+		"using plural table names"
+	if err != nil {
+		log.Warn().Err(err).Msg(errMessage)
+		return nil
+	}
+	content, err := ioutil.ReadFile(filepath.Join(dir, "boil_view_names.go"))
+	if err != nil {
+		log.Warn().Err(err).Msg(errMessage)
+		return nil
+	}
+	viewNamesMatches := tableNameRegex.FindAllStringSubmatch(string(content), -1)
+	viewNames := make([]string, len(viewNamesMatches))
+	for i, tableNameMatch := range viewNamesMatches {
+		viewNames[i] = tableNameMatch[1]
+	}
+	return viewNames
 }
 
 var (

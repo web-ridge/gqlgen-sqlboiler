@@ -106,9 +106,10 @@ type Model struct { //nolint:maligned
 	HasDeletedAt       bool
 	HasPrimaryStringID bool
 	// other stuff
-	Description string
-	PureFields  []*ast.FieldDefinition
-	Implements  []string
+	Description           string
+	PureFields            []*ast.FieldDefinition
+	Implements            []string
+	TableNameResolverName string
 }
 
 type ColumnSetting struct {
@@ -776,25 +777,30 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*BoilerModel) (model
 
 				hasBoilerModel := !hasEmptyBoilerModel
 				hasDeletedAt := hasBoilerModel && boilerModel.HasDeletedAt
+				tableNameResolverName := "TableNames"
+				if hasBoilerModel && boilerModel.IsView {
+					tableNameResolverName = "ViewNames"
+				}
 				m := &Model{
-					Name:           modelName,
-					Description:    schemaType.Description,
-					PluralName:     Plural(modelName),
-					BoilerModel:    boilerModel,
-					HasBoilerModel: hasBoilerModel,
-					IsInput:        isInput,
-					IsFilter:       isFilter,
-					IsWhere:        isWhere,
-					IsUpdateInput:  isUpdateInput,
-					IsCreateInput:  isCreateInput,
-					IsNormalInput:  isNormalInput,
-					IsConnection:   isConnection,
-					IsEdge:         isEdge,
-					IsPayload:      isPayload,
-					IsOrdering:     isOrdering,
-					IsNormal:       isNormal,
-					IsPreloadable:  isNormal,
-					HasDeletedAt:   hasDeletedAt,
+					Name:                  modelName,
+					Description:           schemaType.Description,
+					PluralName:            Plural(modelName),
+					BoilerModel:           boilerModel,
+					HasBoilerModel:        hasBoilerModel,
+					IsInput:               isInput,
+					IsFilter:              isFilter,
+					IsWhere:               isWhere,
+					IsUpdateInput:         isUpdateInput,
+					IsCreateInput:         isCreateInput,
+					IsNormalInput:         isNormalInput,
+					IsConnection:          isConnection,
+					IsEdge:                isEdge,
+					IsPayload:             isPayload,
+					IsOrdering:            isOrdering,
+					IsNormal:              isNormal,
+					IsPreloadable:         isNormal,
+					HasDeletedAt:          hasDeletedAt,
+					TableNameResolverName: tableNameResolverName,
 				}
 
 				for _, implementor := range schema.GetImplements(schemaType) {

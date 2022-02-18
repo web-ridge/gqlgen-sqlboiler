@@ -40,6 +40,7 @@ type SchemaGenerateConfig struct {
 
 type SchemaModel struct {
 	Name   string
+	IsView bool
 	Fields []*SchemaField
 }
 
@@ -348,9 +349,13 @@ func SchemaGet(
 
 	w.br()
 
-	// Generate input and payloads for mutatations
+	// Generate input and payloads for mutations
 	if config.GenerateMutations { //nolint:nestif
 		for _, model := range models {
+			if model.IsView {
+				continue
+			}
+
 			filteredFields := fieldsWithout(model.Fields, config.SkipInputFields)
 
 			modelPluralName := Plural(model.Name)
@@ -486,6 +491,9 @@ func SchemaGet(
 		w.l("type Mutation {")
 
 		for _, model := range models {
+			if model.IsView {
+				continue
+			}
 			modelPluralName := Plural(model.Name)
 
 			// create single
@@ -577,6 +585,7 @@ func boilerModelsToModels(boilerModels []*BoilerModel) []*SchemaModel {
 		a[i] = &SchemaModel{
 			Name:   boilerModel.Name,
 			Fields: boilerFieldsToFields(boilerModel.Fields),
+			IsView: boilerModel.IsView,
 		}
 	}
 	return a

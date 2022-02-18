@@ -72,7 +72,7 @@ const batchInsertStatement = "INSERT INTO %s (%s) VALUES %s"
 		queryMarks, values := {{ lcFirst .BoilerModel.PluralName }}ToBatchCreate(a)
 		// nolint: gosec -> remove warning because no user input without questions marks
 		return fmt.Sprintf(batchInsertStatement,
-			{{ $.Backend.PackageName }}.TableNames.{{ .BoilerModel.Name }},
+			{{ $.Backend.PackageName }}.{{- .TableNameResolverName }}.{{ .BoilerModel.Name }},
 			strings.Join({{ lcFirst .BoilerModel.PluralName }}BatchCreateColumns, ", "),
 			strings.Join(queryMarks, ", "),
 		), values

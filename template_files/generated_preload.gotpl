@@ -37,11 +37,11 @@ import (
 var TablePreloadMap = map[string]map[string]boilergql.ColumnSetting{
 	{{ range $model := .Models -}}
 	{{ if $model.IsPreloadable -}}
-		{{ $.Backend.PackageName }}.TableNames.{{- $model.BoilerModel.TableName }}: {
+		{{ $.Backend.PackageName }}.{{- $model.TableNameResolverName }}.{{- $model.BoilerModel.TableName }}: {
 			{{- range $value := $model.PreloadArray }}
 				 "{{$value.Key}}": {
 					 Name: {{$value.ColumnSetting.Name}},
-					 RelationshipModelName: {{ $.Backend.PackageName }}.TableNames.{{$value.ColumnSetting.RelationshipModelName}},
+					 RelationshipModelName: {{ $.Backend.PackageName }}.{{- $model.TableNameResolverName }}.{{$value.ColumnSetting.RelationshipModelName}},
 					 IDAvailable: {{$value.ColumnSetting.IDAvailable}},
 				},
 			{{- end }}
@@ -53,13 +53,13 @@ var TablePreloadMap = map[string]map[string]boilergql.ColumnSetting{
 {{ range $model := .Models }}
 	{{ if $model.IsPreloadable -}}
 	func Get{{ .Name }}PreloadMods(ctx context.Context) (queryMods []qm.QueryMod) {
-		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, {{ $.Backend.PackageName }}.TableNames.{{ $model.BoilerModel.TableName }}, "")
+		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, {{ $.Backend.PackageName }}.{{- $model.TableNameResolverName }}.{{ $model.BoilerModel.TableName }}, "")
 	}
 	func Get{{ .Name }}NodePreloadMods(ctx context.Context) (queryMods []qm.QueryMod) {
-		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, {{ $.Backend.PackageName }}.TableNames.{{ $model.BoilerModel.TableName }}, DefaultLevels.EdgesNode)
+		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, {{ $.Backend.PackageName }}.{{- $model.TableNameResolverName }}.{{ $model.BoilerModel.TableName }}, DefaultLevels.EdgesNode)
 	}
 	func Get{{ .Name }}PreloadModsWithLevel(ctx context.Context, level string) (queryMods []qm.QueryMod) {
-		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, {{ $.Backend.PackageName }}.TableNames.{{ $model.BoilerModel.TableName }}, level)
+		return boilergql.GetPreloadModsWithLevel(ctx, TablePreloadMap, {{ $.Backend.PackageName }}.{{- $model.TableNameResolverName }}.{{ $model.BoilerModel.TableName }}, level)
 	}
 	{{ end -}}
 {{- end }}

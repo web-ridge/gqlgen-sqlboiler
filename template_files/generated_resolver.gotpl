@@ -271,7 +271,7 @@ const inputKey = "input"
 			{{- end }}
 			mods = append(mods, {{.Model.Name}}FilterToMods(filter)...)
 			mods = append(mods, qm.Select(dm.{{ .Model.Name }}Columns.ID))
-			mods = append(mods, qm.From(dm.TableNames.{{ .Model.BoilerModel.TableName }}))
+			mods = append(mods, qm.From(dm.{{- .Model.TableNameResolverName }}.{{ .Model.BoilerModel.TableName }}))
 
 			{{- if .Model.HasPrimaryStringID }}
 			var IDsToRemove []boilergql.RemovedStringID
@@ -290,7 +290,7 @@ const inputKey = "input"
 			}
 
 			return &fm.{{ .Model.PluralName }}DeletePayload{
-				Ids: boilergql.{{.Model.PrimaryKeyType|go}}IDsToGraphQL(boilerIDs, dm.TableNames.{{ .Model.BoilerModel.TableName }}),
+				Ids: boilergql.{{.Model.PrimaryKeyType|go}}IDsToGraphQL(boilerIDs, dm.{{- .Model.TableNameResolverName }}.{{ .Model.BoilerModel.TableName }}),
 			}, nil
 		{{- end }}
 	}

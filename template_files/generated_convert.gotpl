@@ -189,12 +189,12 @@ import (
 		{{ range $field := .Fields }}
 			{{- if $field.IsPrimaryNumberID -}}
 				func {{ $model.Name }}IDToGraphQL(v uint) string {
-					return boilergql.IDToGraphQL(v, {{ $.Backend.PackageName }}.TableNames.{{ $model.BoilerModel.TableName }})
+					return boilergql.IDToGraphQL(v, {{ $.Backend.PackageName }}.{{- $model.TableNameResolverName }}.{{ $model.BoilerModel.TableName }})
 				}
 			{{- end -}}
 			{{- if $field.IsPrimaryStringID -}}
 				func {{ $model.Name }}IDToGraphQL(v string) string {
-					return boilergql.StringIDToGraphQL(v, {{ $.Backend.PackageName }}.TableNames.{{ $model.BoilerModel.TableName }})
+					return boilergql.StringIDToGraphQL(v, {{ $.Backend.PackageName }}.{{- $model.TableNameResolverName }}.{{ $model.BoilerModel.TableName }})
 				}
 			{{- end -}}
 		{{- end }}
