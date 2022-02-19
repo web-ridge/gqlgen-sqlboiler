@@ -65,8 +65,9 @@ func GetBoilerModels(dir string) ([]*BoilerModel, []*BoilerEnum) { //nolint:goco
 	boilerTypeMap, _, boilerTypeOrder := parseBoilerFile(dir)
 	boilerTypes := getSortedBoilerTypes(boilerTypeMap, boilerTypeOrder)
 	tableNames := parseTableNames(dir)
-	enums := parseEnums(dir)
 	viewNames := parseViews(dir)
+	allTableNames := append(tableNames, viewNames...)
+	enums := parseEnums(dir, allTableNames)
 
 	// sortedModelNames is needed to get the right order back of the models since we want the same order every time
 	// this program has ran.
@@ -197,7 +198,7 @@ func GetBoilerModels(dir string) ([]*BoilerModel, []*BoilerEnum) { //nolint:goco
 	for _, model := range models {
 		for _, field := range model.Fields {
 			enumForField := getEnumByModelNameAndFieldName(enums, model.Name, field.Name)
-			//fmt.Println("enumForField", field.Name, enumForField)
+			// fmt.Println("enumForField", field.Name, enumForField)
 			if enumForField != nil {
 				field.IsEnum = true
 				field.IsRelation = false
@@ -220,8 +221,8 @@ func GetBoilerModels(dir string) ([]*BoilerModel, []*BoilerEnum) { //nolint:goco
 
 func getEnumByModelNameAndFieldName(enums []*BoilerEnum, modelName string, fieldName string) *BoilerEnum {
 	for _, e := range enums {
-		//fmt.Println("        ", e.ModelName, modelName)
-		//fmt.Println("        ", e.ModelFieldKey, fieldName)
+		// fmt.Println("        ", e.ModelName, modelName)
+		// fmt.Println("        ", e.ModelFieldKey, fieldName)
 		if e.ModelName == modelName && e.ModelFieldKey == fieldName {
 			return e
 		}
@@ -378,7 +379,7 @@ var (
 	enumValuesRegex = regexp.MustCompile(`\s(\w+)\s*=\s*"(\w+)"`)                                //nolint:gochecknoglobals
 )
 
-func parseEnums(dir string) []*BoilerEnum {
+func parseEnums(dir string, allTableNames []string) []*BoilerEnum {
 	dir, err := filepath.Abs(dir)
 	errMessage := "could not open enum names file, this could not lead to problems if you're " +
 		"using enums in your db"
@@ -398,11 +399,11 @@ func parseEnums(dir string) []*BoilerEnum {
 		// 2: status
 		// 3: contents
 
-		modelName, fieldKey := stripLastWord(match[1])
+		modelName, fieldKey := stripLastWord(match[1], allTableNames)
 		name := strcase.ToCamel(match[1])
-		//fmt.Println("name", match[1])
-		//fmt.Println("modelName", modelName)
-		//fmt.Println("fieldKey", fieldKey)
+		// fmt.Println("name", match[1])
+		// fmt.Println("modelName", modelName)
+		// fmt.Println("fieldKey", fieldKey)
 
 		a[i] = &BoilerEnum{
 			Name:          name,
@@ -414,18 +415,19 @@ func parseEnums(dir string) []*BoilerEnum {
 	return a
 }
 
-func stripLastWord(v string) (string, string) {
-	var firstPart string
-	for i, character := range v {
-		if isUpperRune(character) && i != 0 {
-			break
+func stripLastWord(v string, allTableNames []string) (string, string) {
+	// longest tables first
+	sort.Slice(allTableNames, func(i, j int) bool {
+		return len(allTableNames[i]) > len(allTableNames[j])
+	})
+
+	for _, tableName := range allTableNames {
+		if strings.HasPrefix(v, tableName) {
+			return tableName, strings.TrimPrefix(v, tableName)
 		}
-
-		firstPart += string(character)
-
 	}
-	lastPart := strings.TrimPrefix(v, firstPart)
-	return firstPart, lastPart
+	log.Warn().Str("enumName", v).Msg("could not find model by enum")
+	return "", ""
 }
 
 func isUpperRune(s rune) bool {

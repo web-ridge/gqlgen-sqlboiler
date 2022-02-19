@@ -951,6 +951,11 @@ func getConvertConfig(enums []*Enum, model *Model, field *Field) (cc ConvertConf
 
 	enum := findEnum(enums, field.TypeWithoutPointer)
 	if enum != nil { //nolint:nestif
+		fmt.Println(enum.Name, boilType, graphType)
+	} else {
+	}
+
+	if enum != nil { //nolint:nestif
 		cc.IsCustom = true
 		cc.ToBoiler = strings.TrimPrefix(
 			getToBoiler(
