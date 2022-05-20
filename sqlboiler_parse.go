@@ -376,7 +376,7 @@ func parseViews(dir string) []string {
 
 var (
 	enumRegex       = regexp.MustCompile(`// Enum values for (.*)\nconst\s\(\n(:?(.|\n)*?)\n\)`) //nolint:gochecknoglobals
-	enumValuesRegex = regexp.MustCompile(`\s(\w+)\s*=\s*"(\w+)"`)                                //nolint:gochecknoglobals
+	enumValuesRegex = regexp.MustCompile(`\s(\w+) string\s*=\s*"(\w+)"`)                                //nolint:gochecknoglobals
 )
 
 func parseEnums(dir string, allTableNames []string) []*BoilerEnum {
