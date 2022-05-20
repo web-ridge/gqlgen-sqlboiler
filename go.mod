@@ -1,4 +1,4 @@
-module github/web-ridge/gqlgen-sqlboiler
+module github.com/web-ridge/gqlgen-sqlboiler/v3
 
 go 1.18
 
@@ -8,7 +8,6 @@ require (
 	github.com/rs/zerolog v1.26.1
 	github.com/vektah/gqlparser/v2 v2.4.2
 	github.com/volatiletech/strmangle v0.0.4
-	github.com/web-ridge/gqlgen-sqlboiler/v3 v3.3.3
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3
 	golang.org/x/tools v0.1.10
 )
