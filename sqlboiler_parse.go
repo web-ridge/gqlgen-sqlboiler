@@ -376,7 +376,7 @@ func parseViews(dir string) []string {
 
 var (
 	enumRegex       = regexp.MustCompile(`// Enum values for (.*)\nconst\s\(\n(:?(.|\n)*?)\n\)`) //nolint:gochecknoglobals
-	enumValuesRegex = regexp.MustCompile(`\s(\w+)\s*=\s*"(\w+)"`)                                //nolint:gochecknoglobals
+	enumValuesRegex = regexp.MustCompile(`\s(\w+)\s*string\s*=\s*"(\w+)"`)                       //nolint:gochecknoglobals
 )
 
 func parseEnums(dir string, allTableNames []string) []*BoilerEnum {
@@ -394,16 +394,17 @@ func parseEnums(dir string, allTableNames []string) []*BoilerEnum {
 	}
 	matches := enumRegex.FindAllStringSubmatch(string(content), -1)
 	a := make([]*BoilerEnum, len(matches))
+	fmt.Println(a)
 	for i, match := range matches {
 		// 1: messageLetterStatus
 		// 2: status
 		// 3: contents
-
+		fmt.Println(match)
 		modelName, fieldKey := stripLastWord(match[1], allTableNames)
 		name := strcase.ToCamel(match[1])
-		// fmt.Println("name", match[1])
-		// fmt.Println("modelName", modelName)
-		// fmt.Println("fieldKey", fieldKey)
+		fmt.Println("name", match[1])
+		fmt.Println("modelName", modelName)
+		fmt.Println("fieldKey", fieldKey)
 
 		a[i] = &BoilerEnum{
 			Name:          name,
@@ -445,7 +446,7 @@ func parseEnumValues(content string) []*BoilerEnumValue {
 		// 2: status
 		// 2: status
 		// 3: contents
-
+		fmt.Println("   name =", match[1])
 		a[i] = &BoilerEnumValue{
 			Name: match[1],
 		}
