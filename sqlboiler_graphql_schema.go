@@ -713,14 +713,14 @@ func toGraphQLName(fieldName string) string {
 }
 
 func toGraphQLType(boilerField *BoilerField) string {
-	lowerFieldName := strings.ToLower(boilerField.Name)
+	// lowerFieldName := strings.ToLower(boilerField.Name)
 	lowerBoilerType := strings.ToLower(boilerField.Type)
 
 	if boilerField.IsEnum {
 		return boilerField.Enum.Name
 	}
 
-	if strings.HasSuffix(lowerFieldName, "id") {
+	if strings.HasSuffix(boilerField.Name, "ID") {
 		return "ID"
 	}
 	if strings.Contains(lowerBoilerType, "string") {
