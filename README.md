@@ -17,20 +17,20 @@ It's really amazing how fast a generated api with these techniques is!
 ## Usage
 
 ### Step 1
-Generate database structs with: [volatiletech/sqlboiler](https://github.com/volatiletech/sqlboiler)    
+Create folder convert/convert.go with the following content:
+See [example of `convert.go`](https://github.com/web-ridge/gqlgen-sqlboiler#convert.go)
+and run `go mod tidy` in `convert/` 
 
-```sh 
-sqlboiler mysql --no-back-referencing
-```
 
 ### Step 2
 Make sure you have [followed the prerequisites](https://github.com/web-ridge/gqlgen-sqlboiler#prerequisites)   
-Generate schema, converts and resolvers  
+
+### Step 3
 ```sh 
-go run convert_plugin.go
+(cd convert && go run convert.go)
 ```
 
-See [example of `convert_plugin.go`](https://github.com/web-ridge/gqlgen-sqlboiler#convert_plugingo)   
+
    
    
 
@@ -126,16 +126,13 @@ mysqldump:
 
 ```yaml
 schema:
-  - schema.graphql
+  - *.graphql
 exec:
-  filename: graphql_models/generated.go
-  package: graphql_models
+  filename: models/fm/generated.go
+  package: fm
 model:
-  filename: graphql_models/genereated_models.go
-  package: graphql_models
-resolver:
-  filename: resolver.go
-  type: Resolver
+  filename: models/fm/generated_models.go
+  package: fm
 models:
   ConnectionBackwardPagination:
     model: github.com/web-ridge/utils-go/boilergql/v3.ConnectionBackwardPagination
@@ -147,79 +144,196 @@ models:
     model: github.com/web-ridge/utils-go/boilergql/v3.SortDirection
 ```
 
-### convert_plugin.go
-Put something like the code below in file convert_plugin.go
+### convert.go
+Put something like the code below in file convert/convert.go
 
 ```go
-// +build ignore
-
 package main
 
 import (
-	"fmt"
-	"os"
-
-	"github.com/99designs/gqlgen/api"
 	"github.com/99designs/gqlgen/codegen/config"
+	"github.com/rs/zerolog/log"
 	gbgen "github.com/web-ridge/gqlgen-sqlboiler/v3"
+	"github.com/web-ridge/gqlgen-sqlboiler/v3/cache"
+	"github.com/web-ridge/gqlgen-sqlboiler/v3/structs"
+	"os"
+	"os/exec"
+	"strings"
 )
 
 func main() {
-	output := gbgen.Config{
+	// change working directory to parent directory where all configs are located
+	newDir, _ := os.Getwd()
+	os.Chdir(strings.TrimSuffix(newDir, "/convert"))
+
+	enableSoftDeletes := true
+	boilerArgs := []string{"mysql", "--no-back-referencing", "--wipe", "-d"}
+	if enableSoftDeletes {
+		boilerArgs = append(boilerArgs, "--add-soft-deletes")
+	}
+	cmd := exec.Command("sqlboiler", boilerArgs...)
+
+	err := cmd.Run()
+	if err != nil {
+		log.Fatal().Err(err).Str("command", cmd.String()).Msg("error generating dm models running sql-boiler")
+	}
+
+	output := structs.Config{
 		Directory:   "helpers", // supports root or sub directories
 		PackageName: "helpers",
 	}
-	backend := gbgen.Config{
-		Directory:   "structs",
-		PackageName: "structs",
+	backend := structs.Config{
+		Directory:   "models/dm",
+		PackageName: "dm",
 	}
-	frontend := gbgen.Config{
-		Directory:   "graphql_models",
-		PackageName: "graphql_models",
-	}
-
-	if err := gbgen.SchemaWrite(gbgen.SchemaConfig{
-		BoilerModelDirectory: backend,
-		// Directives:           []string{"IsAuthenticated"},
-		// GenerateBatchCreate:  false, // Not implemented yet
-		GenerateMutations:    true,
-		GenerateBatchDelete:  true,
-		GenerateBatchUpdate:  true,
-	}, "schema.graphql", gbgen.SchemaGenerateConfig{
-		MergeSchema: false, // uses three way merge to keep your customization
-	}); err != nil {
-		fmt.Println("error while trying to generate schema.graphql")
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(3)
+	frontend := structs.Config{
+		Directory:   "models/fm",
+		PackageName: "fm",
 	}
 
-	cfg, err := config.LoadConfigFromDefaultLocations()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "failed to load config", err.Error())
-		os.Exit(2)
-	}
+	boilerCache := cache.InitializeBoilerCache(backend)
 
-	if err = api.Generate(cfg,
-		api.AddPlugin(gbgen.NewConvertPlugin(
-			output,   // directory where convert.go, convert_input.go and preload.go should live
-			backend,  // directory where sqlboiler files are put
-			frontend, // directory where gqlgen structs live
-			gbgen.ConvertPluginConfig{
-				DatabaseDriver: gbgen.MySQL, // or gbgen.PostgreSQL,
+	generateSchema := true
+	generatedSchema := !generateSchema
+	if generateSchema {
+		if err := gbgen.SchemaWrite(
+			gbgen.SchemaConfig{
+				BoilerCache:         boilerCache,
+				Directives:          []string{"isAuthenticated"},
+				SkipInputFields:     []string{"createdAt", "updatedAt", "deletedAt"},
+				GenerateMutations:   true,
+				GenerateBatchCreate: false,
+				GenerateBatchDelete: false,
+				GenerateBatchUpdate: false,
+				HookShouldAddModel: func(model gbgen.SchemaModel) bool {
+					if model.Name == "Config" {
+						return false
+					}
+					return true
+				},
+				HookChangeFields: func(model *gbgen.SchemaModel, fields []*gbgen.SchemaField, parenType gbgen.ParentType) []*gbgen.SchemaField {
+					//profile: UserPayload! @isAuthenticated
+
+					return fields
+				},
+				HookChangeField: func(model *gbgen.SchemaModel, field *gbgen.SchemaField) {
+					//"userId", "userOrganizationId",
+					if field.Name == "userId" && model.Name != "UserUserOrganization" {
+						field.SkipInput = true
+					}
+					if field.Name == "userOrganizationId" && model.Name != "UserUserOrganization" {
+						field.SkipInput = true
+					}
+				},
 			},
-		)),
-		api.AddPlugin(gbgen.NewResolverPlugin(
+			"../frontend/schema.graphql",
+			gbgen.SchemaGenerateConfig{
+				MergeSchema: false,
+			},
+		); err != nil {
+			log.Fatal().Err(err).Msg("error generating schema")
+		}
+		generatedSchema = true
+	}
+	if generatedSchema {
+
+		cfg, err := config.LoadConfigFromDefaultLocations()
+		if err != nil {
+			log.Fatal().Err(err).Msg("error loading config")
+		}
+
+		data, err := gbgen.NewModelPlugin().GenerateCode(cfg)
+		if err != nil {
+			log.Fatal().Err(err).Msg("error generating graphql models using gqlgen")
+		}
+
+		modelCache := cache.InitializeModelCache(cfg, boilerCache, output, backend, frontend)
+
+		if err := gbgen.NewConvertPlugin(
+			modelCache,
+			gbgen.ConvertPluginConfig{
+				DatabaseDriver: gbgen.MySQL,
+				//Searchable: {
+				//	Company: {
+				//		Column: dm.CompanyColumns.Name
+				//	},
+				//},
+			},
+		).GenerateCode(); err != nil {
+			log.Fatal().Err(err).Msg("error while generating convert/filters")
+		}
+
+		if err := gbgen.NewResolverPlugin(
+			config.ResolverConfig{
+				Filename: "resolvers/all_generated_resolvers.go",
+				Package:  "resolvers",
+				Type:     "resolvers",
+			},
 			output,
-			backend,
-			frontend,
+			boilerCache,
+			modelCache,
 			gbgen.ResolverPluginConfig{
-                   // See example for AuthorizationScopes here: https://github.com/web-ridge/gqlgen-sqlboiler-examples/blob/main/social-network/convert_plugin.go#L66
-                },
-		)),
-	); err != nil {
-		fmt.Println("error while trying generate resolver and converts")
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(3)
+
+				EnableSoftDeletes: enableSoftDeletes,
+				// Authorization scopes can be used to override e.g. userId, organizationId, tenantId
+				// This will be resolved used the provided ScopeResolverName if the result of the AddTrigger=true
+				// You would need this if you don't want to require these fields in your schema but you want to add them
+				// to the db model.
+				// If you do have these fields in your schema but want them authorized you could use a gqlgen directive
+				AuthorizationScopes: []*gbgen.AuthorizationScope{},
+				// 	{
+				// 		ImportPath:        "github.com/my-repo/app/backend/auth",
+				// 		ImportAlias:       "auth",
+				// 		ScopeResolverName: "UserIDFromContext", // function which is called with the context of the resolver
+				// 		BoilerColumnName:  "UserID",
+				// 		AddHook: func(model *gbgen.BoilerModel, resolver *gbgen.Resolver, templateKey string) bool {
+				// 			// fmt.Println(model.Name)
+				// 			// fmt.Println(templateKey)
+				// 			// templateKey contains a unique where the resolver tries to add something
+				// 			// e.g.
+				// 			// most of the time you can ignore this
+
+				// 			// we want the delete call to work for every object we don't want to take in account te user-id here
+				// 			if resolver.IsDelete {
+				// 				return false
+				// 			}
+
+				// 			var addResolver bool
+				// 			for _, field := range model.Fields {
+				// 				if field.Name == "UserID" {
+				// 					addResolver = true
+				// 				}
+				// 			}
+				// 			return addResolver
+				// 		},
+				// 	},
+				// 	{
+				// 		ImportPath:        "github.com/my-repo/app/backend/auth",
+				// 		ImportAlias:       "auth",
+				// 		ScopeResolverName: "UserOrganizationIDFromContext", // function which is called with the context of the resolver
+				// 		BoilerColumnName:  "UserOrganizationID",
+
+				// 		AddHook: func(model *gbgen.BoilerModel, resolver *gbgen.Resolver, templateKey string) bool {
+				// 			// fmt.Println(model.Name)
+				// 			// fmt.Println(templateKey)
+				// 			// templateKey contains a unique where the resolver tries to add something
+				// 			// e.g.
+				// 			// most of the time you can ignore this
+				// 			var addResolver bool
+				// 			for _, field := range model.Fields {
+				// 				if field.Name == "UserOrganizationID" {
+				// 					addResolver = true
+				// 				}
+				// 			}
+				// 			return addResolver
+				// 		},
+				// 	},
+				// },
+			},
+		).GenerateCode(data); err != nil {
+			log.Fatal().Err(err).Msg("error while generating resolvers")
+		}
+
 	}
 }
 ```
