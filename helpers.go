@@ -85,19 +85,3 @@ func getModulePath(projectPath string) (string, error) {
 func gopathImport(dir string) string {
 	return strings.TrimPrefix(pathRegex.FindString(dir), "src/")
 }
-
-func appendIfMissing(slice []string, v string) []string {
-	if sliceContains(slice, v) {
-		return slice
-	}
-	return append(slice, v)
-}
-
-func sliceContains(slice []string, v string) bool {
-	for _, s := range slice {
-		if s == v {
-			return true
-		}
-	}
-	return false
-}

@@ -1,9 +1,8 @@
-// testing really need more improvements!
-// Please add more tests if you use this
+package cache
 
-package gbgen
-
-import "testing"
+import (
+	"testing"
+)
 
 func TestShortType(t *testing.T) {
 	testShortType(t, "gitlab.com/product/app/backend/graphql_models.FlowWhere", "FlowWhere")
@@ -16,7 +15,7 @@ func TestShortType(t *testing.T) {
 }
 
 func testShortType(t *testing.T, input, output string) {
-	result := getShortType(input)
+	result := getShortType(input, []string{})
 	if result != output {
 		t.Errorf("%v should result in %v but did result in %v", input, output, result)
 	}

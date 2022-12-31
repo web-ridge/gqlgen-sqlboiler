@@ -9,7 +9,10 @@ import (
 	"path"
 	"strings"
 
+	"github.com/web-ridge/gqlgen-sqlboiler/v3/structs"
+
 	"github.com/rs/zerolog/log"
+	"github.com/web-ridge/gqlgen-sqlboiler/v3/cache"
 
 	"github.com/iancoleman/strcase"
 )
@@ -20,18 +23,18 @@ const (
 )
 
 type SchemaConfig struct {
-	BoilerModelDirectory Config
-	Directives           []string
-	SkipInputFields      []string
-	GenerateBatchCreate  bool
-	GenerateMutations    bool
-	GenerateBatchDelete  bool
-	GenerateBatchUpdate  bool
-	HookShouldAddModel   func(model SchemaModel) bool
-	HookShouldAddField   func(model SchemaModel, field SchemaField) bool
-	HookChangeField      func(model *SchemaModel, field *SchemaField)
-	HookChangeFields     func(model *SchemaModel, fields []*SchemaField, parenType ParentType) []*SchemaField
-	HookChangeModel      func(model *SchemaModel)
+	BoilerCache         *cache.BoilerCache
+	Directives          []string
+	SkipInputFields     []string
+	GenerateBatchCreate bool
+	GenerateMutations   bool
+	GenerateBatchDelete bool
+	GenerateBatchUpdate bool
+	HookShouldAddModel  func(model SchemaModel) bool
+	HookShouldAddField  func(model SchemaModel, field SchemaField) bool
+	HookChangeField     func(model *SchemaModel, field *SchemaField)
+	HookChangeFields    func(model *SchemaModel, fields []*SchemaField, parenType ParentType) []*SchemaField
+	HookChangeModel     func(model *SchemaModel)
 }
 
 type SchemaGenerateConfig struct {
@@ -52,7 +55,7 @@ type SchemaField struct {
 	InputUpdateType      string
 	InputBatchUpdateType string
 	InputBatchCreateType string
-	BoilerField          *BoilerField
+	BoilerField          *structs.BoilerField
 	SkipInput            bool
 	SkipWhere            bool
 	SkipCreate           bool
@@ -63,7 +66,7 @@ type SchemaField struct {
 	Directives           []string
 }
 
-func NewSchemaField(name string, typ string, boilerField *BoilerField) *SchemaField {
+func NewSchemaField(name string, typ string, boilerField *structs.BoilerField) *SchemaField {
 	return &SchemaField{
 		Name:                 name,
 		Type:                 typ,
@@ -106,9 +109,7 @@ const (
 
 func SchemaWrite(config SchemaConfig, outputFile string, generateOptions SchemaGenerateConfig) error {
 	// Generate schema based on config
-	schema := SchemaGet(
-		config,
-	)
+	schema := SchemaGet(config)
 
 	// TODO: Write schema to the configured location
 	if fileExists(outputFile) && generateOptions.MergeSchema {
@@ -122,7 +123,11 @@ func SchemaWrite(config SchemaConfig, outputFile string, generateOptions SchemaG
 			log.Err(err).Msg("Could not write schema to disk")
 			return err
 		}
-		return formatFile(outputFile)
+		log.Debug().Msg("formatting GraphQL schema")
+
+		err := formatFile(outputFile)
+		log.Debug().Msg("formatted GraphQL schema")
+		return err
 	}
 
 	return nil
@@ -142,9 +147,9 @@ func SchemaGet(
 ) string {
 	w := &SimpleWriter{}
 
-	// Parse models and their fields based on the sqlboiler model directory
-	boilerModels, boilerEnums := GetBoilerModels(config.BoilerModelDirectory.Directory)
-	models := executeHooksOnModels(boilerModelsToModels(boilerModels), config)
+	// Parse structs and their fields based on the sqlboiler model directory
+
+	models := executeHooksOnModels(boilerModelsToModels(config.BoilerCache.BoilerModels), config)
 
 	fullDirectives := make([]string, len(config.Directives))
 	for i, defaultDirective := range config.Directives {
@@ -182,7 +187,7 @@ func SchemaGet(
 	// Add helpers for filtering lists
 	w.l(queryHelperStructs)
 
-	for _, enum := range boilerEnums {
+	for _, enum := range config.BoilerCache.BoilerEnums {
 
 		//	enum UserRoleFilter { ADMIN, USER }
 		w.l(fmt.Sprintf(enumFilterHelper, enum.Name))
@@ -329,11 +334,11 @@ func SchemaGet(
 	w.tl("node(id: ID!): Node" + joinedDirectives)
 
 	for _, model := range models {
-		// single models
+		// single structs
 		w.tl(strcase.ToLowerCamel(model.Name) + "(id: ID!): " + model.Name + "!" + joinedDirectives)
 
 		// lists
-		modelPluralName := Plural(model.Name)
+		modelPluralName := cache.Plural(model.Name)
 
 		arguments := []string{
 			"first: Int!",
@@ -358,7 +363,7 @@ func SchemaGet(
 
 			filteredFields := fieldsWithout(model.Fields, config.SkipInputFields)
 
-			modelPluralName := Plural(model.Name)
+			modelPluralName := cache.Plural(model.Name)
 			// input UserCreateInput {
 			// 	firstName: String!
 			// 	lastName: String
@@ -494,7 +499,7 @@ func SchemaGet(
 			if model.IsView {
 				continue
 			}
-			modelPluralName := Plural(model.Name)
+			modelPluralName := cache.Plural(model.Name)
 
 			// create single
 			// e.g createUser(input: UserInput!): UserPayload!
@@ -579,7 +584,7 @@ func getFullType(fieldType string, isArray bool, isRequired bool) string {
 	return gType
 }
 
-func boilerModelsToModels(boilerModels []*BoilerModel) []*SchemaModel {
+func boilerModelsToModels(boilerModels []*structs.BoilerModel) []*SchemaModel {
 	a := make([]*SchemaModel, len(boilerModels))
 	for i, boilerModel := range boilerModels {
 		a[i] = &SchemaModel{
@@ -591,7 +596,7 @@ func boilerModelsToModels(boilerModels []*BoilerModel) []*SchemaModel {
 	return a
 }
 
-// executeHooksOnModels removes models and fields which the user hooked in into + it can change values
+// executeHooksOnModels removes structs and fields which the user hooked in into + it can change values
 func executeHooksOnModels(models []*SchemaModel, config SchemaConfig) []*SchemaModel {
 	var a []*SchemaModel
 	for _, m := range models {
@@ -619,7 +624,7 @@ func executeHooksOnModels(models []*SchemaModel, config SchemaConfig) []*SchemaM
 	return a
 }
 
-func boilerFieldsToFields(boilerFields []*BoilerField) []*SchemaField {
+func boilerFieldsToFields(boilerFields []*structs.BoilerField) []*SchemaField {
 	fields := make([]*SchemaField, len(boilerFields))
 	for i, boilerField := range boilerFields {
 		fields[i] = boilerFieldToField(boilerField)
@@ -687,7 +692,7 @@ func getFieldType(schemaField *SchemaField, parentType ParentType) string {
 	}
 }
 
-func boilerFieldToField(boilerField *BoilerField) *SchemaField {
+func boilerFieldToField(boilerField *structs.BoilerField) *SchemaField {
 	t := toGraphQLType(boilerField)
 	return NewSchemaField(toGraphQLName(boilerField.Name), t, boilerField)
 }
@@ -712,7 +717,7 @@ func toGraphQLName(fieldName string) string {
 	return strcase.ToLowerCamel(graphqlName)
 }
 
-func toGraphQLType(boilerField *BoilerField) string {
+func toGraphQLType(boilerField *structs.BoilerField) string {
 	lowerFieldName := strings.ToLower(boilerField.Name)
 	lowerBoilerType := strings.ToLower(boilerField.Type)
 
@@ -753,7 +758,7 @@ func toGraphQLType(boilerField *BoilerField) string {
 func fieldsWithout(fields []*SchemaField, skipFieldNames []string) []*SchemaField {
 	var filteredFields []*SchemaField
 	for _, field := range fields {
-		if !sliceContains(skipFieldNames, field.Name) {
+		if !cache.SliceContains(skipFieldNames, field.Name) {
 			filteredFields = append(filteredFields, field)
 		}
 	}

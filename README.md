@@ -170,8 +170,8 @@ func main() {
 		PackageName: "helpers",
 	}
 	backend := gbgen.Config{
-		Directory:   "models",
-		PackageName: "models",
+		Directory:   "structs",
+		PackageName: "structs",
 	}
 	frontend := gbgen.Config{
 		Directory:   "graphql_models",
@@ -203,7 +203,7 @@ func main() {
 		api.AddPlugin(gbgen.NewConvertPlugin(
 			output,   // directory where convert.go, convert_input.go and preload.go should live
 			backend,  // directory where sqlboiler files are put
-			frontend, // directory where gqlgen models live
+			frontend, // directory where gqlgen structs live
 			gbgen.ConvertPluginConfig{
 				DatabaseDriver: gbgen.MySQL, // or gbgen.PostgreSQL,
 			},
