@@ -19,13 +19,14 @@ It's really amazing how fast a generated api with these techniques is!
 ### Step 1
 Create folder convert/convert.go with the following content:
 See [example of `convert.go`](https://github.com/web-ridge/gqlgen-sqlboiler#convert.go)
-and run `go mod tidy` in `convert/` 
-
 
 ### Step 2
-Make sure you have [followed the prerequisites](https://github.com/web-ridge/gqlgen-sqlboiler#prerequisites)   
+run `go mod tidy` in `convert/` 
 
 ### Step 3
+Make sure you have [followed the prerequisites](https://github.com/web-ridge/gqlgen-sqlboiler#prerequisites)   
+
+### Step 4
 ```sh 
 (cd convert && go run convert.go)
 ```
@@ -142,6 +143,29 @@ models:
     model: github.com/web-ridge/utils-go/boilergql/v3.ConnectionPagination
   SortDirection:
     model: github.com/web-ridge/utils-go/boilergql/v3.SortDirection
+```
+
+### resolver/resolver.go
+```go
+
+package resolvers
+
+import (
+	"database/sql"
+)
+
+type Resolver struct {
+	db        *sql.DB
+	// you can add more here
+}
+
+func NewResolver(db *sql.DB) *Resolver {
+	return &Resolver{
+		db:        db,
+        // you can add more here
+	}
+}
+
 ```
 
 ### convert.go
@@ -267,7 +291,7 @@ func main() {
 			config.ResolverConfig{
 				Filename: "resolvers/all_generated_resolvers.go",
 				Package:  "resolvers",
-				Type:     "resolvers",
+				Type:     "Resolver",
 			},
 			output,
 			boilerCache,

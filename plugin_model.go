@@ -27,7 +27,6 @@ func (m *ModelPlugin) GenerateCode(cfg *config.Config) (*codegen.Data, error) {
 	if err := cfg.LoadSchema(); err != nil {
 		return nil, fmt.Errorf("failed to load schema: %w", err)
 	}
-
 	if err := cfg.Init(); err != nil {
 		return nil, fmt.Errorf("generating core failed: %w", err)
 	}

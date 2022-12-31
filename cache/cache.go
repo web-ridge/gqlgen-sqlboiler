@@ -751,7 +751,7 @@ func getConvertConfig(enums []*structs.Enum, model *structs.Model, field *struct
 			cc.ToGraphQL = strings.Replace(cc.ToGraphQL, "VALUE", "m."+field.BoilerField.Name, -1)
 			cc.ToBoiler = strings.Replace(cc.ToBoiler, "VALUE", "m."+field.Name, -1)
 		} else {
-			// Make these go-friendly for the helper/convert_plugin.go package
+			// Make these go-friendly for the helper/plugin_convert.go package
 			cc.ToBoiler = getToBoiler(getBoilerTypeAsText(boilType), getGraphTypeAsText(graphType))
 			cc.ToGraphQL = getToGraphQL(getBoilerTypeAsText(boilType), getGraphTypeAsText(graphType))
 		}

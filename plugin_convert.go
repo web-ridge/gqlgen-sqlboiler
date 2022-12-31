@@ -114,7 +114,6 @@ func (m *ConvertPlugin) GenerateCode() error {
 		Scalars:      m.ModelCache.Scalars,
 	}
 
-	// cfg := copyConfig(*originalCfg)
 	if err := os.MkdirAll(m.ModelCache.Output.Directory, os.ModePerm); err != nil {
 		log.Error().Err(err).Str("directory", m.ModelCache.Output.Directory).Msg("could not create directories")
 	}
@@ -127,14 +126,6 @@ func (m *ConvertPlugin) GenerateCode() error {
 		log.Warn().Msg("no structs found in graphql so skipping generation")
 		return nil
 	}
-
-	// for _, model := range structs {
-	// 	fmt.Println(model.Name, "->", model.BoilerModel.Name)
-	// 	for _, field := range model.Fields {
-	// 		fmt.Println("    ", field.Name, field.Type)
-	// 		fmt.Println("    ", field.BoilerField.Name, field.BoilerField.Type)
-	// 	}
-	// }
 
 	filesToGenerate := []string{
 		"generated_convert.go",
