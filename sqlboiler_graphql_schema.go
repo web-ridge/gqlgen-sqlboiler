@@ -23,18 +23,19 @@ const (
 )
 
 type SchemaConfig struct {
-	BoilerCache         *cache.BoilerCache
-	Directives          []string
-	SkipInputFields     []string
-	GenerateBatchCreate bool
-	GenerateMutations   bool
-	GenerateBatchDelete bool
-	GenerateBatchUpdate bool
-	HookShouldAddModel  func(model SchemaModel) bool
-	HookShouldAddField  func(model SchemaModel, field SchemaField) bool
-	HookChangeField     func(model *SchemaModel, field *SchemaField)
-	HookChangeFields    func(model *SchemaModel, fields []*SchemaField, parenType ParentType) []*SchemaField
-	HookChangeModel     func(model *SchemaModel)
+	BoilerCache           *cache.BoilerCache
+	Directives            []string
+	SkipInputFields       []string
+	GenerateBatchCreate   bool
+	GenerateMutations     bool
+	generateSubscriptions bool
+	GenerateBatchDelete   bool
+	GenerateBatchUpdate   bool
+	HookShouldAddModel    func(model SchemaModel) bool
+	HookShouldAddField    func(model SchemaModel, field SchemaField) bool
+	HookChangeField       func(model *SchemaModel, field *SchemaField)
+	HookChangeFields      func(model *SchemaModel, fields []*SchemaField, parenType ParentType) []*SchemaField
+	HookChangeModel       func(model *SchemaModel)
 }
 
 type SchemaGenerateConfig struct {
@@ -161,6 +162,7 @@ func SchemaGet(
 	joinedDirectives := strings.Join(fullDirectives, " ")
 
 	w.l(`schema {`)
+
 	w.tl(`query: Query`)
 	if config.GenerateMutations {
 		w.tl(`mutation: Mutation`)
@@ -328,6 +330,10 @@ func SchemaGet(
 		w.l("}")
 
 		w.br()
+	}
+
+	if config.generateSubscriptions {
+		w.l("type Subscription {}")
 	}
 
 	w.l("type Query {")

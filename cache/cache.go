@@ -459,6 +459,8 @@ func getExtrasFromSchema(schema *ast.Schema, boilerEnums []*structs.BoilerEnum, 
 }
 
 func getModelsFromSchema(schema *ast.Schema, boilerModels []*structs.BoilerModel) (models []*structs.Model) { //nolint:gocognit,gocyclo
+
+	fmt.Println("schema.Subscription", schema.Subscription)
 	for _, schemaType := range schema.Types {
 		// skip boiler plate from ggqlgen, we only want the structs
 		if strings.HasPrefix(schemaType.Name, "_") {
@@ -473,11 +475,14 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*structs.BoilerModel
 		switch schemaType.Kind {
 		case ast.Object, ast.InputObject:
 			{
+
 				if schemaType == schema.Query ||
 					schemaType == schema.Mutation ||
 					schemaType == schema.Subscription {
+
 					continue
 				}
+
 				modelName := schemaType.Name
 
 				// fmt.Println("GRAPHQL MODEL ::::", m.Name)
