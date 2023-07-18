@@ -48,7 +48,7 @@ const in = " IN ?"
 const notIn = " NOT IN ?"
 
 func isNullOr(column string, v string) qm.QueryMod {
-	return qm.Where("("+column+" IS NULL OR "+column+" != "+v+")")
+	return qm.Where("("+column+" IS NULL OR "+column+" = "+v+")")
 }
 
 func isNotNullOr(column string, v string) qm.QueryMod {
