@@ -392,7 +392,3 @@ If you re-generate the original convert will get changed to originalUserCreateIn
 ## Help us
 
 We're the most happy with your time investments and/or pull request to improve this plugin. Feedback is also highly appreciated.
-
-If you don't have time or knowledge to contribute and we did save you a lot of time, please consider a donation so we can invest more time in this library. 
-   
-[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7B9KKQLXTEW9Q&source=url)
