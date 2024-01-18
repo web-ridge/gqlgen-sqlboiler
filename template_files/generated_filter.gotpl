@@ -425,6 +425,10 @@ func TimeUnixFilterToMods(m *{{ $.Frontend.PackageName }}.TimeUnixFilter, c stri
 					if m.And != nil {
 						queryMods = append(queryMods, qm.Expr({{ $field.TypeWithoutPointer|go }}ToMods(m.And, true, "", "")...))
 					}
+				{{-  else if $field.IsWithDeleted  }}
+				if m.WithDeleted != nil && *m.WithDeleted == true {
+					queryMods = append(queryMods, qm.WithDeleted())
+				}
 				{{- else }}
 					{{- if  $field.IsPrimaryID }}
 					if withPrimaryID {

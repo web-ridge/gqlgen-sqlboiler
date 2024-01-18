@@ -165,10 +165,10 @@ func GetBoilerModels(dir string) ([]*structs.BoilerModel, []*structs.BoilerEnum)
 			}
 
 			if field.IsRelation && field.Relationship == nil {
-				log.Debug().Str("model", model.Name).Str("field", field.Name).Msg(
-					"We could not find the relationship in the generated " +
-						"boiler structs this could result in unexpected behavior, we marked this field as " +
-						"non-relational \n")
+				// log.Debug().Str("model", model.Name).Str("field", field.Name).Msg(
+				//	"We could not find the relationship in the generated " +
+				//		"boiler structs this could result in unexpected behavior, we marked this field as " +
+				//		"non-relational \n")
 				field.IsRelation = false
 			}
 

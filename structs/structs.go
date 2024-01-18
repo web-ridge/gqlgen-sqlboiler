@@ -80,9 +80,10 @@ type Field struct { //nolint:maligned
 	// boiler relation stuff is inside this field
 	BoilerField BoilerField
 	// graphql relation ship can be found here
-	Relationship *Model
-	IsOr         bool
-	IsAnd        bool
+	Relationship  *Model
+	IsOr          bool
+	IsAnd         bool
+	IsWithDeleted bool
 
 	// Some stuff
 	Description  string

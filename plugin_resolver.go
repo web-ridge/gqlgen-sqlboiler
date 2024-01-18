@@ -107,8 +107,8 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*struct
 			if resolver.Model.BoilerModel != nil && resolver.Model.BoilerModel.Name != "" {
 				file.Resolvers = append(file.Resolvers, resolver)
 			} else if resolver.Field.GoFieldName != "Node" {
-				log.Debug().Str("resolver", resolver.Object.Name).Str("field", resolver.Field.GoFieldName).Msg(
-					"skipping resolver since no model found")
+				// log.Debug().Str("resolver", resolver.Object.Name).Str("field", resolver.Field.GoFieldName).Msg(
+				//	"skipping resolver since no model found")
 			}
 		}
 	}

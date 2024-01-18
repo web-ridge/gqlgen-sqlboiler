@@ -23,13 +23,6 @@ import (
 var pathRegex *regexp.Regexp //nolint:gochecknoglobals
 
 func init() { //nolint:gochecknoinits
-	fmt.Println("               _     _____  _     _            \n              | |   |  __ \\(_)   | |           \n __      _____| |__ | |__) |_  __| | __ _  ___ \n \\ \\ /\\ / / _ \\ '_ \\|  _  /| |/ _` |/ _` |/ _ \\\n  \\ V  V /  __/ |_) | | \\ \\| | (_| | (_| |  __/\n   \\_/\\_/ \\___|_.__/|_|  \\_\\_|\\__,_|\\__, |\\___|\n                                     __/ |     \n                                    |___/   ") //nolint:lll
-	fmt.Println("")
-	fmt.Println("  Please help us with feedback, stars and PR's to improve this plugin.")
-	fmt.Println("  If you don't have time for that, please donate if you like this project.")
-	fmt.Println("  Click the sponsor button (PayPal) on https://github.com/web-ridge/gqlgen-sqlboiler")
-	fmt.Println("")
-
 	pathRegex = regexp.MustCompile(`src/(.*)`)
 
 	// Default level for this example is info, unless debug flag is present
@@ -151,7 +144,7 @@ func (m *ConvertPlugin) GenerateCode() error {
 
 func (m *ConvertPlugin) generateFile(data *ConvertTemplateData, fileName string, userDefinedFunctions []string) {
 	templateName := fileName + "tpl"
-	log.Debug().Msg("[convert] render " + templateName)
+	// log.Debug().Msg("[convert] render " + templateName)
 
 	templateContent, err := getTemplateContent(templateName)
 	if err != nil {
@@ -168,7 +161,7 @@ func (m *ConvertPlugin) generateFile(data *ConvertTemplateData, fileName string,
 		}); renderError != nil {
 		log.Err(renderError).Msg("error while rendering " + templateName)
 	}
-	log.Debug().Msg("[convert] rendered " + templateName)
+	log.Debug().Msg("[convert] generated " + templateName)
 }
 
 func getTemplateContent(filename string) (string, error) {

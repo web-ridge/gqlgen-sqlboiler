@@ -323,6 +323,7 @@ func SchemaGet(
 				w.tl(field.Name + ": " + getFilterType(field) + "Filter" + directives)
 			}
 		}
+		w.tl("withDeleted: Boolean")
 		w.tl("or: " + model.Name + "Where")
 		w.tl("and: " + model.Name + "Where")
 		w.l("}")

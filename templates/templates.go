@@ -78,6 +78,10 @@ func WriteTemplateFile(fileName string, cfg Options) error {
 	}
 
 	if contentError != nil || writeError != nil || importsError != nil {
+		// write fallback to file with content that could not be formatted
+		if err := os.WriteFile(fileName, []byte(content), 0o644); err != nil {
+			return fmt.Errorf("errors while writing template to %v  %v", fileName, err)
+		}
 		return fmt.Errorf(
 			"errors while writing template to %v writeError: %v, contentError: %v, importError: %v",
 			fileName, writeError, contentError, importsError)
