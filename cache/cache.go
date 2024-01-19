@@ -654,7 +654,7 @@ func safeTrim(v string, trimSuffix string) string {
 }
 
 func foreignKeyToRel(v string) string {
-	return strings.TrimSuffix(strcase.ToCamel(v), "ID")
+	return strings.TrimSuffix(strings.TrimSuffix(strcase.ToCamel(v), "Id"), "ID")
 }
 
 func isStruct(t types.Type) bool {
