@@ -45,6 +45,7 @@ func init() { // nolint:gochecknoinits
 	strcase.ConfigureAcronym("KVK", "kvk")
 	strcase.ConfigureAcronym("URL", "url")
 	strcase.ConfigureAcronym("FTP", "ftp")
+	strcase.ConfigureAcronym("FCM", "fcm")
 }
 
 func WriteTemplateFile(fileName string, cfg Options) error {
