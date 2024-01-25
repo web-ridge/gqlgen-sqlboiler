@@ -525,7 +525,7 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*structs.BoilerModel
 							// silent continue
 							continue
 						}
-						// log.Warn().Str("model", modelName).Msg("skipped because no database model found")
+						log.Debug().Str("model", modelName).Msg("skipped because no database model found")
 						continue
 					}
 				}
@@ -541,6 +541,7 @@ func getModelsFromSchema(schema *ast.Schema, boilerModels []*structs.BoilerModel
 				}
 				m := &structs.Model{
 					Name:                  modelName,
+					JSONName:              strcase.ToCamel(modelName),
 					Description:           schemaType.Description,
 					PluralName:            Plural(modelName),
 					BoilerModel:           boilerModel,
@@ -654,7 +655,7 @@ func safeTrim(v string, trimSuffix string) string {
 }
 
 func foreignKeyToRel(v string) string {
-	return strings.TrimSuffix(strings.TrimSuffix(strcase.ToCamel(v), "Id"), "ID")
+	return strings.TrimSuffix(v, "ID")
 }
 
 func isStruct(t types.Type) bool {
@@ -814,7 +815,7 @@ func getGraphTypeAsText(graphType string) string {
 
 func FindBoilerModel(models []*structs.BoilerModel, modelName string) *structs.BoilerModel {
 	for _, m := range models {
-		if m.Name == modelName {
+		if strings.ToLower(m.Name) == strings.ToLower(modelName) {
 			return m
 		}
 	}

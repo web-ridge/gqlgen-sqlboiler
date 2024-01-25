@@ -207,7 +207,6 @@ func SchemaGet(
 	w.br()
 
 	for _, model := range models {
-
 		//	enum UserSort { FIRST_NAME, LAST_NAME }
 		w.l("enum " + model.Name + "Sort {")
 		for _, v := range fieldAsEnumStrings(model.Fields) {

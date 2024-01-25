@@ -26,6 +26,7 @@ type Preload struct {
 
 type Model struct { //nolint:maligned
 	Name               string
+	JSONName           string
 	PluralName         string
 	BoilerModel        *BoilerModel
 	HasBoilerModel     bool

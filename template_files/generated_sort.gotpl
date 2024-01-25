@@ -43,7 +43,7 @@ import (
 			{{- if eq $field.Name "Sort" -}}
 				var {{ $field.Enum.Name }}Column = map[{{ $.Frontend.PackageName }}.{{$field.Enum.Name}}]string{
 					{{- range $value := $field.Enum.Values}}
-						{{ $.Frontend.PackageName }}.{{ $field.Enum.Name|go }}{{ .Name|go }}: {{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{ $value.BoilerEnumValue.Name|go }},
+						{{ $.Frontend.PackageName }}.{{ $field.Enum.Name|go }}{{ .Name|go }}: {{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}Columns.{{ $value.Name|go }},
 					{{- end }}
 				}
 

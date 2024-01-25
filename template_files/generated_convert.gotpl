@@ -229,8 +229,8 @@ import (
 			{{- if $field.IsRelation }}
 
 				{{- if $field.IsPlural }}
-					if m.R != nil && m.R.{{ $field.Name }} != nil  {
-						r.{{ $field.Name }} = {{ $field.BoilerField.Relationship.PluralName }}ToGraphQL(m.R.{{ $field.Name }})
+					if m.R != nil && m.R.{{ $field.BoilerField.Name }} != nil  {
+						r.{{ $field.Name }} = {{ $field.BoilerField.Relationship.PluralName }}ToGraphQL(m.R.{{ $field.BoilerField.Name }})
 					} 
 				{{- else }}
 					{{- if $field.BoilerField.IsForeignKey }}
@@ -242,8 +242,8 @@ import (
 							}
 						}
 					{{- else }}
-						if m.R != nil && m.R.{{ $field.Name }} != nil  {
-							r.{{ $field.Name }} = {{ $field.BoilerField.Relationship.Name }}ToGraphQL(m.R.{{ $field.Name }})
+						if m.R != nil && m.R.{{ $field.BoilerField.Name }} != nil  {
+							r.{{ $field.Name }} = {{ $field.BoilerField.Relationship.Name }}ToGraphQL(m.R.{{ $field.BoilerField.Name }})
 						}
 					{{- end -}}
 				{{- end -}}

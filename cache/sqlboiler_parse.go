@@ -53,18 +53,25 @@ func GetBoilerModels(dir string) ([]*structs.BoilerModel, []*structs.BoilerEnum)
 		splitted := strings.Split(boiler.Name, ".")
 		// result in e.g. User
 		modelName := splitted[0]
+
 		// result in e.g. ID
 		boilerFieldName := splitted[1]
+		somethingFcm := strings.Contains(strings.ToLower(modelName), "fcm")
 
 		// handle names with lowercase e.g. userR, userL or other sqlboiler extra's
 		if IsFirstCharacterLowerCase(modelName) {
 			// It's the relations of the model
 			// let's add them so we can use them later
 			if strings.HasSuffix(modelName, "R") {
-				modelName = strcase.ToCamel(strings.TrimSuffix(modelName, "R"))
-
+				modelNameBefore := strings.TrimSuffix(modelName, "R")
+				modelName = strings.ToUpper(string(modelNameBefore[0])) + modelNameBefore[1:]
 				isArray := strings.HasSuffix(boiler.Type, "Slice")
 				boilerType := strings.TrimSuffix(boiler.Type, "Slice")
+
+				if somethingFcm {
+					fmt.Println("boilerType", boilerType)
+					fmt.Println("boilerFieldName", boilerFieldName)
+				}
 
 				relationField := &structs.BoilerField{
 					Name:             boilerFieldName,
@@ -165,10 +172,10 @@ func GetBoilerModels(dir string) ([]*structs.BoilerModel, []*structs.BoilerEnum)
 			}
 
 			if field.IsRelation && field.Relationship == nil {
-				// log.Debug().Str("model", model.Name).Str("field", field.Name).Msg(
-				//	"We could not find the relationship in the generated " +
-				//		"boiler structs this could result in unexpected behavior, we marked this field as " +
-				//		"non-relational \n")
+				log.Debug().Str("model", model.Name).Str("field", field.Name).Msg(
+					"We could not find the relationship in the generated " +
+						"boiler structs this could result in unexpected behavior, we marked this field as " +
+						"non-relational \n")
 				field.IsRelation = false
 			}
 

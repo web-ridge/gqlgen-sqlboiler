@@ -136,7 +136,7 @@ const inputKey = "input"
 			}
 
 			// resolve requested fields after creating
-			mods := Get{{ .Model.Name }}PreloadModsWithLevel(ctx, {{ .Model.Name }}PayloadPreloadLevels.{{ .Model.Name }})
+			mods := Get{{ .Model.Name }}PreloadModsWithLevel(ctx, {{ .Model.Name }}PayloadPreloadLevels.{{ .Model.JSONName }})
 			mods = append(mods, dm.{{ .Model.Name }}Where.ID.EQ(m.ID))
 			pM, err := dm.{{ .Model.PluralName }}(mods...).One(ctx, r.db)
 			if err != nil {
@@ -144,7 +144,7 @@ const inputKey = "input"
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
 			return &fm.{{ .Model.Name }}Payload{
-				{{ .Model.Name }}: {{ .Model.Name }}ToGraphQL(pM),
+				{{ .Model.JSONName }}: {{ .Model.Name }}ToGraphQL(pM),
 			}, nil
 
 		{{- end -}}
@@ -194,7 +194,7 @@ const inputKey = "input"
 			}
 
 			// resolve requested fields after updating
-			mods := Get{{ .Model.Name }}PreloadModsWithLevel(ctx, {{ .Model.Name }}PayloadPreloadLevels.{{ .Model.Name }})
+			mods := Get{{ .Model.Name }}PreloadModsWithLevel(ctx, {{ .Model.Name }}PayloadPreloadLevels.{{ .Model.JSONName }})
 			mods = append(mods, dm.{{ .Model.Name }}Where.ID.EQ(dbID))
 			{{ range $scope := $.AuthorizationScopes -}}
 				{{- if (call $scope.AddHook $resolver.Model.BoilerModel $resolver "updateAfterWhere")   }}
@@ -208,7 +208,7 @@ const inputKey = "input"
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
 			return &fm.{{ .Model.Name }}Payload{
-				{{ .Model.Name }}: {{ .Model.Name }}ToGraphQL(pM),
+				{{ .Model.JSONName }}: {{ .Model.Name }}ToGraphQL(pM),
 			}, nil
 
 		{{- end -}}
@@ -308,7 +308,7 @@ func (r *queryResolver) Node(ctx context.Context, globalGraphID string) (fm.Node
 		{{ range $model := .Models -}}
 		{{ if .IsNormal  -}}
 		case "{{$model.Name}}":
-			return r.{{$model.Name}}(ctx, globalGraphID)
+			return r.{{$model.JSONName}}(ctx, globalGraphID)
 		{{ end -}}
 		{{ end -}}
 
