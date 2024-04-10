@@ -91,7 +91,7 @@ import (
 			for _, cursorValue := range boilergql.CursorStringToValues(cursor) {
 				column, value := {{ .BoilerModel.Name }}SortValueFromCursorValue(cursorValue)
 				if column != "" && value != nil {
-					columns = append(columns, column)
+					columns = append(columns, "{{ .BoilerModel.TableName }}."+column)
 					values = append(values, value)
 				}
 			}
