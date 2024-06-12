@@ -6,7 +6,7 @@ require (
 	github.com/99designs/gqlgen v0.17.43
 	github.com/iancoleman/strcase v0.3.0
 	github.com/rs/zerolog v1.31.0
-	github.com/vektah/gqlparser/v2 v2.5.11
+	github.com/vektah/gqlparser/v2 v2.5.14
 	github.com/volatiletech/strmangle v0.0.6
 	golang.org/x/mod v0.14.0
 	golang.org/x/tools v0.17.0
