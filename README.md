@@ -9,7 +9,7 @@ Tight coupling between your database and graphql scheme is required otherwise ge
 ## Why gqlgen and sqlboiler
 
 They go back to a schema first approach which we like. The generated code with these tools are the most efficient and fast in the Golang system (and probably outside of it too).
-* [sqlboiler](https://github.com/volatiletech/sqlboiler#benchmarks)
+* [sqlboiler](https://github.com/aarondl/sqlboiler#benchmarks)
 * [gqlgen](https://github.com/appleboy/golang-graphql-benchmark#summary)
 
 It's really amazing how fast a generated api with these techniques is!

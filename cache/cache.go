@@ -9,8 +9,8 @@ import (
 
 	"github.com/web-ridge/gqlgen-sqlboiler/v3/structs"
 
+	"github.com/aarondl/strmangle"
 	"github.com/iancoleman/strcase"
-	"github.com/volatiletech/strmangle"
 
 	"github.com/99designs/gqlgen/codegen/config"
 	gqlgenTemplates "github.com/99designs/gqlgen/codegen/templates"

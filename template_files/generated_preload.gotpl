@@ -19,12 +19,12 @@ import (
 	"github.com/99designs/gqlgen/graphql/introspection"
 
 	"github.com/ericlagergren/decimal"
-	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/queries"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
-	"github.com/volatiletech/sqlboiler/v4/queries/qmhelper"
-	"github.com/volatiletech/sqlboiler/v4/types"
-	"github.com/volatiletech/null/v8"
+	"github.com/aarondl/sqlboiler/v4/boil"
+	"github.com/aarondl/sqlboiler/v4/queries"
+	"github.com/aarondl/sqlboiler/v4/queries/qm"
+	"github.com/aarondl/sqlboiler/v4/queries/qmhelper"
+	"github.com/aarondl/sqlboiler/v4/types"
+	"github.com/aarondl/null/v8"
 
 	"database/sql"
 	{{ range $import := .Imports }}
