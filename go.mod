@@ -1,8 +1,8 @@
 module github.com/web-ridge/gqlgen-sqlboiler/v3
 
-go 1.23.0
+go 1.24.4
 
-toolchain go1.23.5
+toolchain go1.24.4
 
 require (
 	github.com/99designs/gqlgen v0.17.75
