@@ -2,8 +2,6 @@ module github.com/web-ridge/gqlgen-sqlboiler/v3
 
 go 1.24.4
 
-toolchain go1.24.4
-
 require (
 	github.com/99designs/gqlgen v0.17.75
 	github.com/aarondl/strmangle v0.0.9
