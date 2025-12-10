@@ -77,7 +77,7 @@ const inputKey = "input"
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
-			return {{ .Model.Name }}ToGraphQL(m), nil
+			return {{ .Model.Name }}ToGraphQL(ctx, r.db, m), nil
 
 		{{- end -}}
 
@@ -104,12 +104,12 @@ const inputKey = "input"
 
 		{{- if .IsCreate }}
 
-			m := {{ .InputModel.Name }}ToBoiler(&input)
+			m := {{ .InputModel.Name }}ToBoiler(ctx, r.db, &input)
 			{{ $model := .Model -}}
 			{{ range $field := .InputModel.Fields -}}
 				{{ if and $field.IsObject $field.BoilerField.IsRelation -}}
 					if input.{{ $field.Name }} != nil {
-						{{ $field.JSONName }} := {{ $field.BoilerField.Relationship.Name }}CreateInputToBoiler(input.{{ $field.Name }})
+						{{ $field.JSONName }} := {{ $field.BoilerField.Relationship.Name }}CreateInputToBoiler(ctx, r.db, input.{{ $field.Name }})
 						{{ range $scope := $.AuthorizationScopes -}}
 							{{- if (call $scope.AddHook $field.BoilerField.Relationship $resolver "createRelationInput")   }}
 								{{ $field.JSONName }}.{{ $scope.BoilerColumnName }} = {{ $scope.ImportAlias }}.{{ $scope.ScopeResolverName }}(ctx)
@@ -147,13 +147,13 @@ const inputKey = "input"
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
 			return &fm.{{ .Model.Name }}Payload{
-				{{ .Model.JSONName }}: {{ .Model.Name }}ToGraphQL(pM),
+				{{ .Model.JSONName }}: {{ .Model.Name }}ToGraphQL(ctx, r.db, pM),
 			}, nil
 
 		{{- end -}}
 
 		{{- if .IsUpdate }}
-			m := {{ .InputModel.Name }}ToModelM(boilergql.GetInputFromContext(ctx, inputKey), input)
+			m := {{ .InputModel.Name }}ToModelM(ctx, r.db, boilergql.GetInputFromContext(ctx, inputKey), input)
 
 			{{ $resolver := . -}}
 			{{ $model := .Model -}}
@@ -162,6 +162,8 @@ const inputKey = "input"
 					if input.{{ $field.Name }} != nil && input.{{ $field.Name }}ID != nil {
 						dbID := {{ $field.BoilerField.Relationship.Name }}ID(*input.{{ $field.Name }}ID)
 						nestedM := {{ $field.BoilerField.Relationship.Name }}UpdateInputToModelM(
+							ctx,
+							r.db,
 							boilergql.GetInputFromContext(ctx, "input.{{ $field.JSONName }}"),
 							*input.{{ $field.Name }},
 						)
@@ -211,7 +213,7 @@ const inputKey = "input"
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
 			}
 			return &fm.{{ .Model.Name }}Payload{
-				{{ .Model.JSONName }}: {{ .Model.Name }}ToGraphQL(pM),
+				{{ .Model.JSONName }}: {{ .Model.Name }}ToGraphQL(ctx, r.db, pM),
 			}, nil
 
 		{{- end -}}
@@ -254,7 +256,7 @@ const inputKey = "input"
 			{{- end }}
 			mods = append(mods, {{.Model.Name}}FilterToMods(filter)...)
 
-			m := {{ .InputModel.Name }}ToModelM(boilergql.GetInputFromContext(ctx, inputKey), input)
+			m := {{ .InputModel.Name }}ToModelM(ctx, r.db, boilergql.GetInputFromContext(ctx, inputKey), input)
 			if _, err := dm.{{ .Model.PluralName }}(mods...).UpdateAll(ctx, r.db, m); err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})

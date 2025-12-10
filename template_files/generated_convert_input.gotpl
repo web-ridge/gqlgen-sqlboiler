@@ -39,19 +39,15 @@ import (
 
 	{{- if .IsInput }}
 				
-		func {{ .PluralName }}ToBoiler(am []*{{ $.Frontend.PackageName }}.{{ .Name }})( []*{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}) {
+		func {{ .PluralName }}ToBoiler(ctx context.Context, db boil.ContextExecutor, am []*{{ $.Frontend.PackageName }}.{{ .Name }})( []*{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}) {
 			ar := make([]*{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}, len(am))
 			for i,m := range am {
-				ar[i] = {{ .Name }}ToBoiler(
-					m,
-				)
+				ar[i] = {{ .Name }}ToBoiler(ctx, db, m)
 			}
 			return ar
 		}
-		
-		func {{ .Name }}ToBoiler(
-				m *{{ $.Frontend.PackageName }}.{{ .Name }},
-			)( *{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}) {
+
+		func {{ .Name }}ToBoiler(ctx context.Context, db boil.ContextExecutor, m *{{ $.Frontend.PackageName }}.{{ .Name }})( *{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}) {
 			if m == nil {
 				return nil
 			}
@@ -77,10 +73,12 @@ import (
 		}
 
 		func {{ .Name }}ToModelM(
+			ctx context.Context,
+			db boil.ContextExecutor,
 			input map[string]interface{},
 			m {{ $.Frontend.PackageName }}.{{ .Name }},
 		) {{ $.Backend.PackageName }}.M {
-			model := {{ .Name }}ToBoiler(&m)
+			model := {{ .Name }}ToBoiler(ctx, db, &m)
 			modelM := {{ $.Backend.PackageName }}.M{}
 			for key := range input {
 				switch key {

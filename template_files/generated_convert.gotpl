@@ -178,10 +178,10 @@ import (
 			
 		{{- end }}
 
-		func {{ .PluralName }}ToGraphQL(am []*{{ $.Backend.PackageName }}.{{ .Name }})( []*{{ $.Frontend.PackageName }}.{{ .Name }}) {
+		func {{ .PluralName }}ToGraphQL(ctx context.Context, db boil.ContextExecutor, am []*{{ $.Backend.PackageName }}.{{ .Name }})( []*{{ $.Frontend.PackageName }}.{{ .Name }}) {
 			ar := make([]*{{ $.Frontend.PackageName }}.{{ .Name }}, len(am))
 			for i,m := range am {
-				ar[i] = {{ .Name }}ToGraphQL(m)
+				ar[i] = {{ .Name }}ToGraphQL(ctx, db, m)
 			}
 			return ar
 		}
@@ -200,7 +200,7 @@ import (
 		{{- end }}
 
 
-	func {{ .Name }}ToGraphQL(m *{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }})( *{{ $.Frontend.PackageName }}.{{ .Name }}) {
+	func {{ .Name }}ToGraphQL(ctx context.Context, db boil.ContextExecutor, m *{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }})( *{{ $.Frontend.PackageName }}.{{ .Name }}) {
 		if m == nil {
 			return nil
 		}
@@ -225,25 +225,25 @@ import (
 		}
 
 		{{ range $field := .Fields }}
-	
+
 			{{- if $field.IsRelation }}
 
 				{{- if $field.IsPlural }}
 					if m.R != nil && m.R.{{ $field.BoilerField.Name }} != nil  {
-						r.{{ $field.Name }} = {{ $field.BoilerField.Relationship.PluralName }}ToGraphQL(m.R.{{ $field.BoilerField.Name }})
-					} 
+						r.{{ $field.Name }} = {{ $field.BoilerField.Relationship.PluralName }}ToGraphQL(ctx, db, m.R.{{ $field.BoilerField.Name }})
+					}
 				{{- else }}
 					{{- if $field.BoilerField.IsForeignKey }}
 						if boilergql.{{ $field.ConvertConfig.BoilerTypeAsText }}IsFilled(m.{{ $field.Name }}ID) {
 							if m.R != nil && m.R.{{ $field.Name }} != nil  {
-								r.{{ $field.Name }} = {{ $field.BoilerField.Relationship.Name }}ToGraphQL(m.R.{{ $field.Name }})
+								r.{{ $field.Name }} = {{ $field.BoilerField.Relationship.Name }}ToGraphQL(ctx, db, m.R.{{ $field.Name }})
 							} else {
 								r.{{ $field.Name }} = {{ $field.BoilerField.Relationship.Name }}With{{ $field.ConvertConfig.BoilerTypeAsText }}ID(m.{{ $field.Name }}ID)
 							}
 						}
 					{{- else }}
 						if m.R != nil && m.R.{{ $field.BoilerField.Name }} != nil  {
-							r.{{ $field.Name }} = {{ $field.BoilerField.Relationship.Name }}ToGraphQL(m.R.{{ $field.BoilerField.Name }})
+							r.{{ $field.Name }} = {{ $field.BoilerField.Relationship.Name }}ToGraphQL(ctx, db, m.R.{{ $field.BoilerField.Name }})
 						}
 					{{- end -}}
 				{{- end -}}

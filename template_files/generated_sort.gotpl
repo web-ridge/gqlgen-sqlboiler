@@ -245,11 +245,11 @@ import (
 			})
 		}
 
-		func {{ .BoilerModel.Name }}EdgeConverter(pagination boilergql.ConnectionPagination, ordering []*{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Ordering) func(*{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}, int) *{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Edge {
+		func {{ .BoilerModel.Name }}EdgeConverter(ctx context.Context, db boil.ContextExecutor, pagination boilergql.ConnectionPagination, ordering []*{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Ordering) func(*{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}, int) *{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Edge {
 			cursor, cursorType := boilergql.GetCursor(pagination.Forward, pagination.Backward), {{ .BoilerModel.Name }}CursorType(ordering)
 			offset := boilergql.GetOffsetFromCursor(cursor)
 			return func(m *{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}, i int) *{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Edge {
-				n := {{ .BoilerModel.Name }}ToGraphQL(m)
+				n := {{ .BoilerModel.Name }}ToGraphQL(ctx, db, m)
 				return &{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Edge{
 					Cursor: To{{ .BoilerModel.Name }}CursorSwitch(ordering, n, cursorType, offset, i),
 					Node:   n,
@@ -293,7 +293,7 @@ import (
 				return nil, err
 			}
 			edges := make([]*{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Edge, 0, boilergql.EdgeLength(pagination, len(a)))
-			edgeConverter := {{ .BoilerModel.Name }}EdgeConverter(pagination, ordering)
+			edgeConverter := {{ .BoilerModel.Name }}EdgeConverter(ctx, db, pagination, ordering)
 			hasMore := boilergql.BaseConnection(pagination, len(a), func(i int) {
 				edges = append(edges, edgeConverter(a[i], i))
 			})
