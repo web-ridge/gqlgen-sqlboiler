@@ -55,6 +55,9 @@ const inputKey = "input"
 	{{- end -}}
 	const {{ $resolver.PublicErrorKey }} = "{{ $resolver.PublicErrorMessage }}"
 
+	{{ if $.IsResolverOverridden $resolver.Field.GoFieldName -}}
+	// {{ $resolver.Field.GoFieldName }} is overridden by user-defined resolver
+	{{ else -}}
 	func (r *{{lcFirst $resolver.Object.Name}}{{ucFirst $.ResolverType}}) {{$resolver.Field.GoFieldName}}{{ $.ShortResolverDeclaration  $resolver }}  {
 
 
@@ -294,6 +297,7 @@ const inputKey = "input"
 			}, nil
 		{{- end }}
 	}
+	{{ end -}}
 
 {{ end }}
 

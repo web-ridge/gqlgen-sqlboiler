@@ -3,11 +3,13 @@ package gbgen
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/web-ridge/gqlgen-sqlboiler/v3/structs"
 
 	"github.com/web-ridge/gqlgen-sqlboiler/v3/cache"
+	"github.com/web-ridge/gqlgen-sqlboiler/v3/customization"
 
 	"github.com/rs/zerolog/log"
 
@@ -113,13 +115,30 @@ func (m *ResolverPlugin) generateSingleFile(data *codegen.Data, models []*struct
 		}
 	}
 
+	// Get directory and filename of the resolver output
+	resolverDir := filepath.Dir(m.resolverConfig.Filename)
+	resolverBasename := filepath.Base(m.resolverConfig.Filename)
+
+	// Scan for user-defined functions in the resolver directory, ignoring the generated file
+	userDefinedFunctions, err := customization.GetFunctionNamesFromDir(resolverDir, []string{resolverBasename})
+	if err != nil {
+		log.Err(err).Msg("could not parse user defined resolver functions")
+	}
+
+	// Convert to map for faster lookup in template
+	userDefinedResolvers := make(map[string]bool)
+	for _, fn := range userDefinedFunctions {
+		userDefinedResolvers[fn] = true
+	}
+
 	resolverBuild := &ResolverBuild{
-		File:                &file,
-		PackageName:         m.resolverConfig.Package,
-		ResolverType:        m.resolverConfig.Type,
-		HasRoot:             false,
-		Models:              models,
-		AuthorizationScopes: m.pluginConfig.AuthorizationScopes,
+		File:                 &file,
+		PackageName:          m.resolverConfig.Package,
+		ResolverType:         m.resolverConfig.Type,
+		HasRoot:              false,
+		Models:               models,
+		AuthorizationScopes:  m.pluginConfig.AuthorizationScopes,
+		UserDefinedResolvers: userDefinedResolvers,
 	}
 
 	templateName := "generated_resolver.gotpl"
@@ -146,12 +165,21 @@ func buildImportPath(rootImportPath, directory string) string {
 
 type ResolverBuild struct {
 	*File
-	HasRoot             bool
-	PackageName         string
-	ResolverType        string
-	Models              []*structs.Model
-	AuthorizationScopes []*AuthorizationScope
-	TryHook             func(string) bool
+	HasRoot              bool
+	PackageName          string
+	ResolverType         string
+	Models               []*structs.Model
+	AuthorizationScopes  []*AuthorizationScope
+	TryHook              func(string) bool
+	UserDefinedResolvers map[string]bool
+}
+
+// IsResolverOverridden checks if the resolver function is overridden by user
+func (rb *ResolverBuild) IsResolverOverridden(name string) bool {
+	if rb.UserDefinedResolvers == nil {
+		return false
+	}
+	return rb.UserDefinedResolvers[name]
 }
 
 type File struct {
