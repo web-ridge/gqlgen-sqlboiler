@@ -93,9 +93,10 @@ func WriteTemplateFile(fileName string, cfg Options) error {
 
 func GetTemplateContent(cfg Options) (string, error) {
 	tpl, err := template.New("").Funcs(template.FuncMap{
-		"go":      gqlgenTemplates.ToGo,
-		"lcFirst": gqlgenTemplates.LcFirst,
-		"ucFirst": gqlgenTemplates.UcFirst,
+		"go":         gqlgenTemplates.ToGo,
+		"lcFirst":    gqlgenTemplates.LcFirst,
+		"ucFirst":    gqlgenTemplates.UcFirst,
+		"trimSuffix": strings.TrimSuffix,
 	}).Parse(cfg.Template)
 	if err != nil {
 		return "", fmt.Errorf("parse: %v", err)

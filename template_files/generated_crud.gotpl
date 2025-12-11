@@ -48,76 +48,6 @@ import (
 			return {{ $.Backend.PackageName }}.{{ .PluralName }}(mods...).One(ctx, db)
 		}
 
-	{{ end -}}
-{{ end }}
-
-{{ range $model := .Models }}
-	{{ if .HasCreateInput -}}
-		{{ $createInput := .CreateInput -}}
-
-		// Create{{ .Name }} creates a new {{ .Name }} and returns the created record with preloads
-		func Create{{ .Name }}(ctx context.Context, db boil.ContextExecutor, input {{ $.Frontend.PackageName }}.{{ $createInput.Name }}, preloadLevel string) (*{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}, error) {
-			m := {{ $createInput.Name }}ToBoiler(ctx, db, &input)
-
-			{{ if gt (len $.AuthorizationScopes) 0 -}}
-			// Validate foreign keys belong to user's scope
-			if err := Validate{{ $createInput.Name }}ForeignKeys(ctx, db, &input); err != nil {
-				return nil, err
-			}
-			{{- end }}
-
-			{{ range $scope := $.AuthorizationScopes -}}
-				{{- if (call $scope.AddHook $model.BoilerModel nil "createInput") }}
-			m.{{ $scope.BoilerColumnName }} = {{ $scope.ImportAlias }}.{{ $scope.ScopeResolverName }}(ctx)
-				{{- end }}
-			{{- end }}
-
-			if err := m.Insert(ctx, db, boil.Infer()); err != nil {
-				return nil, err
-			}
-
-			return Fetch{{ .Name }}(ctx, db, {{ .Name }}IDToGraphQL(m.ID), preloadLevel)
-		}
-
-	{{ end -}}
-{{ end }}
-
-{{ range $model := .Models }}
-	{{ if .HasUpdateInput -}}
-		{{ $updateInput := .UpdateInput -}}
-
-		// Update{{ .Name }} updates an existing {{ .Name }} and returns the updated record with preloads
-		func Update{{ .Name }}(ctx context.Context, db boil.ContextExecutor, id string, input {{ $.Frontend.PackageName }}.{{ $updateInput.Name }}, preloadLevel string) (*{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}, error) {
-			m := {{ $updateInput.Name }}ToModelM(ctx, db, boilergql.GetInputFromContext(ctx, "input"), input)
-
-			{{ if gt (len $.AuthorizationScopes) 0 -}}
-			// Validate foreign keys belong to user's scope
-			if err := Validate{{ $updateInput.Name }}ForeignKeys(ctx, db, &input); err != nil {
-				return nil, err
-			}
-			{{- end }}
-
-			dbID := {{ .Name }}ID(id)
-			if _, err := {{ $.Backend.PackageName }}.{{ .PluralName }}(
-				{{ $.Backend.PackageName }}.{{ .Name }}Where.ID.EQ(dbID),
-				{{- range $scope := $.AuthorizationScopes }}
-					{{- if (call $scope.AddHook $model.BoilerModel nil "updateWhere") }}
-				{{ $.Backend.PackageName }}.{{ $model.Name }}Where.{{ $scope.BoilerColumnName }}.EQ({{ $scope.ImportAlias }}.{{ $scope.ScopeResolverName }}(ctx)),
-					{{- end }}
-				{{- end }}
-			).UpdateAll(ctx, db, m); err != nil {
-				return nil, err
-			}
-
-			return Fetch{{ .Name }}(ctx, db, id, preloadLevel)
-		}
-
-	{{ end -}}
-{{ end }}
-
-{{ range $model := .Models }}
-	{{ if and .IsNormal .BoilerModel -}}
-
 		// Delete{{ .Name }} deletes a {{ .Name }} by ID with authorization (hard delete)
 		func Delete{{ .Name }}(ctx context.Context, db boil.ContextExecutor, id string) error {
 			dbID := {{ .Name }}ID(id)
@@ -147,6 +77,70 @@ import (
 			return err
 		}
 		{{- end }}
+
+	{{ end -}}
+{{ end }}
+
+{{ range $model := .Models }}
+	{{ if .IsCreateInput -}}
+		{{ $modelName := trimSuffix .Name "CreateInput" -}}
+
+		// Create{{ $modelName }} creates a new {{ $modelName }} and returns the created record with preloads
+		func Create{{ $modelName }}(ctx context.Context, db boil.ContextExecutor, input {{ $.Frontend.PackageName }}.{{ .Name }}, preloadLevel string) (*{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}, error) {
+			m := {{ .Name }}ToBoiler(ctx, db, &input)
+
+			{{ if gt (len $.AuthorizationScopes) 0 -}}
+			// Validate foreign keys belong to user's scope
+			if err := Validate{{ .Name }}ForeignKeys(ctx, db, &input); err != nil {
+				return nil, err
+			}
+			{{- end }}
+
+			{{ range $scope := $.AuthorizationScopes -}}
+				{{- if (call $scope.AddHook $model.BoilerModel nil "createInput") }}
+			m.{{ $scope.BoilerColumnName }} = {{ $scope.ImportAlias }}.{{ $scope.ScopeResolverName }}(ctx)
+				{{- end }}
+			{{- end }}
+
+			if err := m.Insert(ctx, db, boil.Infer()); err != nil {
+				return nil, err
+			}
+
+			return Fetch{{ $modelName }}(ctx, db, {{ $modelName }}IDToGraphQL(m.ID), preloadLevel)
+		}
+
+	{{ end -}}
+{{ end }}
+
+{{ range $model := .Models }}
+	{{ if .IsUpdateInput -}}
+		{{ $modelName := trimSuffix .Name "UpdateInput" -}}
+
+		// Update{{ $modelName }} updates an existing {{ $modelName }} and returns the updated record with preloads
+		func Update{{ $modelName }}(ctx context.Context, db boil.ContextExecutor, id string, input {{ $.Frontend.PackageName }}.{{ .Name }}, preloadLevel string) (*{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}, error) {
+			m := {{ .Name }}ToModelM(ctx, db, boilergql.GetInputFromContext(ctx, "input"), input)
+
+			{{ if gt (len $.AuthorizationScopes) 0 -}}
+			// Validate foreign keys belong to user's scope
+			if err := Validate{{ .Name }}ForeignKeys(ctx, db, &input); err != nil {
+				return nil, err
+			}
+			{{- end }}
+
+			dbID := {{ $modelName }}ID(id)
+			if _, err := {{ $.Backend.PackageName }}.{{ $modelName }}s(
+				{{ $.Backend.PackageName }}.{{ $modelName }}Where.ID.EQ(dbID),
+				{{- range $scope := $.AuthorizationScopes }}
+					{{- if (call $scope.AddHook $model.BoilerModel nil "updateWhere") }}
+				{{ $.Backend.PackageName }}.{{ $modelName }}Where.{{ $scope.BoilerColumnName }}.EQ({{ $scope.ImportAlias }}.{{ $scope.ScopeResolverName }}(ctx)),
+					{{- end }}
+				{{- end }}
+			).UpdateAll(ctx, db, m); err != nil {
+				return nil, err
+			}
+
+			return Fetch{{ $modelName }}(ctx, db, id, preloadLevel)
+		}
 
 	{{ end -}}
 {{ end }}
