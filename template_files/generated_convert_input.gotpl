@@ -129,6 +129,23 @@ import (
 							{{- end }}
 						{{- end }}
 						{{- if and $hasAuthColumn (call $scope.AddHook $relatedModel nil "validateForeignKey") }}
+							{{- /* Check if field is a pointer by comparing Type with TypeWithoutPointer */ -}}
+							{{- $isPointer := ne $field.Type $field.TypeWithoutPointer }}
+							{{- if not $isPointer }}
+			{
+				// Validate {{ $field.Name }} references a {{ $relatedModel.Name }} in user's scope
+				exists, err := {{ $.Backend.PackageName }}.{{ $relatedModel.PluralName }}(
+					{{ $.Backend.PackageName }}.{{ $relatedModel.Name }}Where.ID.EQ({{ $relatedModel.Name }}ID(m.{{ $field.Name }})),
+					{{ $.Backend.PackageName }}.{{ $relatedModel.Name }}Where.{{ $scope.BoilerColumnName }}.EQ({{ $scope.ImportAlias }}.{{ $scope.ScopeResolverName }}(ctx)),
+				).Exists(ctx, db)
+				if err != nil {
+					return fmt.Errorf("{{ $field.JSONName }}: %w", err)
+				}
+				if !exists {
+					return fmt.Errorf("{{ $field.JSONName }}: referenced {{ $relatedModel.Name }} not found or access denied")
+				}
+			}
+							{{- else }}
 			if m.{{ $field.Name }} != nil {
 				// Validate {{ $field.Name }} references a {{ $relatedModel.Name }} in user's scope
 				exists, err := {{ $.Backend.PackageName }}.{{ $relatedModel.PluralName }}(
@@ -142,6 +159,7 @@ import (
 					return fmt.Errorf("{{ $field.JSONName }}: referenced {{ $relatedModel.Name }} not found or access denied")
 				}
 			}
+							{{- end }}
 						{{- end }}
 					{{- end }}
 				{{- end }}

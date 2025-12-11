@@ -6,13 +6,17 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"strings"
 )
 
 func GetFunctionNamesFromDir(dir string, ignore []string) ([]string, error) {
 	var a []string
 	set := token.NewFileSet()
-	packs, err := parser.ParseDir(set, dir, nil, 0)
+	// Use filter function to skip ignored files DURING parsing, not after
+	// This prevents parse errors from generated files that may be empty/malformed
+	filterFunc := func(info os.FileInfo) bool {
+		return !contains(ignore, info.Name())
+	}
+	packs, err := parser.ParseDir(set, dir, filterFunc, 0)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -21,11 +25,8 @@ func GetFunctionNamesFromDir(dir string, ignore []string) ([]string, error) {
 	}
 
 	for _, pack := range packs {
-		for fileName, file := range pack.Files {
-			simpleName := strings.TrimPrefix(fileName, dir+"/")
-			if !contains(ignore, simpleName) {
-				a = append(a, GetFunctionNamesFromAstFile(file)...)
-			}
+		for _, file := range pack.Files {
+			a = append(a, GetFunctionNamesFromAstFile(file)...)
 		}
 	}
 	return a, nil

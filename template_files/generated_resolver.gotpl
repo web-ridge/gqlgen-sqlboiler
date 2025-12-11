@@ -94,6 +94,17 @@ const inputKey = "input"
 		{{- end -}}
 
 		{{- if .IsCreate }}
+			{{- /* ID type conversion: find ID field type in BoilerModel.Fields */ -}}
+			{{- $idExpr := "m.ID" -}}
+			{{- if .Model.BoilerModel -}}
+				{{- range $field := .Model.BoilerModel.Fields -}}
+					{{- if eq $field.Name "ID" -}}
+						{{- if and (ne $field.Type "uint") (ne $field.Type "string") -}}
+							{{- $idExpr = "uint(m.ID)" -}}
+						{{- end -}}
+					{{- end -}}
+				{{- end -}}
+			{{- end -}}
 
 			m := {{ .InputModel.Name }}ToBoiler(ctx, r.db, &input)
 
@@ -139,7 +150,7 @@ const inputKey = "input"
 			}
 
 			// resolve requested fields after creating
-			pM, err := Fetch{{ .Model.Name }}(ctx, r.db, {{ .Model.Name }}IDToGraphQL(m.ID), {{ .Model.Name }}PayloadPreloadLevels.{{ .Model.JSONName }})
+			pM, err := Fetch{{ .Model.Name }}(ctx, r.db, {{ .Model.Name }}IDToGraphQL({{ $idExpr }}), {{ .Model.Name }}PayloadPreloadLevels.{{ .Model.JSONName }})
 			if err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})

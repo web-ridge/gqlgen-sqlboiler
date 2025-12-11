@@ -48,6 +48,7 @@ import (
 			return {{ $.Backend.PackageName }}.{{ .PluralName }}(mods...).One(ctx, db)
 		}
 
+		{{- if not .BoilerModel.IsView }}
 		// Delete{{ .Name }} deletes a {{ .Name }} by ID with authorization (hard delete)
 		func Delete{{ .Name }}(ctx context.Context, db boil.ContextExecutor, id string) error {
 			dbID := {{ .Name }}ID(id)
@@ -58,7 +59,7 @@ import (
 				{{ $.Backend.PackageName }}.{{ $model.Name }}Where.{{ $scope.BoilerColumnName }}.EQ({{ $scope.ImportAlias }}.{{ $scope.ScopeResolverName }}(ctx)),
 					{{- end }}
 				{{- end }}
-			).DeleteAll(ctx, db)
+			).DeleteAll(ctx, db{{ if .BoilerModel.HasDeletedAt }}, true{{ end }})
 			return err
 		}
 
@@ -77,6 +78,7 @@ import (
 			return err
 		}
 		{{- end }}
+		{{- end }}
 
 	{{ end -}}
 {{ end }}
@@ -84,6 +86,17 @@ import (
 {{ range $model := .Models }}
 	{{ if .IsCreateInput -}}
 		{{ $modelName := trimSuffix .Name "CreateInput" -}}
+		{{- /* ID type conversion: find ID field type in BoilerModel.Fields */ -}}
+		{{- $idExpr := "m.ID" -}}
+		{{- if .BoilerModel -}}
+			{{- range $field := .BoilerModel.Fields -}}
+				{{- if eq $field.Name "ID" -}}
+					{{- if and (ne $field.Type "uint") (ne $field.Type "string") -}}
+						{{- $idExpr = "uint(m.ID)" -}}
+					{{- end -}}
+				{{- end -}}
+			{{- end -}}
+		{{- end -}}
 
 		// Create{{ $modelName }} creates a new {{ $modelName }} and returns the created record with preloads
 		func Create{{ $modelName }}(ctx context.Context, db boil.ContextExecutor, input {{ $.Frontend.PackageName }}.{{ .Name }}, preloadLevel string) (*{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}, error) {
@@ -106,7 +119,7 @@ import (
 				return nil, err
 			}
 
-			return Fetch{{ $modelName }}(ctx, db, {{ $modelName }}IDToGraphQL(m.ID), preloadLevel)
+			return Fetch{{ $modelName }}(ctx, db, {{ $modelName }}IDToGraphQL({{ $idExpr }}), preloadLevel)
 		}
 
 	{{ end -}}
@@ -115,6 +128,7 @@ import (
 {{ range $model := .Models }}
 	{{ if .IsUpdateInput -}}
 		{{ $modelName := trimSuffix .Name "UpdateInput" -}}
+		{{- /* BoilerModel.PluralName has correct pluralization from sqlboiler */ -}}
 
 		// Update{{ $modelName }} updates an existing {{ $modelName }} and returns the updated record with preloads
 		func Update{{ $modelName }}(ctx context.Context, db boil.ContextExecutor, id string, input {{ $.Frontend.PackageName }}.{{ .Name }}, preloadLevel string) (*{{ $.Backend.PackageName }}.{{ .BoilerModel.Name }}, error) {
@@ -128,7 +142,7 @@ import (
 			{{- end }}
 
 			dbID := {{ $modelName }}ID(id)
-			if _, err := {{ $.Backend.PackageName }}.{{ $modelName }}s(
+			if _, err := {{ $.Backend.PackageName }}.{{ .BoilerModel.PluralName }}(
 				{{ $.Backend.PackageName }}.{{ $modelName }}Where.ID.EQ(dbID),
 				{{- range $scope := $.AuthorizationScopes }}
 					{{- if (call $scope.AddHook $model.BoilerModel nil "updateWhere") }}
