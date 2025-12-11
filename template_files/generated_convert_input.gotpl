@@ -121,22 +121,34 @@ import (
 			{{- range $field := .Fields }}
 				{{- if and $field.IsNumberID $field.BoilerField.IsRelation }}
 					{{- $relatedModel := $field.BoilerField.Relationship }}
+					{{- /* Count applicable scopes to know if we need validation */ -}}
+					{{- $hasAnyScope := false }}
 					{{- range $scope := $.AuthorizationScopes }}
-						{{- $hasAuthColumn := false }}
 						{{- range $relField := $relatedModel.Fields }}
 							{{- if eq $relField.Name $scope.BoilerColumnName }}
-								{{- $hasAuthColumn = true }}
+								{{- if (call $scope.AddHook $relatedModel nil "validateForeignKey") }}
+									{{- $hasAnyScope = true }}
+								{{- end }}
 							{{- end }}
 						{{- end }}
-						{{- if and $hasAuthColumn (call $scope.AddHook $relatedModel nil "validateForeignKey") }}
-							{{- /* Check if field is a pointer by comparing Type with TypeWithoutPointer */ -}}
-							{{- $isPointer := ne $field.Type $field.TypeWithoutPointer }}
-							{{- if not $isPointer }}
+					{{- end }}
+					{{- if $hasAnyScope }}
+						{{- /* Check if field is a pointer by comparing Type with TypeWithoutPointer */ -}}
+						{{- $isPointer := ne $field.Type $field.TypeWithoutPointer }}
+						{{- if not $isPointer }}
 			{
 				// Validate {{ $field.Name }} references a {{ $relatedModel.Name }} in user's scope
 				exists, err := {{ $.Backend.PackageName }}.{{ $relatedModel.PluralName }}(
 					{{ $.Backend.PackageName }}.{{ $relatedModel.Name }}Where.ID.EQ({{ $relatedModel.Name }}ID(m.{{ $field.Name }})),
+							{{- range $scope := $.AuthorizationScopes }}
+								{{- range $relField := $relatedModel.Fields }}
+									{{- if eq $relField.Name $scope.BoilerColumnName }}
+										{{- if (call $scope.AddHook $relatedModel nil "validateForeignKey") }}
 					{{ $.Backend.PackageName }}.{{ $relatedModel.Name }}Where.{{ $scope.BoilerColumnName }}.EQ({{ $scope.ImportAlias }}.{{ $scope.ScopeResolverName }}(ctx)),
+										{{- end }}
+									{{- end }}
+								{{- end }}
+							{{- end }}
 				).Exists(ctx, db)
 				if err != nil {
 					return fmt.Errorf("{{ $field.JSONName }}: %w", err)
@@ -145,12 +157,20 @@ import (
 					return fmt.Errorf("{{ $field.JSONName }}: referenced {{ $relatedModel.Name }} not found or access denied")
 				}
 			}
-							{{- else }}
+						{{- else }}
 			if m.{{ $field.Name }} != nil {
 				// Validate {{ $field.Name }} references a {{ $relatedModel.Name }} in user's scope
 				exists, err := {{ $.Backend.PackageName }}.{{ $relatedModel.PluralName }}(
 					{{ $.Backend.PackageName }}.{{ $relatedModel.Name }}Where.ID.EQ({{ $relatedModel.Name }}ID(*m.{{ $field.Name }})),
+							{{- range $scope := $.AuthorizationScopes }}
+								{{- range $relField := $relatedModel.Fields }}
+									{{- if eq $relField.Name $scope.BoilerColumnName }}
+										{{- if (call $scope.AddHook $relatedModel nil "validateForeignKey") }}
 					{{ $.Backend.PackageName }}.{{ $relatedModel.Name }}Where.{{ $scope.BoilerColumnName }}.EQ({{ $scope.ImportAlias }}.{{ $scope.ScopeResolverName }}(ctx)),
+										{{- end }}
+									{{- end }}
+								{{- end }}
+							{{- end }}
 				).Exists(ctx, db)
 				if err != nil {
 					return fmt.Errorf("{{ $field.JSONName }}: %w", err)
@@ -159,7 +179,6 @@ import (
 					return fmt.Errorf("{{ $field.JSONName }}: referenced {{ $relatedModel.Name }} not found or access denied")
 				}
 			}
-							{{- end }}
 						{{- end }}
 					{{- end }}
 				{{- end }}
