@@ -1,0 +1,263 @@
+# gqlgen-sqlboiler
+
+A Go code generator that bridges gqlgen (GraphQL) and sqlboiler (database ORM) by automatically generating type-safe resolvers, converters, filters, and preloaders.
+
+## What It Does
+
+This library generates boilerplate code that connects your GraphQL API to your database:
+
+1. **GraphQL Schema** - Generates `schema.graphql` from your database models
+2. **Resolvers** - Generates CRUD mutation and query resolvers
+3. **Converters** - Generates functions to convert between GraphQL types and database models
+4. **Filters** - Generates filter input types and their SQL implementations
+5. **Preloaders** - Generates smart preloading based on GraphQL selection sets
+6. **Sorting** - Generates sorting/ordering implementations
+
+## Generated Files
+
+When you run the generator, it creates:
+
+- `generated_convert.go` - Convert database models to GraphQL types
+- `generated_convert_input.go` - Convert GraphQL input types to database models
+- `generated_convert_batch.go` - Batch conversion helpers
+- `generated_crud.go` - Reusable CRUD helper functions (Fetch, Create, Update, Delete)
+- `generated_filter.go` - Filter implementations for WHERE clauses
+- `generated_preload.go` - Preload logic based on GraphQL queries
+- `generated_sort.go` - Sorting implementations
+- `all_generated_resolvers.go` - Query and mutation resolver implementations
+
+## How to Configure
+
+Configuration is done in a `convert/convert.go` file that you run with `go run convert.go`:
+
+```go
+package main
+
+import (
+    gbgen "github.com/web-ridge/gqlgen-sqlboiler/v3"
+    "github.com/web-ridge/gqlgen-sqlboiler/v3/cache"
+    "github.com/web-ridge/gqlgen-sqlboiler/v3/structs"
+)
+
+func main() {
+    // Define paths
+    output := structs.Config{Directory: "helpers", PackageName: "helpers"}
+    backend := structs.Config{Directory: "models/dm", PackageName: "dm"}
+    frontend := structs.Config{Directory: "models/fm", PackageName: "fm"}
+
+    // Initialize caches
+    boilerCache := cache.InitializeBoilerCache(backend)
+    modelCache := cache.InitializeModelCache(cfg, boilerCache, output, backend, frontend)
+
+    // Generate converts, filters, preloads
+    gbgen.NewConvertPlugin(modelCache, gbgen.ConvertPluginConfig{
+        DatabaseDriver: gbgen.MySQL, // or gbgen.PostgreSQL
+    }).GenerateCode(authScopes)
+
+    // Generate resolvers
+    gbgen.NewResolverPlugin(
+        config.ResolverConfig{
+            Filename: "resolvers/all_generated_resolvers.go",
+            Package:  "resolvers",
+            Type:     "Resolver",
+        },
+        output, boilerCache, modelCache,
+        gbgen.ResolverPluginConfig{
+            EnableSoftDeletes:   true,
+            AuthorizationScopes: authScopes,
+        },
+    ).GenerateCode(data)
+}
+```
+
+## How to Override Generated Resolvers
+
+The generator detects user-defined resolver functions and skips generating them. To override:
+
+1. Create a new file in your resolvers directory (e.g., `resolvers/custom_user.go`)
+2. Define a function with the exact same name as the generated one
+3. Re-run the generator - it will skip generating that function
+
+```go
+// resolvers/custom_user.go
+package resolvers
+
+func (r *mutationResolver) CreateUser(ctx context.Context, input fm.UserCreateInput) (*fm.UserPayload, error) {
+    // Your custom implementation
+    // The generated version of this function will be skipped
+}
+```
+
+## How to Override Generated Converters
+
+Similar to resolvers, you can override convert functions:
+
+1. Create a file in your helpers directory (e.g., `helpers/convert_override_user.go`)
+2. Define the same function name - the generator renames the original to `original*`
+
+```go
+// helpers/convert_override_user.go
+package helpers
+
+func UserCreateInputToBoiler(m *graphql_models.UserCreateInput) *models.User {
+    // Call the original if needed
+    original := originalUserCreateInputToBoiler(m)
+    // Add custom logic (e.g., hash password)
+    return original
+}
+```
+
+## Authorization Scopes
+
+Authorization scopes automatically inject tenant/user filtering into queries and mutations:
+
+```go
+authScopes := []*gbgen.AuthorizationScope{
+    {
+        ImportPath:        "github.com/my-app/auth",
+        ImportAlias:       "auth",
+        ScopeResolverName: "OrganizationIDFromContext",  // Function to get value from context
+        BoilerColumnName:  "OrganizationID",             // Database column to filter on
+        AddHook: func(model *structs.BoilerModel, resolver *gbgen.Resolver, templateKey string) bool {
+            // Return true to apply this scope to the model/resolver
+            // templateKey tells you where it's being applied:
+            // - "singleWhere" - Single record queries
+            // - "listWhere" - List queries
+            // - "createInput" - Create mutations (sets the column)
+            // - "updateWhere" - Update mutations (filters)
+            // - "deleteWhere" - Delete mutations (filters)
+            // - "validateForeignKey" - FK validation on create/update
+            return hasColumn(model, "OrganizationID")
+        },
+    },
+}
+```
+
+### templateKey Values
+
+The `AddHook` function receives a `templateKey` that identifies where the scope is being applied:
+
+| templateKey | Operation | What It Does |
+|-------------|-----------|--------------|
+| `singleWhere` | Query single | Adds WHERE clause to single record fetch |
+| `listWhere` | Query list | Adds WHERE clause to list queries |
+| `createInput` | Create mutation | Sets column value on new record |
+| `createRelationInput` | Create nested | Sets column on nested relation create |
+| `updateWhere` | Update mutation | Adds WHERE clause to update |
+| `updateRelationWhere` | Update nested | Adds WHERE clause to nested update |
+| `updateAfterWhere` | Update refetch | Adds WHERE when refetching after update |
+| `deleteWhere` | Delete mutation | Adds WHERE clause to delete |
+| `batchUpdateWhere` | Batch update | Adds WHERE to batch updates |
+| `batchDeleteWhere` | Batch delete | Adds WHERE to batch deletes |
+| `validateForeignKey` | FK validation | Validates FK references are in scope |
+
+## Foreign Key Validation
+
+When `validateForeignKey` is enabled, the generator creates validation functions that verify foreign keys reference records within the user's authorization scope:
+
+```go
+// Generated function
+func ValidatePostCreateInputForeignKeys(ctx context.Context, db boil.ContextExecutor, m *fm.PostCreateInput) error {
+    if m.AuthorID != nil {
+        // Check that the referenced User has matching OrganizationID
+        exists, err := dm.Users(
+            dm.UserWhere.ID.EQ(UserID(*m.AuthorID)),
+            dm.UserWhere.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
+        ).Exists(ctx, db)
+        if !exists {
+            return fmt.Errorf("authorId: referenced User not found or access denied")
+        }
+    }
+    return nil
+}
+```
+
+This is called automatically in create/update resolvers before database writes.
+
+## Schema Generation Hooks
+
+Control schema generation with hooks:
+
+```go
+gbgen.SchemaWrite(gbgen.SchemaConfig{
+    // Skip certain models from schema
+    HookShouldAddModel: func(model gbgen.SchemaModel) bool {
+        return model.Name != "InternalConfig"
+    },
+
+    // Skip certain fields
+    HookShouldAddField: func(model gbgen.SchemaModel, field gbgen.SchemaField) bool {
+        return field.Name != "internalField"
+    },
+
+    // Modify fields (e.g., skip from input)
+    HookChangeField: func(model *gbgen.SchemaModel, field *gbgen.SchemaField) {
+        if field.Name == "userId" {
+            field.SkipInput = true  // Don't include in create/update inputs
+        }
+    },
+
+    // Modify all fields for a model
+    HookChangeFields: func(model *gbgen.SchemaModel, fields []*gbgen.SchemaField, parentType gbgen.ParentType) []*gbgen.SchemaField {
+        return fields
+    },
+})
+```
+
+## Key Types
+
+### BoilerModel
+Represents a database table/model from sqlboiler:
+- `Name` - Model name (e.g., "User")
+- `TableName` - Database table name
+- `PluralName` - Pluralized name (e.g., "Users")
+- `Fields` - List of fields/columns
+
+### BoilerField
+Represents a database column:
+- `Name` - Field name
+- `Type` - Go type
+- `IsForeignKey` - Whether it's a FK
+- `IsRelation` - Whether it references another table
+- `Relationship` - The related BoilerModel (if FK)
+
+### Resolver
+Represents a GraphQL resolver being generated:
+- `IsCreate`, `IsUpdate`, `IsDelete` - Mutation type flags
+- `IsSingle`, `IsList` - Query type flags
+- `IsBatchCreate`, `IsBatchUpdate`, `IsBatchDelete` - Batch operation flags
+- `Model` - The model this resolver operates on
+- `InputModel` - The input type for mutations
+
+## Reusable CRUD Helpers
+
+The generator creates CRUD helper functions in `generated_crud.go` that can be called from custom resolvers:
+
+```go
+// Fetch with preloads and authorization
+func FetchActivity(ctx context.Context, db boil.ContextExecutor, id string, preloadLevel string) (*dm.Activity, error)
+
+// Create with FK validation and authorization
+func CreateActivity(ctx context.Context, db boil.ContextExecutor, input fm.ActivityCreateInput, preloadLevel string) (*dm.Activity, error)
+
+// Update with FK validation and authorization
+func UpdateActivity(ctx context.Context, db boil.ContextExecutor, id string, input fm.ActivityUpdateInput, preloadLevel string) (*dm.Activity, error)
+
+// Delete with authorization
+func DeleteActivity(ctx context.Context, db boil.ContextExecutor, id string) error
+
+// Soft delete (only if model has deleted_at column)
+func SoftDeleteActivity(ctx context.Context, db boil.ContextExecutor, id string) error
+```
+
+These helpers:
+- Include FK validation (checks referenced records are in user's scope)
+- Apply authorization scopes automatically
+- Accept preload level for flexible relationship loading
+- Return boiler models (convert to GraphQL in your resolver)
+
+## Dependencies
+
+- [gqlgen](https://github.com/99designs/gqlgen) - GraphQL server generator
+- [sqlboiler](https://github.com/volatiletech/sqlboiler) - Database ORM generator
+- [boilergql](https://github.com/web-ridge/utils-go/tree/main/boilergql) - Utility functions for pagination, filtering, etc.

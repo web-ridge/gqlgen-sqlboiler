@@ -359,6 +359,79 @@ func main() {
 }
 ```
 
+## Foreign Key Validation
+
+When using authorization scopes, you can enable FK validation to ensure users can only set foreign keys to resources within their scope. This prevents users from associating records with resources they don't have access to.
+
+Add `"validateForeignKey"` handling to your `AddHook` function and pass auth scopes to the ConvertPlugin:
+
+```go
+authScopes := []*gbgen.AuthorizationScope{
+    {
+        ImportPath:        "github.com/my-repo/app/backend/auth",
+        ImportAlias:       "auth",
+        ScopeResolverName: "OrganizationIDFromContext",
+        BoilerColumnName:  "OrganizationID",
+        AddHook: func(model *structs.BoilerModel, resolver *gbgen.Resolver, templateKey string) bool {
+            // Enable FK validation for models with OrganizationID
+            if templateKey == "validateForeignKey" {
+                for _, field := range model.Fields {
+                    if field.Name == "OrganizationID" {
+                        return true
+                    }
+                }
+                return false
+            }
+            // ... existing authorization logic for other templateKeys
+            for _, field := range model.Fields {
+                if field.Name == "OrganizationID" {
+                    return true
+                }
+            }
+            return false
+        },
+    },
+}
+
+// Pass auth scopes to convert plugin for FK validation
+if err := gbgen.NewConvertPlugin(
+    modelCache,
+    gbgen.ConvertPluginConfig{DatabaseDriver: gbgen.MySQL},
+).GenerateCode(authScopes); err != nil {
+    log.Fatal().Err(err).Msg("error while generating convert/filters")
+}
+
+// Pass same auth scopes to resolver plugin
+if err := gbgen.NewResolverPlugin(
+    config.ResolverConfig{...},
+    output, boilerCache, modelCache,
+    gbgen.ResolverPluginConfig{
+        AuthorizationScopes: authScopes,
+    },
+).GenerateCode(data); err != nil {
+    log.Fatal().Err(err).Msg("error while generating resolvers")
+}
+```
+
+This generates validation functions like:
+
+```go
+func ValidatePostCreateInputForeignKeys(ctx context.Context, db boil.ContextExecutor, m *fm.PostCreateInput) error {
+    if m.AuthorID != nil {
+        exists, err := dm.Users(
+            dm.UserWhere.ID.EQ(UserID(*m.AuthorID)),
+            dm.UserWhere.OrganizationID.EQ(auth.OrganizationIDFromContext(ctx)),
+        ).Exists(ctx, db)
+        if err != nil {
+            return fmt.Errorf("authorId: %w", err)
+        }
+        if !exists {
+            return fmt.Errorf("authorId: referenced User not found or access denied")
+        }
+    }
+    return nil
+}
+```
 
 ## Overriding converts
 Put a file in your helpers/ directory e.g. convert_override_user.go
@@ -385,6 +458,46 @@ func UserCreateInputToBoiler(
 ```
 
 If you re-generate the original convert will get changed to originalUserCreateInputToBoiler which you can still use in your overridden convert.
+
+## Reusable CRUD Helpers
+
+The generator creates reusable CRUD helper functions in `generated_crud.go` that can be called from custom resolvers:
+
+```go
+// Fetch with preloads and authorization
+func FetchActivity(ctx context.Context, db boil.ContextExecutor, id string, preloadLevel string) (*dm.Activity, error)
+
+// Create with FK validation and authorization
+func CreateActivity(ctx context.Context, db boil.ContextExecutor, input fm.ActivityCreateInput, preloadLevel string) (*dm.Activity, error)
+
+// Update with FK validation and authorization
+func UpdateActivity(ctx context.Context, db boil.ContextExecutor, id string, input fm.ActivityUpdateInput, preloadLevel string) (*dm.Activity, error)
+
+// Delete with authorization (hard delete)
+func DeleteActivity(ctx context.Context, db boil.ContextExecutor, id string) error
+
+// Soft delete (only generated if model has deleted_at)
+func SoftDeleteActivity(ctx context.Context, db boil.ContextExecutor, id string) error
+```
+
+Use these in custom resolvers:
+
+```go
+func (r *mutationResolver) CreateActivityWithNotification(ctx context.Context, input fm.ActivityCreateInput) (*fm.ActivityPayload, error) {
+    // Use the CRUD helper
+    m, err := CreateActivity(ctx, r.db, input, ActivityPayloadPreloadLevels.Activity)
+    if err != nil {
+        return nil, err
+    }
+
+    // Custom logic
+    notifyUsers(ctx, m)
+
+    return &fm.ActivityPayload{
+        Activity: ActivityToGraphQL(ctx, r.db, m),
+    }, nil
+}
+```
 
 ## Help us
 

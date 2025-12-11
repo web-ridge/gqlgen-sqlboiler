@@ -107,5 +107,47 @@ import (
 			columnsWhichAreSet = append(columnsWhichAreSet, extraColumns...)
 			return boil.Whitelist(columnsWhichAreSet...)
 		}
+
+		{{ $inputModel := . -}}
+		{{ if gt (len $.AuthorizationScopes) 0 -}}
+		func Validate{{ .Name }}ForeignKeys(
+			ctx context.Context,
+			db boil.ContextExecutor,
+			m *{{ $.Frontend.PackageName }}.{{ .Name }},
+		) error {
+			if m == nil {
+				return nil
+			}
+			{{- range $field := .Fields }}
+				{{- if and $field.IsNumberID $field.BoilerField.IsRelation }}
+					{{- $relatedModel := $field.BoilerField.Relationship }}
+					{{- range $scope := $.AuthorizationScopes }}
+						{{- $hasAuthColumn := false }}
+						{{- range $relField := $relatedModel.Fields }}
+							{{- if eq $relField.Name $scope.BoilerColumnName }}
+								{{- $hasAuthColumn = true }}
+							{{- end }}
+						{{- end }}
+						{{- if and $hasAuthColumn (call $scope.AddHook $relatedModel nil "validateForeignKey") }}
+			if m.{{ $field.Name }} != nil {
+				// Validate {{ $field.Name }} references a {{ $relatedModel.Name }} in user's scope
+				exists, err := {{ $.Backend.PackageName }}.{{ $relatedModel.PluralName }}(
+					{{ $.Backend.PackageName }}.{{ $relatedModel.Name }}Where.ID.EQ({{ $relatedModel.Name }}ID(*m.{{ $field.Name }})),
+					{{ $.Backend.PackageName }}.{{ $relatedModel.Name }}Where.{{ $scope.BoilerColumnName }}.EQ({{ $scope.ImportAlias }}.{{ $scope.ScopeResolverName }}(ctx)),
+				).Exists(ctx, db)
+				if err != nil {
+					return fmt.Errorf("{{ $field.JSONName }}: %w", err)
+				}
+				if !exists {
+					return fmt.Errorf("{{ $field.JSONName }}: referenced {{ $relatedModel.Name }} not found or access denied")
+				}
+			}
+						{{- end }}
+					{{- end }}
+				{{- end }}
+			{{- end }}
+			return nil
+		}
+		{{- end }}
 	{{- end }}
 {{- end }}

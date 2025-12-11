@@ -37,18 +37,19 @@ type Import struct {
 }
 
 type ConvertTemplateData struct {
-	Backend      structs.Config
-	Frontend     structs.Config
-	PluginConfig ConvertPluginConfig
-	PackageName  string
-	Interfaces   []*structs.Interface
-	Models       []*structs.Model
-	Enums        []*structs.Enum
-	Scalars      []string
+	Backend             structs.Config
+	Frontend            structs.Config
+	PluginConfig        ConvertPluginConfig
+	PackageName         string
+	Interfaces          []*structs.Interface
+	Models              []*structs.Model
+	Enums               []*structs.Enum
+	Scalars             []string
+	AuthorizationScopes []*AuthorizationScope
 }
 
 func (t ConvertTemplateData) Imports() []Import {
-	return []Import{
+	imports := []Import{
 		{
 			Alias:      t.Frontend.PackageName,
 			ImportPath: t.Frontend.Directory,
@@ -58,6 +59,18 @@ func (t ConvertTemplateData) Imports() []Import {
 			ImportPath: t.Backend.Directory,
 		},
 	}
+	// Add auth scope imports for FK validation
+	seen := make(map[string]bool)
+	for _, scope := range t.AuthorizationScopes {
+		if !seen[scope.ImportAlias] {
+			imports = append(imports, Import{
+				Alias:      scope.ImportAlias,
+				ImportPath: scope.ImportPath,
+			})
+			seen[scope.ImportAlias] = true
+		}
+	}
+	return imports
 }
 
 func NewConvertPlugin(modelCache *cache.ModelCache, pluginConfig ConvertPluginConfig) *ConvertPlugin {
@@ -89,7 +102,7 @@ type ConvertPluginConfig struct {
 	DatabaseDriver DatabaseDriver
 }
 
-func (m *ConvertPlugin) GenerateCode() error {
+func (m *ConvertPlugin) GenerateCode(authScopes []*AuthorizationScope) error {
 	data := &ConvertTemplateData{
 		PackageName: m.ModelCache.Output.PackageName,
 		Backend: structs.Config{
@@ -100,11 +113,12 @@ func (m *ConvertPlugin) GenerateCode() error {
 			Directory:   path.Join(m.rootImportPath, m.ModelCache.Frontend.Directory),
 			PackageName: m.ModelCache.Frontend.PackageName,
 		},
-		PluginConfig: m.PluginConfig,
-		Interfaces:   m.ModelCache.Interfaces,
-		Models:       m.ModelCache.Models,
-		Enums:        m.ModelCache.Enums,
-		Scalars:      m.ModelCache.Scalars,
+		PluginConfig:        m.PluginConfig,
+		Interfaces:          m.ModelCache.Interfaces,
+		Models:              m.ModelCache.Models,
+		Enums:               m.ModelCache.Enums,
+		Scalars:             m.ModelCache.Scalars,
+		AuthorizationScopes: authScopes,
 	}
 
 	if err := os.MkdirAll(m.ModelCache.Output.Directory, os.ModePerm); err != nil {
@@ -124,6 +138,7 @@ func (m *ConvertPlugin) GenerateCode() error {
 		"generated_convert.go",
 		"generated_convert_batch.go",
 		"generated_convert_input.go",
+		"generated_crud.go",
 		"generated_filter.go",
 		"generated_preload.go",
 		"generated_sort.go",

@@ -63,16 +63,7 @@ const inputKey = "input"
 
 
 		{{- if .IsSingle }}
-			dbID := {{ .Model.Name }}ID(id)
-			mods := Get{{ .Model.Name }}PreloadMods(ctx)
-			mods = append(mods, dm.{{ .Model.Name }}Where.ID.EQ(dbID))
-			{{ range $scope := $.AuthorizationScopes -}}
-				{{- if (call $scope.AddHook $resolver.Model.BoilerModel $resolver "singleWhere") }}
-					mods = append(mods, dm.{{ $resolver.Model.Name }}Where.{{ $scope.BoilerColumnName }}.EQ({{ $scope.ImportAlias }}.{{ $scope.ScopeResolverName }}(ctx)))
-				{{- end }}
-			{{- end }}
-
-			m, err := dm.{{ .Model.PluralName }}(mods...).One(ctx, r.db)
+			m, err := Fetch{{ .Model.Name }}(ctx, r.db, id, "")
 			if err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
@@ -105,6 +96,15 @@ const inputKey = "input"
 		{{- if .IsCreate }}
 
 			m := {{ .InputModel.Name }}ToBoiler(ctx, r.db, &input)
+
+			{{ if gt (len $.AuthorizationScopes) 0 -}}
+			// Validate foreign keys belong to user's scope
+			if err := Validate{{ .InputModel.Name }}ForeignKeys(ctx, r.db, &input); err != nil {
+				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
+				return nil, errors.New({{ $resolver.PublicErrorKey }})
+			}
+			{{- end }}
+
 			{{ $model := .Model -}}
 			{{ range $field := .InputModel.Fields -}}
 				{{ if and $field.IsObject $field.BoilerField.IsRelation -}}
@@ -139,9 +139,7 @@ const inputKey = "input"
 			}
 
 			// resolve requested fields after creating
-			mods := Get{{ .Model.Name }}PreloadModsWithLevel(ctx, {{ .Model.Name }}PayloadPreloadLevels.{{ .Model.JSONName }})
-			mods = append(mods, dm.{{ .Model.Name }}Where.ID.EQ(m.ID))
-			pM, err := dm.{{ .Model.PluralName }}(mods...).One(ctx, r.db)
+			pM, err := Fetch{{ .Model.Name }}(ctx, r.db, {{ .Model.Name }}IDToGraphQL(m.ID), {{ .Model.Name }}PayloadPreloadLevels.{{ .Model.JSONName }})
 			if err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
@@ -154,6 +152,14 @@ const inputKey = "input"
 
 		{{- if .IsUpdate }}
 			m := {{ .InputModel.Name }}ToModelM(ctx, r.db, boilergql.GetInputFromContext(ctx, inputKey), input)
+
+			{{ if gt (len $.AuthorizationScopes) 0 -}}
+			// Validate foreign keys belong to user's scope
+			if err := Validate{{ .InputModel.Name }}ForeignKeys(ctx, r.db, &input); err != nil {
+				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
+				return nil, errors.New({{ $resolver.PublicErrorKey }})
+			}
+			{{- end }}
 
 			{{ $resolver := . -}}
 			{{ $model := .Model -}}
@@ -199,15 +205,7 @@ const inputKey = "input"
 			}
 
 			// resolve requested fields after updating
-			mods := Get{{ .Model.Name }}PreloadModsWithLevel(ctx, {{ .Model.Name }}PayloadPreloadLevels.{{ .Model.JSONName }})
-			mods = append(mods, dm.{{ .Model.Name }}Where.ID.EQ(dbID))
-			{{ range $scope := $.AuthorizationScopes -}}
-				{{- if (call $scope.AddHook $resolver.Model.BoilerModel $resolver "updateAfterWhere")   }}
-					mods = append(mods, dm.{{ $resolver.Model.Name }}Where.{{ $scope.BoilerColumnName }}.EQ({{ $scope.ImportAlias }}.{{ $scope.ScopeResolverName }}(ctx)))
-				{{- end }}
-			{{- end }}
-
-			pM, err := dm.{{ .Model.PluralName }}(mods...).One(ctx, r.db)
+			pM, err := Fetch{{ .Model.Name }}(ctx, r.db, id, {{ .Model.Name }}PayloadPreloadLevels.{{ .Model.JSONName }})
 			if err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
 				return nil, errors.New({{ $resolver.PublicErrorKey }})
