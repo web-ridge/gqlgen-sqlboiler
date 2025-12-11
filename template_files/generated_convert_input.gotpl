@@ -109,7 +109,8 @@ import (
 		}
 
 		{{ $inputModel := . -}}
-		{{ if gt (len $.AuthorizationScopes) 0 -}}
+		// Validate{{ .Name }}ForeignKeys validates that foreign key references belong to user's scope
+		// When AuthorizationScopes is nil/empty, this is a no-op for backwards compatibility
 		func Validate{{ .Name }}ForeignKeys(
 			ctx context.Context,
 			db boil.ContextExecutor,
@@ -121,6 +122,8 @@ import (
 			{{- range $field := .Fields }}
 				{{- if and $field.IsNumberID $field.BoilerField.IsRelation }}
 					{{- $relatedModel := $field.BoilerField.Relationship }}
+					{{- /* Skip if relationship model is nil */ -}}
+					{{- if $relatedModel }}
 					{{- /* Count applicable scopes to know if we need validation */ -}}
 					{{- $hasAnyScope := false }}
 					{{- range $scope := $.AuthorizationScopes }}
@@ -181,10 +184,10 @@ import (
 			}
 						{{- end }}
 					{{- end }}
+					{{- end }}
 				{{- end }}
 			{{- end }}
 			return nil
 		}
-		{{- end }}
 	{{- end }}
 {{- end }}

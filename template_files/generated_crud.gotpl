@@ -84,7 +84,7 @@ import (
 {{ end }}
 
 {{ range $model := .Models }}
-	{{ if .IsCreateInput -}}
+	{{ if and .IsCreateInput .BoilerModel -}}
 		{{ $modelName := trimSuffix .Name "CreateInput" -}}
 		{{- /* ID type conversion: find ID field type in BoilerModel.Fields */ -}}
 		{{- $idExpr := "m.ID" -}}
@@ -126,7 +126,7 @@ import (
 {{ end }}
 
 {{ range $model := .Models }}
-	{{ if .IsUpdateInput -}}
+	{{ if and .IsUpdateInput .BoilerModel -}}
 		{{ $modelName := trimSuffix .Name "UpdateInput" -}}
 		{{- /* BoilerModel.PluralName has correct pluralization from sqlboiler */ -}}
 
