@@ -5,7 +5,6 @@ import (
 	"go/types"
 	"sort"
 	"strings"
-	"sync"
 	"unicode"
 
 	"github.com/web-ridge/gqlgen-sqlboiler/v3/structs"
@@ -103,184 +102,138 @@ func EnhanceModelsWithInformation(
 	return models
 }
 
-// typeCache caches resolved types to avoid repeated expensive lookups
-type typeCache struct {
-	mu    sync.RWMutex
-	cache map[string]types.Type
-}
-
-func newTypeCache() *typeCache {
-	return &typeCache{
-		cache: make(map[string]types.Type),
-	}
-}
-
-func (tc *typeCache) get(key string) (types.Type, bool) {
-	tc.mu.RLock()
-	defer tc.mu.RUnlock()
-	t, ok := tc.cache[key]
-	return t, ok
-}
-
-func (tc *typeCache) set(key string, t types.Type) {
-	tc.mu.Lock()
-	defer tc.mu.Unlock()
-	tc.cache[key] = t
-}
-
 //nolint:gocognit,gocyclo
 func enhanceModelsWithFields(enums []*structs.Enum, schema *ast.Schema, cfg *config.Config,
 	models []*structs.Model, ignoreTypePrefixes []string) {
 	binder := cfg.NewBinder()
-	tc := newTypeCache()
 
-	// Filter models that need processing upfront
-	var modelsToProcess []*structs.Model
+	// Generate the basic of the fields
 	for _, m := range models {
-		if m.HasBoilerModel {
-			modelsToProcess = append(modelsToProcess, m)
+		if !m.HasBoilerModel {
+			continue
+		}
+		// Let's convert the pure ast fields to something usable for our templates
+		for _, field := range m.PureFields {
+			fieldDef := schema.Types[field.Type.Name()]
+
+			// This calls some qglgen boilerType which gets the gqlgen type
+			typ, err := getAstFieldType(binder, schema, cfg, field)
+			if err != nil {
+				log.Err(err).Msg("could not get field type from graphql schema")
+			}
+			jsonName := getGraphqlFieldName(cfg, m.Name, field)
+			name := gqlgenTemplates.ToGo(jsonName)
+
+			// just some (old) Relay clutter which is not needed anymore + we won't do anything with it
+			// in our database converts.
+			if strings.EqualFold(name, "clientMutationId") {
+				continue
+			}
+
+			// override type struct with qqlgen code
+			typ = binder.CopyModifiersFromAst(field.Type, typ)
+			if isStruct(typ) && (fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject) {
+				typ = types.NewPointer(typ)
+			}
+
+			// generate some booleans because these checks will be used a lot
+			isObject := fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject
+
+			shortType := getShortType(typ.String(), ignoreTypePrefixes)
+
+			isPrimaryID := strings.EqualFold(name, "id")
+
+			// get sqlboiler information of the field
+			boilerField := findBoilerFieldOrForeignKey(m.BoilerModel, name, isObject)
+			isString := strings.Contains(strings.ToLower(boilerField.Type), "string")
+			isNumberID := strings.HasSuffix(name, "ID") && !isString
+			isPrimaryNumberID := isPrimaryID && !isString
+
+			isPrimaryStringID := isPrimaryID && isString
+
+			// enable simpler code in resolvers
+			if isPrimaryStringID {
+				m.HasPrimaryStringID = isPrimaryStringID
+			}
+			if isPrimaryNumberID || isPrimaryStringID {
+				m.PrimaryKeyType = boilerField.Type
+			}
+
+			isEdges := strings.HasSuffix(m.Name, "Connection") && name == "Edges"
+			isPageInfo := strings.HasSuffix(m.Name, "Connection") && name == "PageInfo"
+			isSort := strings.HasSuffix(m.Name, "Ordering") && name == "Sort"
+			isSortDirection := strings.HasSuffix(m.Name, "Ordering") && name == "Direction"
+			isCursor := strings.HasSuffix(m.Name, "Edge") && name == "Cursor"
+			isNode := strings.HasSuffix(m.Name, "Edge") && name == "Node"
+
+			// log some warnings when fields could not be converted
+			if boilerField.Type == "" {
+				skipWarningInFilter :=
+					strings.EqualFold(name, "and") ||
+						strings.EqualFold(name, "or") ||
+						strings.EqualFold(name, "search") ||
+						strings.EqualFold(name, "where") ||
+						strings.EqualFold(name, "withDeleted")
+
+				switch {
+				case m.IsPayload:
+				case IsPlural(name):
+				case ((m.IsFilter || m.IsWhere) && skipWarningInFilter) ||
+					isEdges ||
+					isSort ||
+					isSortDirection ||
+					isPageInfo ||
+					isCursor ||
+					isNode:
+					// ignore
+				default:
+					log.Warn().Str("field", m.Name+"."+name).Msg("no database mapping")
+				}
+			}
+
+			if boilerField.Name == "" {
+				if m.IsPayload || m.IsFilter || m.IsWhere || m.IsOrdering || m.IsEdge || isPageInfo || isEdges {
+				} else {
+					log.Warn().Str("field", m.Name+"."+name).Msg("no database mapping")
+					continue
+				}
+			}
+
+			enum := findEnum(enums, shortType)
+			field := &structs.Field{
+				Name:               name,
+				JSONName:           jsonName,
+				Type:               shortType,
+				TypeWithoutPointer: strings.Replace(strings.TrimPrefix(shortType, "*"), ".", "Dot", -1),
+				BoilerField:        boilerField,
+				IsNumberID:         isNumberID,
+				IsPrimaryID:        isPrimaryID,
+				IsPrimaryNumberID:  isPrimaryNumberID,
+				IsPrimaryStringID:  isPrimaryStringID,
+				IsRelation:         boilerField.IsRelation,
+				IsRelationAndNotForeignKey: boilerField.IsRelation &&
+					!strings.HasSuffix(strings.ToLower(name), "id"),
+				IsObject:      isObject,
+				IsOr:          strings.EqualFold(name, "or"),
+				IsAnd:         strings.EqualFold(name, "and"),
+				IsWithDeleted: strings.EqualFold(name, "withDeleted"),
+				IsPlural:      IsPlural(name),
+				PluralName:    Plural(name),
+				OriginalType:  typ,
+				Description:   field.Description,
+				Enum:          enum,
+			}
+			field.ConvertConfig = getConvertConfig(enums, m, field)
+			m.Fields = append(m.Fields, field)
 		}
 	}
 
-	// Process models in parallel
-	var wg sync.WaitGroup
-	wg.Add(len(modelsToProcess))
-
-	for _, m := range modelsToProcess {
-		go func(m *structs.Model) {
-			defer wg.Done()
-			processModelFields(m, enums, schema, cfg, binder, tc, ignoreTypePrefixes)
-		}(m)
-	}
-
-	wg.Wait()
-
-	// Link relationships (must be done after all fields are processed)
 	for _, m := range models {
 		for _, f := range m.Fields {
 			if f.BoilerField.Relationship != nil {
 				f.Relationship = findModel(models, f.BoilerField.Relationship.Name)
 			}
 		}
-	}
-}
-
-//nolint:gocognit,gocyclo
-func processModelFields(m *structs.Model, enums []*structs.Enum, schema *ast.Schema,
-	cfg *config.Config, binder *config.Binder, tc *typeCache, ignoreTypePrefixes []string) {
-	// Let's convert the pure ast fields to something usable for our templates
-	for _, field := range m.PureFields {
-		fieldDef := schema.Types[field.Type.Name()]
-
-		// This calls some qglgen boilerType which gets the gqlgen type
-		typ, err := getAstFieldTypeCached(binder, schema, cfg, field, tc)
-		if err != nil {
-			log.Err(err).Msg("could not get field type from graphql schema")
-		}
-		jsonName := getGraphqlFieldName(cfg, m.Name, field)
-		name := gqlgenTemplates.ToGo(jsonName)
-
-		// just some (old) Relay clutter which is not needed anymore + we won't do anything with it
-		// in our database converts.
-		if strings.EqualFold(name, "clientMutationId") {
-			continue
-		}
-
-		// override type struct with qqlgen code
-		typ = binder.CopyModifiersFromAst(field.Type, typ)
-		if isStruct(typ) && (fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject) {
-			typ = types.NewPointer(typ)
-		}
-
-		// generate some booleans because these checks will be used a lot
-		isObject := fieldDef.Kind == ast.Object || fieldDef.Kind == ast.InputObject
-
-		shortType := getShortType(typ.String(), ignoreTypePrefixes)
-
-		isPrimaryID := strings.EqualFold(name, "id")
-
-		// get sqlboiler information of the field
-		boilerField := findBoilerFieldOrForeignKey(m.BoilerModel, name, isObject)
-		isString := strings.Contains(strings.ToLower(boilerField.Type), "string")
-		isNumberID := strings.HasSuffix(name, "ID") && !isString
-		isPrimaryNumberID := isPrimaryID && !isString
-
-		isPrimaryStringID := isPrimaryID && isString
-
-		// enable simpler code in resolvers
-		if isPrimaryStringID {
-			m.HasPrimaryStringID = isPrimaryStringID
-		}
-		if isPrimaryNumberID || isPrimaryStringID {
-			m.PrimaryKeyType = boilerField.Type
-		}
-
-		isEdges := strings.HasSuffix(m.Name, "Connection") && name == "Edges"
-		isPageInfo := strings.HasSuffix(m.Name, "Connection") && name == "PageInfo"
-		isSort := strings.HasSuffix(m.Name, "Ordering") && name == "Sort"
-		isSortDirection := strings.HasSuffix(m.Name, "Ordering") && name == "Direction"
-		isCursor := strings.HasSuffix(m.Name, "Edge") && name == "Cursor"
-		isNode := strings.HasSuffix(m.Name, "Edge") && name == "Node"
-
-		// log some warnings when fields could not be converted
-		if boilerField.Type == "" {
-			skipWarningInFilter :=
-				strings.EqualFold(name, "and") ||
-					strings.EqualFold(name, "or") ||
-					strings.EqualFold(name, "search") ||
-					strings.EqualFold(name, "where") ||
-					strings.EqualFold(name, "withDeleted")
-
-			switch {
-			case m.IsPayload:
-			case IsPlural(name):
-			case ((m.IsFilter || m.IsWhere) && skipWarningInFilter) ||
-				isEdges ||
-				isSort ||
-				isSortDirection ||
-				isPageInfo ||
-				isCursor ||
-				isNode:
-				// ignore
-			default:
-				log.Warn().Str("field", m.Name+"."+name).Msg("no database mapping")
-			}
-		}
-
-		if boilerField.Name == "" {
-			if m.IsPayload || m.IsFilter || m.IsWhere || m.IsOrdering || m.IsEdge || isPageInfo || isEdges {
-			} else {
-				log.Warn().Str("field", m.Name+"."+name).Msg("no database mapping")
-				continue
-			}
-		}
-
-		enum := findEnum(enums, shortType)
-		f := &structs.Field{
-			Name:               name,
-			JSONName:           jsonName,
-			Type:               shortType,
-			TypeWithoutPointer: strings.Replace(strings.TrimPrefix(shortType, "*"), ".", "Dot", -1),
-			BoilerField:        boilerField,
-			IsNumberID:         isNumberID,
-			IsPrimaryID:        isPrimaryID,
-			IsPrimaryNumberID:  isPrimaryNumberID,
-			IsPrimaryStringID:  isPrimaryStringID,
-			IsRelation:         boilerField.IsRelation,
-			IsRelationAndNotForeignKey: boilerField.IsRelation &&
-				!strings.HasSuffix(strings.ToLower(name), "id"),
-			IsObject:      isObject,
-			IsOr:          strings.EqualFold(name, "or"),
-			IsAnd:         strings.EqualFold(name, "and"),
-			IsWithDeleted: strings.EqualFold(name, "withDeleted"),
-			IsPlural:      IsPlural(name),
-			PluralName:    Plural(name),
-			OriginalType:  typ,
-			Description:   field.Description,
-			Enum:          enum,
-		}
-		f.ConvertConfig = getConvertConfig(enums, m, f)
-		m.Fields = append(m.Fields, f)
 	}
 }
 
@@ -299,27 +252,6 @@ func enumsWithout(enums []*structs.Enum, skip []string) []*structs.Enum {
 		}
 	}
 	return a
-}
-
-// getAstFieldTypeCached is a cached version of getAstFieldType to avoid repeated expensive lookups
-func getAstFieldTypeCached(binder *config.Binder, schema *ast.Schema, cfg *config.Config,
-	field *ast.FieldDefinition, tc *typeCache) (types.Type, error) {
-	typeName := field.Type.Name()
-
-	// Check cache first
-	if cached, ok := tc.get(typeName); ok {
-		return cached, nil
-	}
-
-	// Not in cache, compute it
-	typ, err := getAstFieldType(binder, schema, cfg, field)
-	if err != nil {
-		return typ, err
-	}
-
-	// Cache the result
-	tc.set(typeName, typ)
-	return typ, nil
 }
 
 // getAstFieldType check's if user has defined a
