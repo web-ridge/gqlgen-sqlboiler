@@ -44,6 +44,7 @@ func init() { // nolint:gochecknoinits
 	strcase.ConfigureAcronym("QR", "qr")
 	strcase.ConfigureAcronym("KVK", "kvk")
 	strcase.ConfigureAcronym("URL", "url")
+	strcase.ConfigureAcronym("PDF", "pdf")
 	strcase.ConfigureAcronym("FTP", "ftp")
 	strcase.ConfigureAcronym("FCM", "fcm")
 }
