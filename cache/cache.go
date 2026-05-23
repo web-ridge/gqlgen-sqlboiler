@@ -107,6 +107,13 @@ func enhanceModelsWithFields(enums []*structs.Enum, schema *ast.Schema, cfg *con
 	models []*structs.Model, ignoreTypePrefixes []string) {
 	binder := cfg.NewBinder()
 
+	// getAstFieldType result depends only on field.Type.Name() — same unwrapped
+	// GraphQL type name always resolves to the same Go base type. With ~6k fields
+	// pointing at a few hundred unique type names, caching here turns ~17s of
+	// binder.FindTypeFromName calls into a sub-millisecond map lookup.
+	astTypeCache := make(map[string]types.Type, 256)
+	astErrCache := make(map[string]error, 4)
+
 	// Generate the basic of the fields
 	for _, m := range models {
 		if !m.HasBoilerModel {
@@ -117,7 +124,18 @@ func enhanceModelsWithFields(enums []*structs.Enum, schema *ast.Schema, cfg *con
 			fieldDef := schema.Types[field.Type.Name()]
 
 			// This calls some qglgen boilerType which gets the gqlgen type
-			typ, err := getAstFieldType(binder, schema, cfg, field)
+			typeName := field.Type.Name()
+			typ, cached := astTypeCache[typeName]
+			var err error
+			if !cached {
+				typ, err = getAstFieldType(binder, schema, cfg, field)
+				astTypeCache[typeName] = typ
+				if err != nil {
+					astErrCache[typeName] = err
+				}
+			} else {
+				err = astErrCache[typeName]
+			}
 			if err != nil {
 				log.Err(err).Msg("could not get field type from graphql schema")
 			}
