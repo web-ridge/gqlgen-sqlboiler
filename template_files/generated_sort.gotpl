@@ -60,7 +60,7 @@ import (
 						{{- end -}}
 					{{ end }}
 
-					return column, boilergql.StringToInterface(value)
+					return column, boilergql.CursorValueForColumn({{ $.Backend.PackageName }}.{{ $model.BoilerModel.Name }}{}, column, value)
 				}
 
 				func {{ $model.BoilerModel.Name }}SortCursorValue(sort {{ $.Frontend.PackageName }}.{{ $model.BoilerModel.Name }}Sort, m *{{ $.Frontend.PackageName }}.{{ $model.BoilerModel.Name }}) interface{} {
