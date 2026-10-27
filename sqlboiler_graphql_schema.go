@@ -35,6 +35,11 @@ type SchemaConfig struct {
 	HookChangeField     func(model *SchemaModel, field *SchemaField)
 	HookChangeFields    func(model *SchemaModel, fields []*SchemaField, parenType ParentType) []*SchemaField
 	HookChangeModel     func(model *SchemaModel)
+	// OptIn generates only the models listed in Models, each with only the
+	// operations and types its ModelExposure asks for. Without OptIn every
+	// model gets every type and operation.
+	OptIn  bool
+	Models map[string]ModelExposure
 }
 
 type SchemaGenerateConfig struct {
@@ -108,8 +113,10 @@ const (
 )
 
 func SchemaWrite(config SchemaConfig, outputFile string, generateOptions SchemaGenerateConfig) error {
-	// Generate schema based on config
-	schema := SchemaGet(config)
+	schema, err := schemaGet(config)
+	if err != nil {
+		return err
+	}
 
 	// TODO: Write schema to the configured location
 	if fileExists(outputFile) && generateOptions.MergeSchema {
@@ -141,15 +148,39 @@ func getDirectivesAsString(va []string) string {
 	return strings.Join(a, " ")
 }
 
+// SchemaGet returns the generated schema; it logs and returns "" when an
+// opt-in config names models or fields that do not exist.
+func SchemaGet(config SchemaConfig) string {
+	schema, err := schemaGet(config)
+	if err != nil {
+		log.Err(err).Msg("could not generate schema")
+	}
+	return schema
+}
+
 //nolint:gocognit,gocyclo
-func SchemaGet(
+func schemaGet(
 	config SchemaConfig,
-) string {
+) (string, error) {
 	w := &SimpleWriter{}
 
 	// Parse structs and their fields based on the sqlboiler model directory
 
 	models := executeHooksOnModels(boilerModelsToModels(config.BoilerCache.BoilerModels), config)
+	exposed := newExposure(config)
+	if err := exposed.validate(models); err != nil {
+		return "", err
+	}
+	models = exposed.apply(models)
+	hasMutations := false
+	if config.GenerateMutations {
+		for _, model := range models {
+			e := exposed.of(model.Name)
+			if !model.IsView && (e.Create || e.Update || e.Delete) {
+				hasMutations = true
+			}
+		}
+	}
 
 	fullDirectives := make([]string, len(config.Directives))
 	for i, defaultDirective := range config.Directives {
@@ -162,7 +193,7 @@ func SchemaGet(
 
 	w.l(`schema {`)
 	w.tl(`query: Query`)
-	if config.GenerateMutations {
+	if hasMutations {
 		w.tl(`mutation: Mutation`)
 	}
 	w.l(`}`)
@@ -188,6 +219,9 @@ func SchemaGet(
 	w.l(queryHelperStructs)
 
 	for _, enum := range config.BoilerCache.BoilerEnums {
+		if !exposed.keepEnum(enum.Name) {
+			continue
+		}
 
 		//	enum UserRoleFilter { ADMIN, USER }
 		w.l(fmt.Sprintf(enumFilterHelper, enum.Name))
@@ -207,25 +241,28 @@ func SchemaGet(
 	w.br()
 
 	for _, model := range models {
-		//	enum UserSort { FIRST_NAME, LAST_NAME }
-		w.l("enum " + model.Name + "Sort {")
-		for _, v := range fieldAsEnumStrings(model.Fields) {
-			w.tl(v)
+		e := exposed.of(model.Name)
+		if e.hasPagination() {
+			//	enum UserSort { FIRST_NAME, LAST_NAME }
+			w.l("enum " + model.Name + "Sort {")
+			for _, v := range fieldAsEnumStrings(model.Fields) {
+				w.tl(v)
+			}
+			w.l("}")
+
+			w.br()
+
+			//	input UserOrdering {
+			//		sort: UserSort!
+			//		direction: SortDirection! = ASC
+			//	}
+			w.l("input " + model.Name + "Ordering {")
+			w.tl("sort: " + model.Name + "Sort!")
+			w.tl("direction: SortDirection! = ASC")
+			w.l("}")
+
+			w.br()
 		}
-		w.l("}")
-
-		w.br()
-
-		//	input UserOrdering {
-		//		sort: UserSort!
-		//		direction: SortDirection! = ASC
-		//	}
-		w.l("input " + model.Name + "Ordering {")
-		w.tl("sort: " + model.Name + "Sort!")
-		w.tl("direction: SortDirection! = ASC")
-		w.l("}")
-
-		w.br()
 
 		// Create basic structs e.g.
 		// type User {
@@ -261,25 +298,27 @@ func SchemaGet(
 		//	node: User
 		//}
 
-		w.l("type " + model.Name + "Edge {")
+		if e.hasPagination() {
+			w.l("type " + model.Name + "Edge {")
 
-		w.tl(`cursor: String!`)
-		w.tl(`node: ` + model.Name)
-		w.l("}")
+			w.tl(`cursor: String!`)
+			w.tl(`node: ` + model.Name)
+			w.l("}")
 
-		w.br()
+			w.br()
 
-		//type UserConnection {
-		//	edges: [UserEdge]
-		//	pageInfo: PageInfo!
-		//}
+			//type UserConnection {
+			//	edges: [UserEdge]
+			//	pageInfo: PageInfo!
+			//}
 
-		w.l("type " + model.Name + "Connection {")
-		w.tl(`edges: [` + model.Name + `Edge]`)
-		w.tl(`pageInfo: PageInfo!`)
-		w.l("}")
+			w.l("type " + model.Name + "Connection {")
+			w.tl(`edges: [` + model.Name + `Edge]`)
+			w.tl(`pageInfo: PageInfo!`)
+			w.l("}")
 
-		w.br()
+			w.br()
+		}
 
 		// generate filter structs per model
 
@@ -291,12 +330,18 @@ func SchemaGet(
 		// 	search: String
 		// 	where: UserWhere
 		// }
-		w.l("input " + model.Name + "Filter {")
-		w.tl("search: String")
-		w.tl("where: " + model.Name + "Where")
-		w.l("}")
+		if e.Filter {
+			w.l("input " + model.Name + "Filter {")
+			w.tl("search: String")
+			w.tl("where: " + model.Name + "Where")
+			w.l("}")
 
-		w.br()
+			w.br()
+		}
+
+		if !e.hasWhere() {
+			continue
+		}
 
 		// Generate a where struct
 		// type UserWhere {
@@ -309,7 +354,7 @@ func SchemaGet(
 		w.l("input " + model.Name + "Where {")
 
 		for _, field := range enhanceFields(config, model, model.Fields, ParentTypeWhere) {
-			if field.SkipInput || field.SkipWhere {
+			if field.SkipInput || field.SkipWhere || !exposed.keepWhereField(model, field) {
 				continue
 			}
 			directives := getDirectivesAsString(field.InputDirectives)
@@ -334,17 +379,27 @@ func SchemaGet(
 	w.tl("node(id: ID!): Node" + joinedDirectives)
 
 	for _, model := range models {
+		e := exposed.of(model.Name)
 		// single structs
-		w.tl(strcase.ToLowerCamel(model.Name) + "(id: ID!): " + model.Name + "!" + joinedDirectives)
+		if e.Single {
+			w.tl(strcase.ToLowerCamel(model.Name) + "(id: ID!): " + model.Name + "!" + joinedDirectives)
+		}
 
+		if !e.List {
+			continue
+		}
 		// lists
 		modelPluralName := cache.Plural(model.Name)
 
 		arguments := []string{
 			"first: Int!",
 			"after: String",
-			"ordering: [" + model.Name + "Ordering!]",
-			"filter: " + model.Name + "Filter",
+		}
+		if e.Ordering {
+			arguments = append(arguments, "ordering: ["+model.Name+"Ordering!]")
+		}
+		if e.Filter {
+			arguments = append(arguments, "filter: "+model.Name+"Filter")
 		}
 		w.tl(
 			strcase.ToLowerCamel(modelPluralName) + "(" + strings.Join(arguments, ", ") + "): " +
@@ -360,6 +415,7 @@ func SchemaGet(
 			if model.IsView {
 				continue
 			}
+			e := exposed.of(model.Name)
 
 			filteredFields := fieldsWithout(model.Fields, config.SkipInputFields)
 
@@ -369,61 +425,65 @@ func SchemaGet(
 			// 	lastName: String
 			//	organizationId: ID!
 			// }
-			w.l("input " + model.Name + "CreateInput {")
+			if e.hasCreateInput() {
+				w.l("input " + model.Name + "CreateInput {")
 
-			for _, field := range enhanceFields(config, model, filteredFields, ParentTypeCreate) {
-				if field.SkipInput || field.SkipCreate {
-					continue
+				for _, field := range enhanceFields(config, model, filteredFields, ParentTypeCreate) {
+					if field.SkipInput || field.SkipCreate {
+						continue
+					}
+					// id is not required in create and will be specified in update resolver
+					if field.Name == "id" {
+						continue
+					}
+					// not possible yet in input
+					// TODO: make this possible for one-to-one structs?
+					// only for foreign keys inside model itself
+					if field.BoilerField.IsRelation && field.BoilerField.IsArray ||
+						field.BoilerField.IsRelation && !strings.HasSuffix(field.BoilerField.Name, "ID") {
+						continue
+					}
+					directives := getDirectivesAsString(field.InputDirectives)
+					fullType := getFinalFullType(field, ParentTypeCreate)
+					w.tl(field.Name + ": " + fullType + directives)
 				}
-				// id is not required in create and will be specified in update resolver
-				if field.Name == "id" {
-					continue
-				}
-				// not possible yet in input
-				// TODO: make this possible for one-to-one structs?
-				// only for foreign keys inside model itself
-				if field.BoilerField.IsRelation && field.BoilerField.IsArray ||
-					field.BoilerField.IsRelation && !strings.HasSuffix(field.BoilerField.Name, "ID") {
-					continue
-				}
-				directives := getDirectivesAsString(field.InputDirectives)
-				fullType := getFinalFullType(field, ParentTypeCreate)
-				w.tl(field.Name + ": " + fullType + directives)
+				w.l("}")
+
+				w.br()
 			}
-			w.l("}")
-
-			w.br()
 
 			// input UserUpdateInput {
 			// 	firstName: String!
 			// 	lastName: String
 			//	organizationId: ID!
 			// }
-			w.l("input " + model.Name + "UpdateInput {")
+			if e.hasUpdateInput() {
+				w.l("input " + model.Name + "UpdateInput {")
 
-			for _, field := range enhanceFields(config, model, filteredFields, ParentTypeUpdate) {
-				if field.SkipInput || field.SkipUpdate {
-					continue
+				for _, field := range enhanceFields(config, model, filteredFields, ParentTypeUpdate) {
+					if field.SkipInput || field.SkipUpdate {
+						continue
+					}
+					// id is not required in create and will be specified in update resolver
+					if field.Name == "id" {
+						continue
+					}
+					// not possible yet in input
+					// TODO: make this possible for one-to-one structs?
+					// only for foreign keys inside model itself
+					if field.BoilerField.IsRelation && field.BoilerField.IsArray ||
+						field.BoilerField.IsRelation && !strings.HasSuffix(field.BoilerField.Name, "ID") {
+						continue
+					}
+					directives := getDirectivesAsString(field.InputDirectives)
+					w.tl(field.Name + ": " + getFinalFullType(field, ParentTypeUpdate) + directives)
 				}
-				// id is not required in create and will be specified in update resolver
-				if field.Name == "id" {
-					continue
-				}
-				// not possible yet in input
-				// TODO: make this possible for one-to-one structs?
-				// only for foreign keys inside model itself
-				if field.BoilerField.IsRelation && field.BoilerField.IsArray ||
-					field.BoilerField.IsRelation && !strings.HasSuffix(field.BoilerField.Name, "ID") {
-					continue
-				}
-				directives := getDirectivesAsString(field.InputDirectives)
-				w.tl(field.Name + ": " + getFinalFullType(field, ParentTypeUpdate) + directives)
+				w.l("}")
+
+				w.br()
 			}
-			w.l("}")
 
-			w.br()
-
-			if config.GenerateBatchCreate {
+			if config.GenerateBatchCreate && e.Create {
 				w.l("input " + modelPluralName + "CreateInput {")
 
 				w.tl(strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "CreateInput!]!")
@@ -442,27 +502,31 @@ func SchemaGet(
 			// type UserPayload {
 			// 	user: User!
 			// }
-			w.l("type " + model.Name + "Payload {")
-			w.tl(strcase.ToLowerCamel(model.Name) + ": " + model.Name + "!")
-			w.l("}")
+			if e.hasPayload() {
+				w.l("type " + model.Name + "Payload {")
+				w.tl(strcase.ToLowerCamel(model.Name) + ": " + model.Name + "!")
+				w.l("}")
 
-			w.br()
+				w.br()
+			}
 
 			// TODO batch, delete input and payloads
 
 			// type UserDeletePayload {
 			// 	id: ID!
 			// }
-			w.l("type " + model.Name + "DeletePayload {")
-			w.tl("id: ID!")
-			w.l("}")
+			if e.hasDeletePayload() {
+				w.l("type " + model.Name + "DeletePayload {")
+				w.tl("id: ID!")
+				w.l("}")
 
-			w.br()
+				w.br()
+			}
 
 			// type UsersPayload {
 			// 	users: [User!]!
 			// }
-			if config.GenerateBatchCreate {
+			if config.GenerateBatchCreate && e.Create {
 				w.l("type " + modelPluralName + "Payload {")
 				w.tl(strcase.ToLowerCamel(modelPluralName) + ": [" + model.Name + "!]!")
 				w.l("}")
@@ -473,7 +537,7 @@ func SchemaGet(
 			// type UsersDeletePayload {
 			// 	ids: [ID!]!
 			// }
-			if config.GenerateBatchDelete {
+			if config.GenerateBatchDelete && e.Delete {
 				w.l("type " + modelPluralName + "DeletePayload {")
 				w.tl("ids: [ID!]!")
 				w.l("}")
@@ -483,7 +547,7 @@ func SchemaGet(
 			// type UsersUpdatePayload {
 			// 	ok: Boolean!
 			// }
-			if config.GenerateBatchUpdate {
+			if config.GenerateBatchUpdate && e.Update {
 				w.l("type " + modelPluralName + "UpdatePayload {")
 				w.tl("ok: Boolean!")
 				w.l("}")
@@ -492,6 +556,9 @@ func SchemaGet(
 			}
 		}
 
+	}
+
+	if hasMutations { //nolint:nestif
 		// Generate mutation queries
 		w.l("type Mutation {")
 
@@ -499,39 +566,46 @@ func SchemaGet(
 			if model.IsView {
 				continue
 			}
+			e := exposed.of(model.Name)
 			modelPluralName := cache.Plural(model.Name)
 
 			// create single
 			// e.g createUser(input: UserInput!): UserPayload!
-			w.tl("create" + model.Name + "(input: " + model.Name + "CreateInput!): " +
-				model.Name + "Payload!" + joinedDirectives)
+			if e.Create {
+				w.tl("create" + model.Name + "(input: " + model.Name + "CreateInput!): " +
+					model.Name + "Payload!" + joinedDirectives)
+			}
 
 			// create multiple
 			// e.g createUsers(input: [UsersInput!]!): UsersPayload!
-			if config.GenerateBatchCreate {
+			if config.GenerateBatchCreate && e.Create {
 				w.tl("create" + modelPluralName + "(input: " + modelPluralName + "CreateInput!): " +
 					modelPluralName + "Payload!" + joinedDirectives)
 			}
 
 			// update single
 			// e.g updateUser(id: ID!, input: UserInput!): UserPayload!
-			w.tl("update" + model.Name + "(id: ID!, input: " + model.Name + "UpdateInput!): " +
-				model.Name + "Payload!" + joinedDirectives)
+			if e.Update {
+				w.tl("update" + model.Name + "(id: ID!, input: " + model.Name + "UpdateInput!): " +
+					model.Name + "Payload!" + joinedDirectives)
+			}
 
 			// update multiple (batch update)
 			// e.g updateUsers(filter: UserFilter, input: UsersInput!): UsersPayload!
-			if config.GenerateBatchUpdate {
+			if config.GenerateBatchUpdate && e.Update && e.Filter {
 				w.tl("update" + modelPluralName + "(filter: " + model.Name + "Filter, input: " +
 					model.Name + "UpdateInput!): " + modelPluralName + "UpdatePayload!" + joinedDirectives)
 			}
 
 			// delete single
 			// e.g deleteUser(id: ID!): UserPayload!
-			w.tl("delete" + model.Name + "(id: ID!): " + model.Name + "DeletePayload!" + joinedDirectives)
+			if e.Delete {
+				w.tl("delete" + model.Name + "(id: ID!): " + model.Name + "DeletePayload!" + joinedDirectives)
+			}
 
 			// delete multiple
 			// e.g deleteUsers(filter: UserFilter, input: [UsersInput!]!): UsersPayload!
-			if config.GenerateBatchDelete {
+			if config.GenerateBatchDelete && e.Delete && e.Filter {
 				w.tl("delete" + modelPluralName + "(filter: " + model.Name + "Filter): " +
 					modelPluralName + "DeletePayload!" + joinedDirectives)
 			}
@@ -541,7 +615,7 @@ func SchemaGet(
 		w.br()
 	}
 
-	return w.s.String()
+	return w.s.String(), nil
 }
 
 func getFilterType(field *SchemaField) string {

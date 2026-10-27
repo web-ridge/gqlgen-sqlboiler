@@ -195,17 +195,21 @@ type Resolver struct {
 	Object *codegen.Object
 	Field  *codegen.Field
 
-	Implementation            string
-	IsSingle                  bool
-	IsList                    bool
-	IsListForward             bool
-	IsListBackward            bool
-	IsCreate                  bool
-	IsUpdate                  bool
-	IsDelete                  bool
-	IsBatchCreate             bool
-	IsBatchUpdate             bool
-	IsBatchDelete             bool
+	Implementation string
+	IsSingle       bool
+	IsList         bool
+	IsListForward  bool
+	IsListBackward bool
+	IsCreate       bool
+	IsUpdate       bool
+	IsDelete       bool
+	IsBatchCreate  bool
+	IsBatchUpdate  bool
+	IsBatchDelete  bool
+	// HasFilterArg and HasOrderingArg are false for an opt-in list query
+	// that was generated without that argument.
+	HasFilterArg              bool
+	HasOrderingArg            bool
 	ResolveOrganizationID     bool // TODO: something more pluggable
 	ResolveUserOrganizationID bool // TODO: something more pluggable
 	ResolveUserID             bool // TODO: something more pluggable
@@ -285,6 +289,14 @@ func enhanceResolver(resolverConfig ResolverPluginConfig, r *Resolver, models []
 		}
 
 		r.IsSingle = !r.IsList
+		for _, arg := range r.Field.Args {
+			switch arg.Name {
+			case "filter":
+				r.HasFilterArg = true
+			case "ordering":
+				r.HasOrderingArg = true
+			}
+		}
 	case "Subscription":
 	// TODO: generate helpers for subscription
 	default:
