@@ -359,6 +359,54 @@ func main() {
 }
 ```
 
+## Opt-in schema
+
+By default every table gets a type, a single and a list query, create, update
+and delete mutations, and Where, Filter, Ordering, Connection, Edge, Payload and
+input types. In a large database most of that is never called, but gqlgen still
+generates executor code for all of it.
+
+Set `OptIn` to generate only what you list. A table that is not in `Models` gets
+nothing, and relations that point at it disappear from the tables you do list.
+
+```go
+gbgen.SchemaConfig{
+	BoilerCache:       boilerCache,
+	Directives:        []string{"isAuthenticated"},
+	GenerateMutations: true,
+	OptIn:             true,
+	Models: map[string]gbgen.ModelExposure{
+		// a paginated, filterable list plus the full CRUD
+		"User": {Single: true, List: true, Create: true, Update: true, Delete: true, Filter: true, Ordering: true},
+		// only filterable on two fields (id, or, and and withDeleted always stay)
+		"Post": {List: true, Filter: true, WhereFields: []string{"title", "user"}},
+		// a type that other types point at, without any query or mutation
+		"Organization": {},
+		// types used by hand-written schema, without the generated operation
+		"Comment": {Payload: true, CreateInput: true},
+	},
+}
+```
+
+| Field                         | Generates                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| `Single`                      | `post(id: ID!): Post!`                                                     |
+| `List`                        | `posts(first, after, ...)` with `PostConnection`, `PostEdge`, `PostOrdering`, `PostSort` |
+| `Ordering`                    | the `ordering` argument of the list (and the pagination types)             |
+| `Filter`                      | `PostFilter`, `PostWhere` and the `filter` argument of the list            |
+| `Where`                       | `PostWhere` alone, e.g. to filter through a relation of another Where      |
+| `WhereFields`                 | limits `PostWhere` to these fields; `nil` keeps all                        |
+| `Create`, `Update`, `Delete`  | the mutation with its input and payload                                    |
+| `Connection`                  | the pagination types without a list query                                  |
+| `Payload`, `DeletePayload`    | the payload types without a mutation                                       |
+| `CreateInput`, `UpdateInput`  | the input types without a mutation                                         |
+
+A relation stays in a Where only when the related table has a Where too. Enums
+are generated only while a generated field uses them. A name in `Models` or
+`WhereFields` that does not exist fails `SchemaWrite`, so typos do not silently
+remove an API. The convert and resolver plugins follow the schema, so they
+generate less as well.
+
 ## Foreign Key Validation
 
 When using authorization scopes, you can enable FK validation to ensure users can only set foreign keys to resources within their scope. This prevents users from associating records with resources they don't have access to.

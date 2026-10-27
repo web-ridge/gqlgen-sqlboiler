@@ -80,11 +80,13 @@ const inputKey = "input"
 				{{- end }}
 			{{- end }}
 
+			{{- if .HasFilterArg }}
 			mods = append(mods, {{.Model.Name}}FilterToMods(filter)...)
+			{{- end }}
 			{{- if .IsListBackward }}
-				connection, err := {{.Model.Name}}Connection(ctx, r.db, mods, boilergql.NewBackwardPagination(last, before), ordering)
+				connection, err := {{.Model.Name}}Connection(ctx, r.db, mods, boilergql.NewBackwardPagination(last, before), {{ if .HasOrderingArg }}ordering{{ else }}nil{{ end }})
 			{{- else }}
-				connection, err := {{.Model.Name}}Connection(ctx, r.db, mods, boilergql.NewForwardPagination(first, after), ordering)
+				connection, err := {{.Model.Name}}Connection(ctx, r.db, mods, boilergql.NewForwardPagination(first, after), {{ if .HasOrderingArg }}ordering{{ else }}nil{{ end }})
 			{{- end }}
 			if err != nil {
 				log.Error().Err(err).Msg({{ $resolver.PublicErrorKey }})
