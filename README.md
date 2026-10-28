@@ -401,8 +401,9 @@ gbgen.SchemaConfig{
 | `Payload`, `DeletePayload`    | the payload types without a mutation                                       |
 | `CreateInput`, `UpdateInput`  | the input types without a mutation                                         |
 
-A relation stays in a Where only when the related table has a Where too. Enums
-are generated only while a generated field uses them. A name in `Models` or
+A relation stays in a Where only when the related table has a Where too. Every
+enum and its filter is still generated, because hand-written schema often uses
+them. A name in `Models` or
 `WhereFields` that does not exist fails `SchemaWrite`, so typos do not silently
 remove an API. The convert and resolver plugins follow the schema, so they
 generate less as well.

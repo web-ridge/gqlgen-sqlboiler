@@ -219,9 +219,6 @@ func schemaGet(
 	w.l(queryHelperStructs)
 
 	for _, enum := range config.BoilerCache.BoilerEnums {
-		if !exposed.keepEnum(enum.Name) {
-			continue
-		}
 
 		//	enum UserRoleFilter { ADMIN, USER }
 		w.l(fmt.Sprintf(enumFilterHelper, enum.Name))

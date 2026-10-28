@@ -85,8 +85,9 @@ func TestSchemaOptIn(t *testing.T) {
 		{"type-only relation target", "type Organization implements Node {", true},
 		{"relation to a listed model", "organization: Organization!", true},
 		{"no query for a model without operations", "organizations(", false},
-		{"unlisted model", "Secret", false},
-		{"enum of an unlisted model", "SecretKind", false},
+		{"unlisted model", "type Secret", false},
+		{"relation to an unlisted model", "secret:", false},
+		{"enums stay for hand-written schema", "enum SecretKind {", true},
 		{"enum of a listed model", "enum UserRole {", true},
 		{"allowed where field", "name: StringFilter", true},
 		{"where field outside the allowlist", "email: StringFilter", false},
@@ -128,14 +129,15 @@ func TestSchemaOptInRejectsUnknownNames(t *testing.T) {
 		BoilerCache: optInTestCache(),
 		OptIn:       true,
 		Models: map[string]ModelExposure{
-			"Usr":  {List: true},
-			"User": {Where: true, WhereFields: []string{"nme"}},
+			"Usr":          {List: true},
+			"User":         {Where: true, WhereFields: []string{"nme"}},
+			"Organization": {WhereFields: []string{"name"}},
 		},
 	})
 	if err == nil {
 		t.Fatal("expected an error for unknown names")
 	}
-	for _, want := range []string{"unknown model Usr", "unknown where field User.nme"} {
+	for _, want := range []string{"unknown model Usr", "unknown where field User.nme", "WhereFields without Where or Filter on Organization"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error %q lacks %q", err, want)
 		}
