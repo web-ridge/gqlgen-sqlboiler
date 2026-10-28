@@ -323,7 +323,7 @@ func (r *queryResolver) Node(ctx context.Context, globalGraphID string) (fm.Node
 	model := splitID[0]
 	switch model {
 		{{ range $model := .Models -}}
-		{{ if .IsNormal  -}}
+		{{ if and .IsNormal ($.HasSingleQuery $model.Name) -}}
 		case "{{$model.Name}}":
 			return r.{{$model.JSONName}}(ctx, globalGraphID)
 		{{ end -}}

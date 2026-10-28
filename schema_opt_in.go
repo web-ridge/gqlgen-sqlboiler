@@ -65,12 +65,10 @@ var alwaysWhereFields = map[string]bool{"id": true, "or": true, "and": true, "wi
 type exposure struct {
 	optIn  bool
 	models map[string]ModelExposure
-	// enums holds the enums that a kept field still uses.
-	enums map[string]bool
 }
 
 func newExposure(config SchemaConfig) exposure {
-	return exposure{optIn: config.OptIn, models: config.Models, enums: map[string]bool{}}
+	return exposure{optIn: config.OptIn, models: config.Models}
 }
 
 func (x exposure) of(modelName string) ModelExposure {
@@ -115,9 +113,6 @@ func (x exposure) apply(models []*SchemaModel) []*SchemaModel {
 				continue
 			}
 			fields = append(fields, f)
-			if f.BoilerField != nil && f.BoilerField.IsEnum {
-				x.enums[f.BoilerField.Enum.Name] = true
-			}
 		}
 		m.Fields = fields
 		kept = append(kept, m)
@@ -148,10 +143,6 @@ func (x exposure) keepWhereField(model *SchemaModel, field *SchemaField) bool {
 	return false
 }
 
-func (x exposure) keepEnum(enumName string) bool {
-	return !x.optIn || x.enums[enumName]
-}
-
 // validate reports models and Where fields in the allowlist that the database
 // does not have, which are almost always typos.
 func (x exposure) validate(models []*SchemaModel) error {
@@ -171,6 +162,9 @@ func (x exposure) validate(models []*SchemaModel) error {
 		}
 		if e.WhereFields == nil {
 			continue
+		}
+		if !e.hasWhere() {
+			problems = append(problems, "WhereFields without Where or Filter on "+name)
 		}
 		known := map[string]bool{}
 		for _, f := range m.Fields {

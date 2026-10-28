@@ -174,6 +174,17 @@ type ResolverBuild struct {
 	UserDefinedResolvers map[string]bool
 }
 
+// HasSingleQuery reports whether the schema has the single query of a model,
+// which an opt-in schema can leave out.
+func (rb *ResolverBuild) HasSingleQuery(modelName string) bool {
+	for _, r := range rb.Resolvers {
+		if r.IsSingle && r.Object.Name == "Query" && r.Model.Name == modelName {
+			return true
+		}
+	}
+	return false
+}
+
 // IsResolverOverridden checks if the resolver function is overridden by user
 func (rb *ResolverBuild) IsResolverOverridden(name string) bool {
 	if rb.UserDefinedResolvers == nil {
