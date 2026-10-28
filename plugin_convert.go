@@ -1,13 +1,11 @@
 package gbgen
 
 import (
+	"embed"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"regexp"
-	"runtime"
 
 	"github.com/web-ridge/gqlgen-sqlboiler/v3/structs"
 
@@ -179,11 +177,13 @@ func (m *ConvertPlugin) generateFile(data *ConvertTemplateData, fileName string,
 	log.Debug().Msg("[convert] generated " + templateName)
 }
 
+//go:embed template_files/*.gotpl
+var templateFiles embed.FS
+
+// getTemplateContent reads from the embedded templates, so generation works
+// from a binary built with -trimpath, where source paths are not on disk.
 func getTemplateContent(filename string) (string, error) {
-	// load path relative to calling source file
-	_, callerFile, _, _ := runtime.Caller(1) //nolint:dogsled
-	rootDir := filepath.Dir(callerFile)
-	content, err := ioutil.ReadFile(path.Join(rootDir, "template_files", filename))
+	content, err := templateFiles.ReadFile("template_files/" + filename)
 	if err != nil {
 		return "", fmt.Errorf("could not read template file: %v", err)
 	}
