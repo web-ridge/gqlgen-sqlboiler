@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"strings"
 )
 
 func GetFunctionNamesFromDir(dir string, ignore []string) ([]string, error) {
@@ -52,4 +53,28 @@ func contains(s []string, e string) bool {
 		}
 	}
 	return false
+}
+
+// GetExportedFunctionNamesFromDir lists the exported package-level functions
+// of the non-test files in dir.
+func GetExportedFunctionNamesFromDir(dir string) ([]string, error) {
+	set := token.NewFileSet()
+	packs, err := parser.ParseDir(set, dir, func(info os.FileInfo) bool {
+		return !strings.HasSuffix(info.Name(), "_test.go")
+	}, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse package: %v", err)
+	}
+	var a []string
+	for _, pack := range packs {
+		for _, file := range pack.Files {
+			for _, decl := range file.Decls {
+				fn, ok := decl.(*ast.FuncDecl)
+				if ok && fn.Recv == nil && fn.Name.IsExported() {
+					a = append(a, fn.Name.Name)
+				}
+			}
+		}
+	}
+	return a, nil
 }

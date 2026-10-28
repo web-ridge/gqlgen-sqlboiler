@@ -16,6 +16,7 @@ import (
 
 	"github.com/iancoleman/strcase"
 
+	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/imports"
 
 	gqlgenTemplates "github.com/99designs/gqlgen/codegen/templates"
@@ -38,6 +39,15 @@ type Options struct {
 	UserDefinedFunctions []string
 	// Data will be passed to the template execution.
 	Data interface{}
+	// DotImports are packages the file imports with "." when it uses one of
+	// their Names, so generated code can call hand-written functions that live
+	// outside the generated package.
+	DotImports []DotImport
+}
+
+type DotImport struct {
+	Path  string
+	Names []string
 }
 
 func init() { // nolint:gochecknoinits
@@ -66,6 +76,8 @@ func WriteTemplateFile(fileName string, cfg Options) error {
 		}
 		return true
 	})
+
+	addUsedDotImports(fSet, node, cfg.DotImports)
 
 	// write new ast to file
 	f, writeError := os.Create(fileName)
@@ -133,4 +145,25 @@ func ToGo(name string) string {
 
 func ToLowerAndGo(name string) string {
 	return ToGo(strings.ToLower(name))
+}
+
+func addUsedDotImports(fSet *token.FileSet, node *ast.File, dotImports []DotImport) {
+	if node == nil || len(dotImports) == 0 {
+		return
+	}
+	used := map[string]bool{}
+	ast.Inspect(node, func(n ast.Node) bool {
+		if ident, ok := n.(*ast.Ident); ok {
+			used[ident.Name] = true
+		}
+		return true
+	})
+	for _, dotImport := range dotImports {
+		for _, name := range dotImport.Names {
+			if used[name] {
+				astutil.AddNamedImport(fSet, node, ".", dotImport.Path)
+				break
+			}
+		}
+	}
 }
