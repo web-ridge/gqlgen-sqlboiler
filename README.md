@@ -408,6 +408,25 @@ them. A name in `Models` or
 remove an API. The convert and resolver plugins follow the schema, so they
 generate less as well.
 
+## Generated code in its own package
+
+By default the convert plugin writes into a package that also holds your
+hand-written overrides (for example `<Model>SearchToMods`). To keep the
+generated code in a package of its own, point `structs.Config` for the output
+at that directory and list the hand-written packages in `SupportDirectories`:
+
+```go
+output := structs.Config{Directory: "models/fm/fmconv", PackageName: "fmconv"}
+gbgen.NewConvertPlugin(modelCache, gbgen.ConvertPluginConfig{
+	DatabaseDriver:     gbgen.MySQL,
+	SupportDirectories: []string{"gqlsupport"},
+})
+```
+
+A generated file dot-imports a support package when it calls one of its
+exported functions. A support function with the name of a generated function
+replaces it; the generated one is kept as `original<Name>`.
+
 ## Foreign Key Validation
 
 When using authorization scopes, you can enable FK validation to ensure users can only set foreign keys to resources within their scope. This prevents users from associating records with resources they don't have access to.
