@@ -231,17 +231,37 @@ import (
 			return ""
 		}
 
+		// {{ .BoilerModel.Name }}ReversePageInformation reports whether a row exists on
+		// the other side of the cursor (hasPreviousPage when paginating forward).
+		// It asks for one row within originalMods (the connection's own filters,
+		// such as the tenant scope) instead of counting: a COUNT(*) over the
+		// reversed range read every row before the cursor, and without the
+		// filters it read them across the whole table.
 		func {{ .BoilerModel.Name }}ReversePageInformation(
 			ctx context.Context,
 			db *sql.DB,
 			pagination boilergql.ConnectionPagination,
 			ordering []*{{ $.Frontend.PackageName }}.{{ .BoilerModel.Name }}Ordering,
+			originalMods ...qm.QueryMod,
 		) (bool, error) {
 			reverse := pagination.Forward != nil
 			cursor, reverseMods := {{ .BoilerModel.Name }}PaginationModsBase(pagination, ordering, reverse, 1)
 			cursorType := {{ .BoilerModel.Name }}CursorType(ordering)
 			return boilergql.HasReversePage(cursor, pagination, cursorType, func() (int64, error) {
-				return {{ $.Backend.PackageName }}.{{ .BoilerModel.PluralName }}(reverseMods...).Count(ctx, db)
+				mods := make([]qm.QueryMod, 0, len(originalMods)+len(reverseMods))
+				mods = append(mods, originalMods...)
+				mods = append(mods, reverseMods...)
+				q := {{ $.Backend.PackageName }}.{{ .BoilerModel.PluralName }}(mods...)
+				queries.SetSelect(q.Query, []string{"1"})
+				var found int
+				err := q.QueryRowContext(ctx, db).Scan(&found)
+				if errors.Is(err, sql.ErrNoRows) {
+					return 0, nil
+				}
+				if err != nil {
+					return 0, err
+				}
+				return 1, nil
 			})
 		}
 
@@ -283,7 +303,7 @@ import (
 				return nil, err
 			}
 
-			hasMoreReversed, err := {{ .BoilerModel.Name }}ReversePageInformation(ctx, db, pagination, ordering)
+			hasMoreReversed, err := {{ .BoilerModel.Name }}ReversePageInformation(ctx, db, pagination, ordering, originalMods...)
 			if err != nil {
 				return nil, err
 			}
