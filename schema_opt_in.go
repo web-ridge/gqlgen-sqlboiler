@@ -185,3 +185,43 @@ func (x exposure) validate(models []*SchemaModel) error {
 	sort.Strings(problems)
 	return fmt.Errorf("opt-in schema config: %v", strings.Join(problems, ", "))
 }
+
+// enumsInUse reports which enums and enum filters the schema needs. Outside
+// opt-in mode that is all of them. In opt-in mode an enum is kept when a
+// field of a listed model has it as type (also through its inputs) and its
+// filter when a generated Where filters on such a field; SchemaConfig.KeepTypes
+// adds the ones hand-written schema or code uses.
+func (x exposure) enumsInUse(config SchemaConfig, models []*SchemaModel) (keepEnum, keepFilter func(string) bool) {
+	if !x.optIn {
+		all := func(string) bool { return true }
+		return all, all
+	}
+	types := map[string]bool{}
+	filters := map[string]bool{}
+	for _, name := range config.KeepTypes {
+		if enum, isFilter := strings.CutSuffix(name, "Filter"); isFilter {
+			filters[enum] = true
+			continue
+		}
+		types[name] = true
+	}
+	for _, model := range models {
+		e := x.of(model.Name)
+		for _, field := range enhanceFields(config, model, model.Fields, ParentTypeNormal) {
+			if field.BoilerField != nil && !field.BoilerField.IsRelation {
+				types[field.Type] = true
+			}
+		}
+		if !e.hasWhere() {
+			continue
+		}
+		for _, field := range enhanceFields(config, model, model.Fields, ParentTypeWhere) {
+			if field.BoilerField == nil || field.BoilerField.IsRelation || field.SkipInput || field.SkipWhere || !x.keepWhereField(model, field) {
+				continue
+			}
+			filters[getFilterType(field)] = true
+		}
+	}
+	return func(name string) bool { return types[name] || filters[name] },
+		func(name string) bool { return filters[name] }
+}

@@ -87,8 +87,9 @@ func TestSchemaOptIn(t *testing.T) {
 		{"no query for a model without operations", "organizations(", false},
 		{"unlisted model", "type Secret", false},
 		{"relation to an unlisted model", "secret:", false},
-		{"enums stay for hand-written schema", "enum SecretKind {", true},
+		{"enum of an unlisted model", "enum SecretKind {", false},
 		{"enum of a listed model", "enum UserRole {", true},
+		{"no enum filter outside the where", "input UserRoleFilter {", false},
 		{"allowed where field", "name: StringFilter", true},
 		{"where field outside the allowlist", "email: StringFilter", false},
 		{"relation to a model without where", "organization: OrganizationWhere", false},
@@ -141,5 +142,36 @@ func TestSchemaOptInRejectsUnknownNames(t *testing.T) {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error %q lacks %q", err, want)
 		}
+	}
+}
+
+func TestSchemaOptInKeepTypes(t *testing.T) {
+	models := map[string]ModelExposure{"User": {List: true, Filter: true}}
+	schema, err := schemaGet(SchemaConfig{
+		BoilerCache: optInTestCache(), OptIn: true, Models: models,
+		KeepTypes: []string{"SecretKindFilter"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"input UserRoleFilter {", // the User where filters on role
+		"role: UserRoleFilter",
+		"enum SecretKind {", // named by hand-written schema, with its filter
+		"input SecretKindFilter {",
+	} {
+		if !strings.Contains(schema, want) {
+			t.Errorf("schema lacks %q", want)
+		}
+	}
+	schema, err = schemaGet(SchemaConfig{
+		BoilerCache: optInTestCache(), OptIn: true, Models: models,
+		KeepTypes: []string{"SecretKind"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(schema, "enum SecretKind {") || strings.Contains(schema, "input SecretKindFilter {") {
+		t.Error("an enum named in KeepTypes is kept without its filter")
 	}
 }

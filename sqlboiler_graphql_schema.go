@@ -40,6 +40,12 @@ type SchemaConfig struct {
 	// model gets every type and operation.
 	OptIn  bool
 	Models map[string]ModelExposure
+	// KeepTypes names generated enums and enum filters (UserRole,
+	// UserRoleFilter) that schema or code outside the generator uses. In
+	// opt-in mode an enum is generated only when a listed model uses it or it
+	// is named here, and its filter only when a generated Where uses it or it
+	// is named here. Without OptIn every enum and filter is generated.
+	KeepTypes []string
 }
 
 type SchemaGenerateConfig struct {
@@ -218,10 +224,16 @@ func schemaGet(
 	// Add helpers for filtering lists
 	w.l(queryHelperStructs)
 
+	keepEnum, keepEnumFilter := exposed.enumsInUse(config, models)
 	for _, enum := range config.BoilerCache.BoilerEnums {
+		if !keepEnum(enum.Name) {
+			continue
+		}
 
 		//	enum UserRoleFilter { ADMIN, USER }
-		w.l(fmt.Sprintf(enumFilterHelper, enum.Name))
+		if keepEnumFilter(enum.Name) {
+			w.l(fmt.Sprintf(enumFilterHelper, enum.Name))
+		}
 
 		//	enum UserRole { ADMIN, USER }
 		w.l("enum " + enum.Name + " {")
